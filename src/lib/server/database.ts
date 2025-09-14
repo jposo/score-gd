@@ -11,7 +11,7 @@ type UserValues = Omit<
   User,
   "id" | "bio" | "profile_picture_url" | "created_at"
 >;
-type ProgressValues = Omit<Progress, "id" | "created_at" | "updated_at">;
+export type ProgressValues = Omit<Progress, "id" | "created_at" | "updated_at">;
 
 export default class Database {
   static #instance: Database;
@@ -197,6 +197,21 @@ export default class Database {
     }
   }
 
+  async getReviews(level_id: number) {
+    try {
+      const reviews = await this.sql`
+        SELECT p.status, p.enjoyment_rating, p.review, p.created_at, u.username, u.profile_picture_url
+        FROM progress p
+        JOIN users u ON p.user_id = u.id
+        WHERE level_id = ${level_id} AND p.review IS NOT NULL
+      `;
+      return reviews;
+    } catch (error) {
+      console.error("Error getting reviews:", error);
+      return null;
+    }
+  }
+
   // async updateUserProgress(
   //   userId: number,
   //   levelId: number,
@@ -218,12 +233,10 @@ export default class Database {
   // }
 
   async updateUserProgress(values: ProgressValues) {
-    console.log(values);
     try {
       const [progress] = await this.sql`
-        INSERT INTO progress ${this.sql(values)}
-        ON CONFLICT (user_id, level_id)
-        DO UPDATE SET status = ${values.status}, enjoyment_rating = ${values.enjoyment_rating}
+        UPDATE progress SET ${this.sql(values)}
+        WHERE level_id = ${values.level_id} AND user_id = ${values.user_id}
         RETURNING *
       `;
       return progress as Progress | null;

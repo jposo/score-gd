@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS songs (
   id SERIAL PRIMARY KEY,
-  geometry_dash_id INTEGER NOT NULL, -- negative for offical songs
+  geometry_dash_id INTEGER NOT NULL UNIQUE, -- negative for offical songs
   name TEXT NOT NULL,
   artist TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS songs (
 
 CREATE TABLE IF NOT EXISTS levels (
   id SERIAL PRIMARY KEY,
-  geometry_dash_id INTEGER NOT NULL,
+  geometry_dash_id INTEGER NOT NULL UNIQUE,
   type LevelType NOT NULL,
   name TEXT NOT NULL,
   publisher TEXT NOT NULL,

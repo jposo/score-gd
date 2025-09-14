@@ -50,11 +50,25 @@
     <a href="/" class="btn btn-ghost text-xl">loggd</a>
   </div>
   <div class="flex gap-4 px-4">
-    <input
-      type="text"
-      placeholder="Search"
-      class="input input-bordered w-24 md:w-auto"
-    />
+    <label class="input">
+      <svg
+        class="h-[1em] opacity-50"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+      >
+        <g
+          stroke-linejoin="round"
+          stroke-linecap="round"
+          stroke-width="2.5"
+          fill="none"
+          stroke="currentColor"
+        >
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.3-4.3"></path>
+        </g>
+      </svg>
+      <input type="search" placeholder="Search" />
+    </label>
 
     <!-- Theme Controller -->
     <div class="dropdown dropdown-end">
@@ -102,7 +116,7 @@
           role="button"
           class="btn btn-ghost btn-circle avatar {data.user.profile_picture_url
             ? ''
-            : 'avatar avatar-placeholder'} "
+            : 'avatar-placeholder'} "
         >
           <div class="w-10 rounded-full text-neutral-content bg-neutral">
             {#if data.user.profile_picture_url}

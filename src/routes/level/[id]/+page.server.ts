@@ -12,7 +12,8 @@ export const load: PageServerLoad = async ({ params, parent }) => {
       return { level };
     }
     const progress = await db.getUserProgress(user.id, level.id);
-    return { level, progress };
+    const reviews = await db.getReviews(level.id);
+    return { level, progress, reviews };
   } catch (err) {
     console.error(err);
     error(404, "Not found");

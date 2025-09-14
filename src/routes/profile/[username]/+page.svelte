@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from "$app/state";
-  import { getUsers, type User } from "$lib/db";
+  import Database from "$lib/server/database";
+  import type { User } from "$lib/db-types";
   import { onMount } from "svelte";
 
   const username = $derived(page.params.username);
@@ -9,7 +10,7 @@
   let loading = $state(true);
 
   onMount(() => {
-    user = getUsers().find((u) => u.username === username);
+    // user = Database.instance.getUsers().find((u) => u.username === username);
     if (!user) {
       loading = false;
       return;
@@ -22,12 +23,12 @@
 <div class="container mx-auto p-4">
   {#if !loading}
     {#if user}
-      <div class="flex flex-col">
+      <!-- <div class="flex flex-col">
         <div class="avatar flex flex-row h-24 gap-4">
           <div class="w-24 rounded-full">
             <img
               alt="{user.username} Profile Picture"
-              src={user.profilePictureUrl}
+              src={user.profile_picture_url}
             />
           </div>
           <div class="flex flex-col content-center w-full">
@@ -35,14 +36,14 @@
           </div>
         </div>
         <p>{user.bio}</p>
-        <!-- {#each levels as level, index}
+        {#each levels as level, index}
       <div class="card bg-base-200 w-full shadow-sm">
         <div class="card-body">
           <h2 class="card-title">#{index + 1} - {level.name}</h2>
         </div>
       </div>
-    {/each} -->
-      </div>
+    {/each}
+      </div> -->
     {:else}
       <div class="hero min-h-full">
         <div class="hero-content text-center">
