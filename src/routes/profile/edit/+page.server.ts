@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from "./$types";
-import { requireAuth } from "$lib/auth/middleware";
+import { requireAuth } from "$lib/server/auth/middleware";
 import Database from "$lib/server/database";
 import { fail } from "@sveltejs/kit";
 
@@ -22,8 +22,10 @@ export const actions: Actions = {
 
     try {
       const data = await request.formData();
+      console.log(data);
       const bio = data.get("bio") as string;
-      const profilePictureUrl = data.get("profile_picture_url") as string;
+      const profilePictureUrl =
+        data.get("profile_picture_url") ?? (undefined as string | undefined);
 
       // Basic validation
       if (bio && bio.length > 500) {
@@ -35,7 +37,10 @@ export const actions: Actions = {
       }
 
       // Update user in database
-      const updates: { bio?: string; profile_picture_url?: string } = {};
+      const updates: {
+        bio?: string | null;
+        profile_picture_url?: string | null;
+      } = {};
 
       if (bio !== undefined) {
         updates.bio = bio.trim() || null;

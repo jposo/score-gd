@@ -14,7 +14,7 @@ const DB_CONFIG = {
   // ssl: "require" as const,
 };
 
-const OUTPUT_FILE = "./db-types.ts";
+const OUTPUT_FILE = "./src/lib/db-types.ts";
 const SCHEMA_NAME = "public"; // The database schema to inspect.
 
 // --- TYPE MAPPING ---

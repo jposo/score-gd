@@ -5,7 +5,7 @@ import {
   isValidEmail,
   generateToken,
   cookieOptions,
-} from "$lib/auth/utils";
+} from "$lib/server/auth/utils";
 import Database from "$lib/server/database";
 
 export const POST: RequestHandler = async ({ request, cookies }) => {

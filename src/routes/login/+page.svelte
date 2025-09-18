@@ -37,13 +37,13 @@
       });
 
       const data = await response.json();
-
       if (response.ok) {
         // Redirect to home page or the page they came from
         const redirectTo =
           new URL(window.location.href).searchParams.get("redirectTo") || "/";
         window.location.href = redirectTo;
       } else {
+        console.log("caca", data);
         error = data.error || "Login failed";
       }
     } catch (err) {
@@ -121,10 +121,10 @@
       </div>
 
       {#if error}
-        <div class="alert alert-error">
+        <div role="alert" class="alert alert-error">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="stroke-current shrink-0 h-6 w-6"
+            class="h-6 w-6 shrink-0 stroke-current"
             fill="none"
             viewBox="0 0 24 24"
           >

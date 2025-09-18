@@ -1,5 +1,6 @@
 import postgres from "postgres";
 import type { Level, Song, User, Progress } from "$lib/db-types";
+import type { ListItem } from "../shared/types";
 
 // interface LoggdDatabase {
 //   getUsers();
@@ -147,11 +148,62 @@ export default class Database {
   async getUserById(id: number) {
     try {
       const [user] = await this.sql`
-        SELECT id, username, email, bio, profile_picture_url, created_at
-        FROM users
-        WHERE id = ${id}
+        SELECT
+          u.id,
+          u.username,
+          u.bio,
+          u.profile_picture_url,
+          u.created_at,
+          CAST(SUM(CASE WHEN p.status = 'Completed' THEN 1 END) AS INTEGER) AS levels_completed,
+          CAST(AVG(p.enjoyment_rating) AS FLOAT) AS average_rating,
+          CAST(SUM(CASE WHEN p.review IS NOT NULL THEN 1 END) AS INTEGER) AS reviews_written,
+          json_agg(
+            json_build_object(
+              'id', p.id,
+           	  'geometry_dash_id', l.geometry_dash_id,
+           	  'level_name', l.name,
+           	  'placement', p.placement,
+              'enjoyment_rating', p.enjoyment_rating
+            )
+           	ORDER BY p.placement ASC
+          ) FILTER (WHERE p.status = 'Completed') AS list,
+          json_agg(
+           	json_build_object(
+              'geometry_dash_id', l.geometry_dash_id,
+          		'status', p.status,
+          		'enjoyment_rating', p.enjoyment_rating,
+          		'level_name', l.name,
+          		'review', p.review,
+          		'created_at', p.created_at
+           	)
+            ORDER BY p.created_at DESC
+          ) AS recent_activity
+        FROM users u
+        LEFT JOIN progress p ON u.id = p.user_id
+        LEFT JOIN levels l ON l.id = p.level_id
+        WHERE u.id = ${id}
+        GROUP BY u.id
       `;
-      return user as User | null;
+      return user as User & {
+        levels_completed: number;
+        average_rating: number;
+        reviews_written: number;
+        list: {
+          id: number;
+          geometry_dash_id: number;
+          level_name: string;
+          placement: number;
+          enjoyment_rating: number;
+        }[];
+        recent_activity: {
+          geometry_dash_id: number;
+          status: string;
+          enjoyment_rating: number;
+          level_name: string;
+          review: string;
+          created_at: string;
+        }[];
+      };
     } catch (error) {
       console.error("Error getting user by id:", error);
       return null;
@@ -197,15 +249,51 @@ export default class Database {
     }
   }
 
+  async getUserList(userId: number) {
+    try {
+      const list = await this.sql`
+        SELECT p.id, p.placement, l.id as level_id, l.name
+        FROM progress p
+        JOIN levels l ON p.level_id = l.id
+        WHERE user_id = ${userId}
+        ORDER BY placement ASC, updated_at DESC
+      `;
+      return list as ListItem[];
+    } catch (error) {
+      console.error("Error getting user progresses:", error);
+      return null;
+    }
+  }
+
+  async updateListPlacement(progressId: number, placement: number) {
+    try {
+      await this.sql`
+        UPDATE progress
+        SET placement = ${placement}
+        WHERE id = ${progressId}
+      `;
+    } catch (error) {
+      console.error("Error updating list placement:", error);
+      return null;
+    }
+  }
+
   async getReviews(level_id: number) {
     try {
       const reviews = await this.sql`
-        SELECT p.status, p.enjoyment_rating, p.review, p.created_at, u.username, u.profile_picture_url
+        SELECT p.status, p.enjoyment_rating, p.review, p.created_at, p.user_id, u.username, u.profile_picture_url, p.total_attempts
         FROM progress p
         JOIN users u ON p.user_id = u.id
-        WHERE level_id = ${level_id} AND p.review IS NOT NULL
+        WHERE level_id = ${level_id}
+          AND p.review IS NOT NULL
+          AND p.status NOT IN ('In Progress', 'To Try')
+        ORDER BY p.created_at DESC
+        LIMIT 15
       `;
-      return reviews;
+      return reviews as (Progress & {
+        username: string;
+        profile_picture_url: string;
+      })[];
     } catch (error) {
       console.error("Error getting reviews:", error);
       return null;
@@ -232,7 +320,36 @@ export default class Database {
   //   }
   // }
 
+  private async createUserProgress(
+    userId: number,
+    levelId: number,
+    status: string,
+  ) {
+    try {
+      const [progress] = await this.sql`
+        INSERT INTO progress (user_id, level_id, status)
+        VALUES (${userId}, ${levelId}, ${status})
+        RETURNING *
+      `;
+      return progress as Progress | null;
+    } catch (error) {
+      console.error("Error creating user progress:", error);
+      return null;
+    }
+  }
+
   async updateUserProgress(values: ProgressValues) {
+    // check if progress exists
+    const [progress] = await this.sql`
+      SELECT * FROM progress WHERE level_id = ${values.level_id} AND user_id = ${values.user_id}
+    `;
+    if (!progress) {
+      await this.createUserProgress(
+        values.user_id,
+        values.level_id,
+        values.status,
+      );
+    }
     try {
       const [progress] = await this.sql`
         UPDATE progress SET ${this.sql(values)}
@@ -244,5 +361,23 @@ export default class Database {
       console.error("Error updating user progress:", error);
       return null;
     }
+  }
+
+  async getRecentActivity(userId: number) {
+    const activity = await this.sql`
+      SELECT
+        l.geometry_dash_id,
+        p.status,
+        p.enjoyment_rating,
+        p.created_at,
+        l.name,
+        p.review
+      FROM progress p
+      JOIN levels l ON p.level_id = l.id
+      WHERE user_id = ${userId}
+      ORDER BY created_at DESC
+      LIMIT 5
+    `;
+    return activity;
   }
 }

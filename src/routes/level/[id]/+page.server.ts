@@ -8,11 +8,11 @@ export const load: PageServerLoad = async ({ params, parent }) => {
     const id = parseInt(params.id);
     const db = Database.instance;
     const level = await db.getLevel(id);
+    const reviews = await db.getReviews(level.id);
     if (!user) {
-      return { level };
+      return { level, reviews };
     }
     const progress = await db.getUserProgress(user.id, level.id);
-    const reviews = await db.getReviews(level.id);
     return { level, progress, reviews };
   } catch (err) {
     console.error(err);

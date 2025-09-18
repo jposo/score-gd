@@ -11,6 +11,8 @@
     "npm:jsonwebtoken@^9.0.2": "9.0.2",
     "npm:postgres@^3.4.7": "3.4.7",
     "npm:svelte-check@4": "4.3.1_svelte@5.38.8__acorn@8.15.0_typescript@5.9.2",
+    "npm:svelte-dnd-action@~0.9.65": "0.9.65_svelte@5.38.8__acorn@8.15.0",
+    "npm:svelte-hero-icons@^5.2.0": "5.2.0_svelte@5.38.8__acorn@8.15.0",
     "npm:svelte@5": "5.38.8_acorn@8.15.0",
     "npm:tailwindcss@^4.1.13": "4.1.13",
     "npm:typescript@5": "5.9.2",
@@ -317,6 +319,9 @@
     },
     "@standard-schema/spec@1.0.0": {
       "integrity": "sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA=="
+    },
+    "@steeze-ui/heroicons@2.4.2": {
+      "integrity": "sha512-66luL+uaxyC6mcZigewH4phfDxNWj4sH+n6qK2VnY3zcgpMmNAgVQbMGfZYfKhLqrUo13BlqpmhWuHqAUpehlA=="
     },
     "@sveltejs/acorn-typescript@1.0.5_acorn@8.15.0": {
       "integrity": "sha512-IwQk4yfwLdibDlrXVE04jTZYlLnwsTT2PIOQQGNLWfjavGifnk1JD1LcZjZaBTRcxZu2FfPfNLOE04DSu9lqtQ==",
@@ -891,6 +896,19 @@
       ],
       "bin": true
     },
+    "svelte-dnd-action@0.9.65_svelte@5.38.8__acorn@8.15.0": {
+      "integrity": "sha512-GKFtrAtYAjcm27aMELoXOhkLtKA1AEoj2njjCReCer6jh1hnRtTHdEO4Kjfpayz+ZAvE0MMwIvLISW3tsiO9Qg==",
+      "dependencies": [
+        "svelte"
+      ]
+    },
+    "svelte-hero-icons@5.2.0_svelte@5.38.8__acorn@8.15.0": {
+      "integrity": "sha512-KpdMTL0bOnkxciEmDXvyVF/R5nrZ1x1uHCSt9gMrrbEd3g5HSIaaDChOutTOfeI+cZ3EJbb+OcBH/lBzJr1aEw==",
+      "dependencies": [
+        "@steeze-ui/heroicons",
+        "svelte"
+      ]
+    },
     "svelte@5.38.8_acorn@8.15.0": {
       "integrity": "sha512-UDpTbM/iuZ4MaMnn4ODB3rf5JKDyPOi5oJcopP0j7YHQ9BuJtsAqsR71r2N6AnJf7ygbalTJU5y8eSWGAQZjlQ==",
       "dependencies": [
@@ -991,6 +1009,8 @@
         "npm:jsonwebtoken@^9.0.2",
         "npm:postgres@^3.4.7",
         "npm:svelte-check@4",
+        "npm:svelte-dnd-action@~0.9.65",
+        "npm:svelte-hero-icons@^5.2.0",
         "npm:svelte@5",
         "npm:tailwindcss@^4.1.13",
         "npm:typescript@5",

@@ -1,5 +1,5 @@
 import type { Actions } from "./$types";
-import { requireAuth } from "$lib/auth/middleware";
+import { requireAuth } from "$lib/server/auth/middleware";
 import Database, { type ProgressValues } from "$lib/server/database";
 
 export const actions: Actions = {
@@ -10,13 +10,11 @@ export const actions: Actions = {
     const data = await request.formData();
     data.append("user_id", user.id.toString());
     // console.log(user);
-    console.log(data);
 
     // const status = data.get("status") as string;
     // const enjoyment_rating = data.get("enjoyment_rating") as string;
     const params: ProgressValues = { status: "In Progress" };
     data.entries().forEach(([key, value]) => {
-      console.log(value, key);
       if (value === "") return;
       if (key == "status") {
         params.status = value;
@@ -25,6 +23,8 @@ export const actions: Actions = {
         if (params.completion_pct >= 100) {
           params.completion_pct = 100;
         }
+      } else if (key == "total_attempts") {
+        params.total_attempts = parseInt(value);
       } else if (key == "enjoyment_rating") {
         params.enjoyment_rating = parseInt(value);
       } else if (key == "start_date") {

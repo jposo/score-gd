@@ -5,12 +5,10 @@
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
   import "../app.css";
-  import type { PageProps } from "./$types";
+  import type { PageData } from "./$types";
   import type { User } from "$lib/db-types";
 
-  let { children, data }: { children: any; data: PageProps } = $props();
-
-  // let user: User = data.user;
+  let { children, data }: { children: any; data: PageData } = $props();
 
   // Initialize theme on mount
   onMount(() => {
@@ -43,6 +41,7 @@
 
 <svelte:head>
   <link rel="icon" href={favicon} />
+  <title>loggd</title>
 </svelte:head>
 
 <nav class="navbar bg-base-300 shadow-sm">
@@ -51,6 +50,7 @@
   </div>
   <div class="flex gap-4 px-4">
     <label class="input">
+      <!-- <Icon src={MagnifyingGlass} class="h-[1em] opacity-50" /> -->
       <svg
         class="h-[1em] opacity-50"
         xmlns="http://www.w3.org/2000/svg"
@@ -137,7 +137,7 @@
             <span>Hi, {data.user.username}!</span>
           </li>
           <li>
-            <a href="/profile"> Profile </a>
+            <a href="/profile/{data.user.id}"> Profile </a>
           </li>
           <li><a href="/settings">Settings</a></li>
           <li><button onclick={handleLogout}>Logout</button></li>

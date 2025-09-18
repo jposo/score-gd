@@ -6,7 +6,7 @@ import {
   isValidPassword,
   generateToken,
   cookieOptions,
-} from "$lib/auth/utils";
+} from "$lib/server/auth/utils";
 import Database from "$lib/server/database";
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
@@ -74,11 +74,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     const passwordHash = await hashPassword(password);
 
     // Create user
-    const user = await Database.instance.createUser(
+    const user = await Database.instance.createUser({
       username,
       email,
-      passwordHash,
-    );
+      password_hash: passwordHash,
+    });
     if (!user) {
       return json({ error: "Failed to create user account" }, { status: 500 });
     }
