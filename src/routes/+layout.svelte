@@ -137,7 +137,7 @@
             <span>Hi, {data.user.username}!</span>
           </li>
           <li>
-            <a href="/profile/{data.user.id}"> Profile </a>
+            <a href="/profile/{data.user.username}"> Profile </a>
           </li>
           <li><a href="/settings">Settings</a></li>
           <li><button onclick={handleLogout}>Logout</button></li>

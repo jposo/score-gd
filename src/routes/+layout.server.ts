@@ -23,7 +23,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
   }
 
   // Get full user data from database
-  const user = await Database.instance.getUserById(authToken.userId);
+  const user = await Database.instance.getUserInfo(authToken.username);
 
   return {
     user,

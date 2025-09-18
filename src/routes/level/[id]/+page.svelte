@@ -79,8 +79,10 @@
 
     const form = new FormData();
     form.append("level_id", data.level.id.toString());
-    if (rating) form.append("enjoyment_rating", rating.toString());
     form.append("status", status);
+    if (rating && typeof rating === "number" && !Number.isNaN(rating)) {
+      form.append("enjoyment_rating", rating.toString());
+    }
     await request(form);
   }
 

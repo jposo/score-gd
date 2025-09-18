@@ -1,30 +1,25 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { json, error } from "@sveltejs/kit";
-import { requireAuth } from "$lib/server/auth/middleware";
+import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import Database from "$lib/server/database";
 
 export const load: PageServerLoad = async (event) => {
-  // Require authentication for profile page
-  const localUser = await requireAuth(event);
-  const id = event.params.id as string;
-  const parsedId = parseInt(id);
-  if (!Number.isInteger(parsedId)) {
-    return json({ error: "Invalid user ID" });
-  }
-  const user = await Database.instance.getUserById(parsedId);
+  const username = event.params.username as string;
+  const user = await Database.instance.getUserInfo(username);
   if (!user) {
     return json({ error: "User not found" });
   }
-  // const activity = await Database.instance.getRecentActivity(user.id);
 
-  // const list = await Database.instance.getUserList(user.id);
+  const token = getTokenFromCookies(event.cookies);
+  let isUser = false;
+  if (token) {
+    const authToken = verifyToken(token);
+    isUser = authToken?.username === user.username;
+  }
 
-  // Return user data for the profile page
   return {
     user,
-    isUser: user && user.username === localUser.username,
-    // activity,
-    // list,
+    isUser,
   };
 };
 

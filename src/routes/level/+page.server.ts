@@ -1,3 +1,4 @@
+import { json, error } from "@sveltejs/kit";
 import type { Actions } from "./$types";
 import { requireAuth } from "$lib/server/auth/middleware";
 import Database, { type ProgressValues } from "$lib/server/database";
@@ -42,8 +43,11 @@ export const actions: Actions = {
       }
     });
 
-    console.log(params);
-
-    Database.instance.updateUserProgress(params);
+    const result = await Database.instance.updateUserProgress(params);
+    if (result) {
+      json({ success: true });
+    } else {
+      error(400, "Failed to update progress");
+    }
   },
 };

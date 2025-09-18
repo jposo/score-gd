@@ -33,7 +33,7 @@
     <div class="flex flex-col content-center w-full">
       <div class="flex flex-row justify-between">
         <span class="font-bold text-primary hover:underline"
-          ><a href="/profile/{props.userId}">{props.username}</a></span
+          ><a href="/profile/{props.username}">{props.username}</a></span
         >
         <span class="opacity-50">{dateToString(props.createdAt)}</span>
       </div>

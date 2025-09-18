@@ -145,7 +145,7 @@ export default class Database {
     }
   }
 
-  async getUserById(id: number) {
+  async getUserInfo(username: string) {
     try {
       const [user] = await this.sql`
         SELECT
@@ -163,7 +163,8 @@ export default class Database {
            	  'geometry_dash_id', l.geometry_dash_id,
            	  'level_name', l.name,
            	  'placement', p.placement,
-              'enjoyment_rating', p.enjoyment_rating
+              'enjoyment_rating', p.enjoyment_rating,
+              'attempts', p.total_attempts
             )
            	ORDER BY p.placement ASC
           ) FILTER (WHERE p.status = 'Completed') AS list,
@@ -181,7 +182,7 @@ export default class Database {
         FROM users u
         LEFT JOIN progress p ON u.id = p.user_id
         LEFT JOIN levels l ON l.id = p.level_id
-        WHERE u.id = ${id}
+        WHERE u.username = ${username}
         GROUP BY u.id
       `;
       return user as User & {
@@ -192,6 +193,7 @@ export default class Database {
           id: number;
           geometry_dash_id: number;
           level_name: string;
+          attempts: number;
           placement: number;
           enjoyment_rating: number;
         }[];
