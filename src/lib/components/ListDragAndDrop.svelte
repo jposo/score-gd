@@ -9,7 +9,13 @@
     editMode,
     onDrop,
   }: {
-    items: { id: number; level_name: string }[];
+    items: {
+      id: number;
+      level_name: string;
+      publisher: string;
+      attempts: number;
+      enjoyment_rating: number;
+    }[];
     editMode: boolean;
     onDrop: (newItems: ListItem[]) => void;
   } = $props();
@@ -25,26 +31,44 @@
   }
 </script>
 
-<div
+<ul
   use:dndzone={{ items, flipDurationMs, dragDisabled: !editMode }}
   onconsider={handleDndConsider}
   onfinalize={handleDndFinalize}
-  class="w-full"
+  class="list shadow-sm"
 >
   {#each items as item, index (item.id)}
-    <div
-      class="collapse bg-base-200 border border-base-300 my-2"
+    <li
+      class="list-row flex items-center"
       animate:flip={{ duration: flipDurationMs }}
     >
-      <!-- <input type="radio" name="my-accordion-1" checked={true} /> -->
-      <div class="collapse-title font-semibold flex flex-row items-center">
+      <div class="flex items-center text-4xl font-thin opacity-30 tabular-nums">
         {#if editMode}
-          <Icon src={Bars3} class="size-4 me-2" />
+          <span class="cursor-grab">
+            <Icon src={Bars3} class="size-6 me-2" />
+          </span>
         {/if}
-        #{index + 1}
-        {item.level_name}
+        {index + 1}
       </div>
-      <div class="collapse-content text-sm">{item.level_name}</div>
-    </div>
+      <!-- <div class="text-4xl font-thin opacity-30 tabular-nums">
+        {index + 1}
+      </div> -->
+      <div class="list-col-grow">
+        <div class="text-xl bold">
+          {item.level_name}
+          <span class="text-xs font-semibold opacity-60">
+            {item.publisher}
+          </span>
+        </div>
+        <div class="text-xs uppercase font-semibold opacity-60">
+          {#if item.attempts}
+            {item.attempts} attempts
+          {/if}
+          {#if item.enjoyment_rating}
+            {item.enjoyment_rating}/10
+          {/if}
+        </div>
+      </div>
+    </li>
   {/each}
-</div>
+</ul>

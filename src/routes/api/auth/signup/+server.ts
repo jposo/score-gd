@@ -74,7 +74,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     const passwordHash = await hashPassword(password);
 
     // Create user
-    const user = await Database.instance.createUser({
+    const user = await Database.instance.insertUser({
       username,
       email,
       password_hash: passwordHash,

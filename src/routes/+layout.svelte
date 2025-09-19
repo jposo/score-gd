@@ -45,10 +45,15 @@
 </svelte:head>
 
 <nav class="navbar bg-base-300 shadow-sm">
-  <div class="flex-1">
+  <div class="navbar-start">
     <a href="/" class="btn btn-ghost text-xl">loggd</a>
   </div>
-  <div class="flex gap-4 px-4">
+
+  <div class="navbar-center">
+    <a href="/levels" class="btn">Levels</a>
+  </div>
+
+  <div class="navbar-end flex gap-4">
     <label class="input">
       <!-- <Icon src={MagnifyingGlass} class="h-[1em] opacity-50" /> -->
       <svg
@@ -70,8 +75,47 @@
       <input type="search" placeholder="Search" />
     </label>
 
+    <!-- <ul class="menu menu-horizontal px-1">
+      <li><a href="/levels">Levels</a></li>
+      <li>
+        <details>
+          <summary>
+            <svg
+              class="fill-current w-4 h-4"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+            >
+              <path
+                d="M448,256c0-106-86-192-192-192V448C362,448,448,362,448,256Z"
+              />
+              <path d="M256,64C150,64,64,150,64,256s86,192,192,192V64Z" />
+            </svg>
+            Theme
+          </summary>
+          <ul class="p-2">
+            {#each themes as themeOption}
+              {@const isCurrentTheme = $theme === themeOption}
+              <li>
+                <input
+                  type="radio"
+                  name="theme-dropdown"
+                  class="theme-controller btn btn-sm btn-block {!isCurrentTheme
+                    ? 'btn-ghost'
+                    : ''} justify-start"
+                  aria-label={themeOption}
+                  value={themeOption}
+                  checked={isCurrentTheme}
+                  onchange={() => setTheme(themeOption)}
+                />
+              </li>
+            {/each}
+          </ul>
+        </details>
+      </li>
+    </ul> -->
+
     <!-- Theme Controller -->
-    <div class="dropdown dropdown-end">
+    <!-- <div class="dropdown dropdown-end">
       <div tabindex="0" role="button" class="btn btn-ghost">
         <svg
           class="fill-current w-4 h-4"
@@ -106,7 +150,7 @@
           </li>
         {/each}
       </ul>
-    </div>
+    </div> -->
 
     {#if data.user}
       <!-- Authenticated user menu -->

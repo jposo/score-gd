@@ -11,7 +11,11 @@ export const GET: RequestHandler = async ({ url }) => {
 
 export const POST: RequestHandler = async ({ request }) => {
   const body = await request.json();
-  await addLevelsToDatabase(body?.pageCount ?? 0);
+  try {
+    await addLevelsToDatabase(body?.pageCount ?? 0);
+  } catch (error) {
+    console.log(error);
+  }
   // const { levelId, levelType } = await request.json();
   // const db = Database.instance;
   // await db.insertLevel({

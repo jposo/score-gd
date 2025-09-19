@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { enhance } from "$app/forms";
-  import { onMount } from "svelte";
-  import getDifficultyColor from "$lib/tools/getDifficultyColor";
-  import type { Level, Progress, User } from "$lib/db-types";
   import type { PageData } from "./$types";
-  // import { getTokenFromCookies } from "$lib/auth/utils";
-  import { convertDate, dateToString } from "$lib/tools/utils";
+  import {
+    convertDate,
+    dateToString,
+    calculateNewAverage,
+  } from "$lib/tools/utils";
   import Review from "$lib/components/Review.svelte";
   import Alert from "$lib/components/Alert.svelte";
 
@@ -14,7 +13,10 @@
   let details: HTMLDialogElement | undefined = $state();
   let success: string | undefined = $state();
   let error: string | undefined = $state();
+  const alertDuration = 2000;
 
+  let average = $state(data.level.average_rating ?? undefined);
+  let oldRating = $state(data.progress?.enjoyment_rating ?? undefined);
   let rating = $state(data.progress?.enjoyment_rating ?? undefined);
   let status = $state(data.progress?.status ?? undefined);
   let completionPercentage = $state(data.progress?.completion_pct ?? undefined);
@@ -25,8 +27,6 @@
   );
   let review = $state(data.progress?.review ?? undefined);
   let isAuthenticated = data.user !== null;
-
-  const alertDuration = 2000;
 
   const ratingOptions = [
     { value: 1, label: "Terrible" },
@@ -50,25 +50,27 @@
 
   async function request(formData: FormData) {
     try {
-      const response = await fetch(`/level`, {
+      const response = await fetch(`/level/${data.level.id}`, {
         method: "POST",
         body: formData,
       });
 
       if (response.ok) {
-        // Handle success
         success = "Progress updated successfully";
         setTimeout(() => {
           success = undefined;
         }, alertDuration);
       } else {
-        // Handle error
-        error = await response.text();
+        error = "Failed to update list";
       }
     } catch (error) {
-      // Handle network error
       console.error(error);
-      error = "Network error occurred";
+      error = "An error occurred while updating the progress";
+    } finally {
+      setTimeout(() => {
+        success = undefined;
+        error = undefined;
+      }, alertDuration);
     }
   }
 
@@ -78,10 +80,18 @@
       status = "In Progress";
 
     const form = new FormData();
-    form.append("level_id", data.level.id.toString());
     form.append("status", status);
     if (rating && typeof rating === "number" && !Number.isNaN(rating)) {
       form.append("enjoyment_rating", rating.toString());
+      if (average && oldRating) {
+        average = calculateNewAverage(
+          data.level.progress_count,
+          average,
+          oldRating,
+          rating,
+        );
+      }
+      oldRating = rating;
     }
     await request(form);
   }
@@ -92,7 +102,6 @@
       status = "In Progress";
 
     const form = new FormData(event.target as HTMLFormElement);
-    form.append("level_id", data.level.id.toString());
     form.append("status", status!);
 
     await request(form);
@@ -105,6 +114,9 @@
 
 {#if success}
   <Alert message={success} type="success" duration={alertDuration} />
+{/if}
+{#if error}
+  <Alert message={error} type="error" duration={alertDuration} />
 {/if}
 
 <div class="container mx-auto p-4">
@@ -269,7 +281,7 @@
                       <button
                         type="button"
                         class="btn"
-                        onclick={() => details.close()}
+                        onclick={() => details!.close()}
                       >
                         Close
                       </button>
@@ -285,9 +297,7 @@
           <div class="stat">
             <div class="stat-title">Enjoyment</div>
             <div class="stat-value">
-              {data.level.average_rating
-                ? parseFloat(data.level.average_rating).toFixed(1)
-                : "N/A"}
+              {average ? average.toFixed(1) : "N/A"}
             </div>
           </div>
 
@@ -322,9 +332,20 @@
               {/if}
               by <span class="font-semibold">{data.level.publisher}</span>
             </h2>
-            <p>{data.level.description}</p>
+            <p class="italic">{data.level.description}</p>
             <span>
+              <div class="badge badge-neutral">
+                <span class="font-semibold">{data.level.song_title}</span> by
+                <span class="font-semibold">{data.level.song_artist}</span>
+              </div>
+              <div class="badge badge-warning">{data.level.rating}</div>
               <div class="badge badge-neutral">{data.level.length}</div>
+              {#if data.level.two_player}
+                <div class="badge badge-neutral">2-Player</div>
+              {/if}
+              {#if data.level.coins && data.level.coins >= 1}
+                <div class="badge badge-neutral">{data.level.coins} Coins</div>
+              {/if}
               <div class="badge badge-error">{data.level.difficulty}</div>
             </span>
           </div>
@@ -346,18 +367,17 @@
         <!-- Reviews -->
         <div class="flex flex-col gap-4">
           <h3 class="text-xl">Reviews</h3>
-          {#if !data.reviews || data.reviews?.length == 0}
+          {#if !data.level.reviews || data.level.reviews.length == 0}
             <div class="opacity-50">No reviews yet.</div>
           {:else}
-            {#each data.reviews as r}
+            {#each data.level.reviews as r}
               <Review
-                userId={r.user_id}
                 username={r.username}
                 profilePictureUrl={r.profile_picture_url}
                 rating={r.enjoyment_rating}
                 attempts={r.total_attempts}
                 status={r.status}
-                createdAt={r.created_at}
+                date={new Date(r.updated_at)}
                 review={r.review!}
               />
               <div class="divider"></div>

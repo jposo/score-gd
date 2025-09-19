@@ -2,33 +2,56 @@
   import type { PageData } from "./$types";
   import { Icon, Check, ListBullet, Clock, Pencil } from "svelte-hero-icons";
   import Activity from "$lib/components/Activity.svelte";
+  import Alert from "$lib/components/Alert.svelte";
   import List from "$lib/components/ListDragAndDrop.svelte";
   import { formatDate } from "$lib/tools/utils";
   import type { ListItem } from "$lib/shared/types";
 
   let { data }: { data: PageData } = $props();
 
-  let editMode = $state(false);
+  let success: string | undefined = $state();
+  let error: string | undefined = $state();
+  const alertDuration = 2000;
 
-  let lastState: ListItem[] = [];
+  let editMode = $state(false);
+  let lastState: ListItem[] | undefined = undefined;
+  let firstState: ListItem[] | undefined = undefined;
 
   function handleDrop(newItems: ListItem[]) {
-    if (!lastState) return;
+    if (lastState === undefined) {
+      firstState = newItems;
+    }
     lastState = newItems;
   }
 
   async function updateListPlacement() {
-    if (!lastState) return;
     editMode = !editMode;
     if (!editMode) {
+      if (lastState === undefined) return;
+      if (firstState === lastState) return;
       const form = new FormData();
       form.append("list", JSON.stringify(lastState));
 
-      const response = await fetch(`/profile/${data.user!.id}`, {
-        method: "POST",
-        body: form,
-      });
-      console.log("LastState:", lastState);
+      try {
+        const response = await fetch(`/profile/${data.user!.id}`, {
+          method: "POST",
+          body: form,
+        });
+
+        if (response.ok) {
+          success = "List updated successfully";
+        } else {
+          error = "Failed to update list";
+        }
+      } catch (error) {
+        error = "An error occurred while updating the list";
+      } finally {
+        lastState = undefined;
+        setTimeout(() => {
+          success = undefined;
+          error = undefined;
+        }, alertDuration);
+      }
     }
   }
 </script>
@@ -36,6 +59,13 @@
 <svelte:head>
   <title>Profile - {data.user?.username} - loggd</title>
 </svelte:head>
+
+{#if success}
+  <Alert message={success} type="success" duration={alertDuration} />
+{/if}
+{#if error}
+  <Alert message={error} type="error" duration={alertDuration} />
+{/if}
 
 {#if data.user}
   <div class="container mx-auto px-4 py-8">
@@ -160,16 +190,18 @@
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
             {#if data.isUser}
-              <button
-                class="btn btn-sm btn-square"
-                onclick={updateListPlacement}
-              >
-                {#if editMode}
-                  <Icon src={Check} class="size-[1.2em]" />
-                {:else}
-                  <Icon src={Pencil} class="size-[1.2em]" />
-                {/if}
-              </button>
+              <div class="flex justify-end">
+                <button
+                  class="btn btn-sm btn-square"
+                  onclick={updateListPlacement}
+                >
+                  {#if editMode}
+                    <Icon src={Check} class="size-[1.2em]" />
+                  {:else}
+                    <Icon src={Pencil} class="size-[1.2em]" />
+                  {/if}
+                </button>
+              </div>
             {/if}
             <List items={data.user.list!} {editMode} onDrop={handleDrop} />
           </div>

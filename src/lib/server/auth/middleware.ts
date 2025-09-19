@@ -41,7 +41,7 @@ export async function requireAuth(event: RequestEvent, redirectTo?: string) {
   }
 
   // Get full user data from database
-  const user = await Database.instance.getUserById(authToken.userId);
+  const user = await Database.instance.getUserInfo(authToken.username);
   if (!user) {
     // User doesn't exist in database, clear token and redirect
     cookies.set("auth-token", "", {

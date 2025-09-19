@@ -39,3 +39,13 @@ export function formatDate(dateString: string | Date) {
     day: "numeric",
   });
 }
+
+export function calculateNewAverage(
+  count: number,
+  oldAverage: number,
+  oldRating: number,
+  newRating: number,
+) {
+  const total = oldAverage * count - oldRating + newRating;
+  return total / count;
+}

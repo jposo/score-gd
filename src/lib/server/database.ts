@@ -1,6 +1,5 @@
 import postgres from "postgres";
 import type { Level, Song, User, Progress } from "$lib/db-types";
-import type { ListItem } from "../shared/types";
 
 // interface LoggdDatabase {
 //   getUsers();
@@ -43,41 +42,90 @@ export default class Database {
     await this.sql?.end();
   }
 
-  public async getLevels() {
+  public async getLevels(page?: number) {
+    const LIMIT = 18;
     const levels = await this.sql`
-      SELECT * FROM levels
+      SELECT *
+      FROM levels
+      ORDER BY id ASC
+      LIMIT ${LIMIT} OFFSET ${page ? (page - 1) * LIMIT : 0}
     `;
-    return levels;
+    return levels as Level[];
   }
 
-  public async getLevel(id: number) {
-    const level = await this.sql`
+  public async getLevel(geometry_dash_id: number) {
+    const [level] = await this.sql`
       SELECT
-       	l.*,
-        CAST(AVG(p.enjoyment_rating) AS DECIMAL(10, 2)) AS average_rating,
+       	l.geometry_dash_id,
+        l.name,
+        l.publisher,
+        l.publisher_id,
+        l.description,
+        l.difficulty,
+        l.coins,
+        l.two_player,
+        l.rating,
+        l.length,
+        l.release_date,
+        l.video_url,
+        s.geometry_dash_id AS song_geometry_dash_id,
+        s.title AS song_title,
+        s.artist AS song_artist,
+        CAST(COUNT(p.enjoyment_rating) AS INTEGER) AS progress_count,
+        CAST(AVG(p.enjoyment_rating) AS FLOAT) AS average_rating,
        	CAST(COUNT(CASE WHEN p.status = 'Completed' THEN 1 END) AS INTEGER) AS completion_count,
-       	CAST(COUNT(CASE WHEN p.review IS NOT NULL THEN 1 END) AS INTEGER) AS review_count
+       	CAST(COUNT(CASE WHEN p.review IS NOT NULL THEN 1 END) AS INTEGER) AS review_count,
+        json_agg(
+          json_build_object(
+            'username', u.username,
+            'status', p.status,
+            'enjoyment_rating', p.enjoyment_rating,
+            'review', p.review,
+            'profile_picture_url', u.profile_picture_url,
+            'total_attempts', p.total_attempts,
+            'updated_at', p.updated_at
+          )
+          ORDER BY p.updated_at DESC
+        ) FILTER (WHERE p.review IS NOT NULL
+          AND p.status NOT IN ('In Progress', 'To Try')) AS reviews
       FROM levels l
+      JOIN songs s ON l.song_id = s.id
       LEFT JOIN progress p ON l.id = p.level_id
-      WHERE l.geometry_dash_id = ${id}
-      GROUP BY l.id;
+      LEFT JOIN users u ON p.user_id = u.id
+      WHERE l.geometry_dash_id = ${geometry_dash_id}
+      GROUP BY l.id, s.geometry_dash_id, s.title, s.artist
+      LIMIT 10;
     `;
     return (
-      (level[0] as Level & {
-        average_rating: number;
+      (level as Level & {
+        song_geometry_dash_id: number;
+        song_title: string;
+        song_artist: string;
+        progress_count: number;
+        average_rating: number | null;
         completion_count: number;
         review_count: number;
+        reviews: {
+          username: string;
+          status: string;
+          enjoyment_rating: number;
+          review: string;
+          profile_picture_url: string;
+          total_attempts: number;
+          updated_at: string;
+        }[];
       }) || null
     );
   }
 
   public async insertLevel(values: LevelValues) {
     console.log("Inserting level with values:", values);
-    const result = await this.sql`
+    const [result] = await this.sql`
       INSERT INTO levels ${this.sql(values)}
-      RETURNING id;
+      ON CONFLICT (geometry_dash_id) DO NOTHING
+      RETURNING geometry_dash_id;
     `;
-    return result[0].id;
+    return result as Level | null;
   }
 
   public async getSong(id: number): Promise<Song | null> {
@@ -103,7 +151,7 @@ export default class Database {
     return result[0].id;
   }
 
-  async createUser(values: UserValues) {
+  async insertUser(values: UserValues) {
     try {
       const [user] = await this.sql`
         INSERT INTO users (username, email, password_hash)
@@ -154,14 +202,15 @@ export default class Database {
           u.bio,
           u.profile_picture_url,
           u.created_at,
-          CAST(SUM(CASE WHEN p.status = 'Completed' THEN 1 END) AS INTEGER) AS levels_completed,
+          CAST(COUNT(CASE WHEN p.status = 'Completed' THEN 1 END) AS INTEGER) AS levels_completed,
           CAST(AVG(p.enjoyment_rating) AS FLOAT) AS average_rating,
-          CAST(SUM(CASE WHEN p.review IS NOT NULL THEN 1 END) AS INTEGER) AS reviews_written,
+          CAST(COUNT(CASE WHEN p.review IS NOT NULL THEN 1 END) AS INTEGER) AS reviews_written,
           json_agg(
             json_build_object(
               'id', p.id,
            	  'geometry_dash_id', l.geometry_dash_id,
            	  'level_name', l.name,
+              'publisher', l.publisher,
            	  'placement', p.placement,
               'enjoyment_rating', p.enjoyment_rating,
               'attempts', p.total_attempts
@@ -193,6 +242,7 @@ export default class Database {
           id: number;
           geometry_dash_id: number;
           level_name: string;
+          publisher: string;
           attempts: number;
           placement: number;
           enjoyment_rating: number;
@@ -217,16 +267,9 @@ export default class Database {
     updates: Partial<Pick<User, "bio" | "profile_picture_url">>,
   ) {
     try {
-      const setClause = Object.entries(updates)
-        .filter(([_, value]) => value !== undefined)
-        .map(([key, _]) => `${key} = $${key}`)
-        .join(", ");
-
-      if (!setClause) return null;
-
       const [user] = await this.sql`
         UPDATE users
-        SET ${this.sql(updates)}
+        SET ${this.sql(updates)}, updated_at = NOW()
         WHERE id = ${id}
         RETURNING id, username, email, bio, profile_picture_url, created_at
       `;
@@ -246,23 +289,10 @@ export default class Database {
       `;
       return progress as Progress;
     } catch (error) {
-      console.error("Error getting user progress:", error);
-      return null;
-    }
-  }
-
-  async getUserList(userId: number) {
-    try {
-      const list = await this.sql`
-        SELECT p.id, p.placement, l.id as level_id, l.name
-        FROM progress p
-        JOIN levels l ON p.level_id = l.id
-        WHERE user_id = ${userId}
-        ORDER BY placement ASC, updated_at DESC
-      `;
-      return list as ListItem[];
-    } catch (error) {
-      console.error("Error getting user progresses:", error);
+      console.error(
+        `Error getting user progress, params: userId=${userId}, levelId=${levelId}`,
+        error,
+      );
       return null;
     }
   }
@@ -276,28 +306,6 @@ export default class Database {
       `;
     } catch (error) {
       console.error("Error updating list placement:", error);
-      return null;
-    }
-  }
-
-  async getReviews(level_id: number) {
-    try {
-      const reviews = await this.sql`
-        SELECT p.status, p.enjoyment_rating, p.review, p.created_at, p.user_id, u.username, u.profile_picture_url, p.total_attempts
-        FROM progress p
-        JOIN users u ON p.user_id = u.id
-        WHERE level_id = ${level_id}
-          AND p.review IS NOT NULL
-          AND p.status NOT IN ('In Progress', 'To Try')
-        ORDER BY p.created_at DESC
-        LIMIT 15
-      `;
-      return reviews as (Progress & {
-        username: string;
-        profile_picture_url: string;
-      })[];
-    } catch (error) {
-      console.error("Error getting reviews:", error);
       return null;
     }
   }
@@ -354,7 +362,7 @@ export default class Database {
     }
     try {
       const [progress] = await this.sql`
-        UPDATE progress SET ${this.sql(values)}
+        UPDATE progress SET ${this.sql(values)}, updated_at = NOW()
         WHERE level_id = ${values.level_id} AND user_id = ${values.user_id}
         RETURNING *
       `;

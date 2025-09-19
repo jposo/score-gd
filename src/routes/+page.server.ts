@@ -4,9 +4,9 @@ import Database from "$lib/server/database";
 
 export const load: PageServerLoad = async () => {
   try {
-    const db = Database.instance;
-    const levels = await db.getLevels();
-    return { data: levels };
+    // const db = Database.instance;
+    // const levels = await db.getLevels();
+    // return { levels };
   } catch (err) {
     console.error(err);
     error(404, "Not found");

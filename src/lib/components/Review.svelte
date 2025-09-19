@@ -2,11 +2,10 @@
   import { dateToString, abbreviateNumber } from "$lib/tools/utils";
 
   let props: {
-    userId: number;
     username: string;
     profilePictureUrl: string | null;
     status: string;
-    createdAt: Date;
+    date: Date;
     rating: number | null;
     attempts: number | null;
     review: string;
@@ -35,7 +34,7 @@
         <span class="font-bold text-primary hover:underline"
           ><a href="/profile/{props.username}">{props.username}</a></span
         >
-        <span class="opacity-50">{dateToString(props.createdAt)}</span>
+        <span class="opacity-50">{dateToString(props.date)}</span>
       </div>
       <div class="font-semibold">{subtitle}</div>
     </div>

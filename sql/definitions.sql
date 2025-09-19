@@ -15,6 +15,14 @@ CREATE TYPE LevelType AS ENUM (
   'Platformer'
 );
 
+CREATE TYPE LevelRating AS ENUM (
+  'Rated',
+  'Featured',
+  'Epic',
+  'Legendary',
+  'Mythic'
+);
+
 CREATE TYPE LevelDifficulty AS ENUM (
   'N/A',
   'Auto',
@@ -35,7 +43,8 @@ CREATE TYPE LevelLength AS ENUM (
   'Short',
   'Medium',
   'Long',
-  'XL'
+  'XL',
+  'Platformer'
 );
 
 CREATE TYPE ProgressStatus AS ENUM (

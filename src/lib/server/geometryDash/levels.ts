@@ -1,5 +1,6 @@
 import { splitPairings } from "../utils";
 import Database from "../database";
+import { OfficialSongs } from "./officialSongs";
 
 const Type = {
   SearchQuery: "0",
@@ -50,100 +51,13 @@ const Length = {
   Platformer: "5",
 };
 
-const Number2Length: Record<string, string> = {
-  "0": "Tiny",
-  "1": "Short",
-  "2": "Medium",
-  "3": "Long",
-  "4": "XL",
-  "5": "Platformer",
-};
-
-const OfficialSongs: Record<string, { title: string; artist: string }> = {
-  "0": {
-    title: "Stereo Madness",
-    artist: "ForeverBound",
-  },
-  "1": {
-    title: "Back on Track",
-    artist: "DJVI",
-  },
-  "2": {
-    title: "Polargeist",
-    artist: "Step",
-  },
-  "3": {
-    title: "Dry Out",
-    artist: "DJVI",
-  },
-  "4": {
-    title: "Base After Base",
-    artist: "DJVI",
-  },
-  "5": {
-    title: "Can't Let Go",
-    artist: "DJVI",
-  },
-  "6": {
-    title: "Jumper",
-    artist: "Waterflame",
-  },
-  "7": {
-    title: "Time Machine",
-    artist: "Waterflame",
-  },
-  "8": {
-    title: "Cycles",
-    artist: "DJVI",
-  },
-  "9": {
-    title: "xStep",
-    artist: "DJVI",
-  },
-  "10": {
-    title: "Clutterfunk",
-    artist: "Waterflame",
-  },
-  "11": {
-    title: "Theory of Everything",
-    artist: "DJ-Nate",
-  },
-  "12": {
-    title: "Electroman Adventures",
-    artist: "DJ-Nate",
-  },
-  "13": {
-    title: "Clubstep",
-    artist: "DJ-Nate",
-  },
-  "14": {
-    title: "Electrodynamix",
-    artist: "DJ-Nate",
-  },
-  "15": {
-    title: "Hexagon Force",
-    artist: "DJ-Nate",
-  },
-  "16": {
-    title: "Blast Processing",
-    artist: "DJ-Nate",
-  },
-  "17": {
-    title: "Theory of Everything 2",
-    artist: "DJ-Nate",
-  },
-  "18": {
-    title: "Geometrical Dominator",
-    artist: "Waterflame",
-  },
-  "19": {
-    title: "Deadlocked",
-    artist: "F-777",
-  },
-  "20": {
-    title: "Fingerdash",
-    artist: "MDK",
-  },
+const Number2Length: Record<number, string> = {
+  0: "Tiny",
+  1: "Short",
+  2: "Medium",
+  3: "Long",
+  4: "XL",
+  5: "Platformer",
 };
 
 async function getLevels(params: {
@@ -197,6 +111,100 @@ async function getLevels(params: {
   await parseResponse(text);
 }
 
+function getDifficulty(
+  difficultyDenominator: number,
+  difficultyNumerator: number,
+  demon: boolean,
+  demonDifficulty: number,
+  auto: boolean,
+) {
+  if (auto) return "Auto";
+  if (difficultyDenominator === 0) return "N/A";
+
+  if (demon) {
+    if (demonDifficulty === 3) return "Easy Demon";
+    if (demonDifficulty === 4) return "Medium Demon";
+    if (demonDifficulty === 0) return "Hard Demon";
+    if (demonDifficulty === 5) return "Insane Demon";
+    if (demonDifficulty === 6) return "Extreme Demon";
+  }
+
+  if (difficultyNumerator === 10) return "Easy";
+  if (difficultyNumerator === 20) return "Normal";
+  if (difficultyNumerator === 30) return "Hard";
+  if (difficultyNumerator === 40) return "Harder";
+  if (difficultyNumerator === 50) return "Insane";
+}
+
+export interface LevelData {
+  /** The unique identifier for the level. (from index 1) */
+  id: number;
+  /** The name of the level. (from index 2) */
+  name: string;
+  /** The description of the level. (from index 3) */
+  description: string | null;
+  /** The version of the level. (from index 5) */
+  version: number;
+  /** The ID of the level's publisher/creator. (from index 6) */
+  publisherID: number;
+  /** The denominator for the difficulty calculation. (from index 8) */
+  difficultyDenominator: number;
+  /** The numerator for the difficulty calculation. (from index 9) */
+  difficultyNumerator: number;
+  /** The total number of downloads. (from index 10) */
+  downloads: number;
+  /** The ID of the official song, if used. (from index 12) */
+  officialSong: number;
+  /** The game version the level was created in. (from index 13) */
+  gameVersion: number;
+  /** The number of likes the level has received. (from index 14) */
+  likes: number;
+  /** The length of the level (e.g., 0=tiny, 1=short, 2=medium, 3=long, 4=xl). (from index 15) */
+  length: number;
+  /** The number of dislikes the level has received. (from index 16) */
+  dislikes: number;
+  /** A boolean (represented as 0 or 1) indicating if the level is a demon. (from index 17) */
+  demon: boolean;
+  /** The number of stars the level is rated. (from index 18) */
+  stars: number;
+  /** The feature score of the level. (from index 19) */
+  featureScore: number;
+  /** A boolean (represented as 0 or 1) indicating if the level is an auto level. (from index 25) */
+  auto: boolean;
+  /** A boolean (represented as 0 or 1) indicating if the level is for two players. (from index 31) */
+  twoPlayer: boolean;
+  /** The ID of the custom song, if used. (from index 35) */
+  customSongID: number;
+  /** The number of user coins in the level. (from index 37) */
+  coins: number;
+  /** A boolean (represented as 0 or 1) indicating if the user coins are verified. (from index 38) */
+  verifiedCoins: boolean;
+  /** The number of stars requested for the level. (from index 39) */
+  starsRequested: number;
+  epic: number;
+  /** The demon difficulty rating (e.g., 0=easy, 1=medium, 2=hard, 3=insane, 4=extreme). (from index 43) */
+  demonDifficulty: number;
+  /** A boolean (represented as 0 or 1) indicating if the level is part of a gauntlet. (from index 44) */
+  isGauntlet: boolean;
+  /** The total number of objects in the level. (from index 45) */
+  objects: number;
+  /** The time spent in the editor in seconds. (from index 46) */
+  editorTime: number;
+  /** The number of copies made of the level. (from index 47) */
+  editorTimeCopies: number;
+}
+
+const toInt = (value: any): number => parseInt(value || "0", 10);
+const toBool = (value: any): boolean => toInt(value) === 1;
+
+function getRating(featureScore: number, epic: number) {
+  if (epic === 3) return "Mythic";
+  if (epic === 2) return "Legendary";
+  if (epic === 1) return "Epic";
+  if (featureScore > 0) return "Featured";
+  return "Rated";
+}
+
 async function parseResponse(text: string) {
   const [levelsRaw, creatorsRaw, songsRaw, pageInfoRaw, hash] = text.split("#");
 
@@ -228,22 +236,62 @@ async function parseResponse(text: string) {
   for (let i = 0; i < levelsList.length; i++) {
     const level = levelsList[i];
     const levelObject = splitPairings(level, ":");
-    const name = levelObject[2];
-    const difficulty = "Extreme Demon";
-    const publisherID = levelObject[6];
-    const publisher = creators[publisherID];
-    const officialSong = levelObject[12];
-    const songID = levelObject[35];
-    const length = levelObject[15];
+    let decodedDescription;
+    try {
+      decodedDescription = atob(levelObject[3]);
+    } catch (error) {
+      console.error(decodedDescription, error);
+      decodedDescription = null;
+    }
+    const data: LevelData = {
+      id: toInt(levelObject[1]),
+      name: levelObject[2] || "",
+      description: decodedDescription,
+      version: toInt(levelObject[5]),
+      publisherID: toInt(levelObject[6]),
+      difficultyDenominator: toInt(levelObject[8]),
+      difficultyNumerator: toInt(levelObject[9]),
+      downloads: toInt(levelObject[10]),
+      officialSong: toInt(levelObject[12]),
+      gameVersion: toInt(levelObject[13]),
+      likes: toInt(levelObject[14]),
+      length: toInt(levelObject[15]),
+      dislikes: toInt(levelObject[16]),
+      demon: toBool(levelObject[17]),
+      stars: toInt(levelObject[18]),
+      featureScore: toInt(levelObject[19]),
+      auto: toBool(levelObject[25]),
+      twoPlayer: toBool(levelObject[31]),
+      customSongID: toInt(levelObject[35]),
+      coins: toInt(levelObject[37]),
+      verifiedCoins: toBool(levelObject[38]),
+      starsRequested: toInt(levelObject[39]),
+      epic: toInt(levelObject[42]),
+      demonDifficulty: toInt(levelObject[43]),
+      isGauntlet: toBool(levelObject[44]),
+      objects: toInt(levelObject[45]),
+      editorTime: toInt(levelObject[46]),
+      editorTimeCopies: toInt(levelObject[47]),
+    };
+
+    const difficulty = getDifficulty(
+      data.difficultyDenominator,
+      data.difficultyNumerator,
+      data.demon,
+      data.demonDifficulty,
+      data.auto,
+    );
+
+    const rating = getRating(data.featureScore, data.epic);
+    const publisher = creators[data.publisherID];
     let song = { artist: "", title: "" };
     let songId;
-    if (songID == "0") {
-      const gdId = 0 - parseInt(officialSong); // negative ids for offical songs
-      song = OfficialSongs[officialSong];
-      const dbsong = await Database.instance.getSong(gdId);
+    if (data.customSongID === 0) {
+      song = OfficialSongs[data.officialSong];
+      const dbsong = await Database.instance.getSong(0 - data.officialSong);
       if (dbsong === null) {
         songId = await Database.instance.insertSong({
-          geometry_dash_id: gdId,
+          geometry_dash_id: 0 - data.officialSong,
           title: song.title,
           artist: song.artist,
         });
@@ -251,12 +299,11 @@ async function parseResponse(text: string) {
         songId = dbsong.id;
       }
     } else {
-      const gdId = parseInt(songID);
-      song = songs[songID];
-      const dbsong = await Database.instance.getSong(gdId);
+      song = songs[data.customSongID];
+      const dbsong = await Database.instance.getSong(data.customSongID);
       if (dbsong === null) {
         songId = await Database.instance.insertSong({
-          geometry_dash_id: gdId,
+          geometry_dash_id: data.customSongID,
           title: song.title,
           artist: song.artist,
         });
@@ -264,33 +311,33 @@ async function parseResponse(text: string) {
         songId = dbsong.id;
       }
     }
-    const levelType = levelObject[15] === "5" ? "Platformer" : "Classic";
-    const levelID = levelObject[1];
-    const levelId = parseInt(levelID);
+    const type = data.length === 5 ? "Platformer" : "Classic";
 
-    console.log(
-      `${name} by ${publisher} with song ${song.title} by ${song.artist} (${levelID}-${levelType})`,
-    );
-
-    const dblevel = await Database.instance.getLevel(levelId);
-    if (dblevel === null) {
-      await Database.instance.insertLevel({
-        geometry_dash_id: levelId,
-        name,
-        type: levelType,
-        publisher,
-        difficulty,
-        length: Number2Length[length],
-        song_id: songId,
-      });
-    } else {
-      console.log("Level already exists. Skipping...");
+    const l = await Database.instance.insertLevel({
+      geometry_dash_id: data.id,
+      name: data.name,
+      description: data.description,
+      type: type,
+      publisher,
+      publisher_id: null,
+      release_date: null,
+      difficulty,
+      length: Number2Length[data.length],
+      song_id: songId,
+      video_url: null,
+      coins: data.coins,
+      two_player: data.twoPlayer,
+      rating: rating,
+    });
+    if (!l) {
+      console.log("Level already exists.");
     }
   }
 }
 
 export async function addLevelsToDatabase(pageCount: number) {
   for (let i = 0; i < pageCount; i++) {
+    console.log("Page #", i);
     await getLevels({
       secret: "Wmfd2893gb7",
       diff: Difficulty.Demons,
