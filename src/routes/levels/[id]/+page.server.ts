@@ -44,12 +44,18 @@ export const actions: Actions = {
       "review",
     ]);
 
+    const levelId = parseInt(params.id!);
+
+    if (Number.isNaN(levelId)) {
+      return fail(400, { error: `Invalid level ID: ${params.id}` });
+    }
+
     try {
       const data = await request.formData();
 
       const parameters: ProgressValues = {
         user_id: user.id,
-        level_id: parseInt(params.id!),
+        level_id: levelId,
         status: "In Progress",
       };
 

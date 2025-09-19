@@ -56,6 +56,7 @@ export default class Database {
   public async getLevel(geometry_dash_id: number) {
     const [level] = await this.sql`
       SELECT
+        l.id,
        	l.geometry_dash_id,
         l.name,
         l.publisher,
@@ -201,6 +202,7 @@ export default class Database {
           u.username,
           u.bio,
           u.profile_picture_url,
+          u.role,
           u.created_at,
           CAST(COUNT(CASE WHEN p.status = 'Completed' THEN 1 END) AS INTEGER) AS levels_completed,
           CAST(AVG(p.enjoyment_rating) AS FLOAT) AS average_rating,
@@ -227,7 +229,7 @@ export default class Database {
           		'created_at', p.created_at
            	)
             ORDER BY p.created_at DESC
-          ) AS recent_activity
+          ) FILTER (WHERE l.geometry_dash_id IS NOT NULL) AS recent_activity
         FROM users u
         LEFT JOIN progress p ON u.id = p.user_id
         LEFT JOIN levels l ON l.id = p.level_id

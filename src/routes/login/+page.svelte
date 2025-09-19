@@ -64,9 +64,7 @@
   <title>Login - Loggd</title>
 </svelte:head>
 
-<div
-  class="min-h-full flex items-center justify-center bg-base-200 py-12 px-4 sm:px-6 lg:px-8"
->
+<div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
   <div class="max-w-md w-full space-y-8">
     <div>
       <h2 class="mt-6 text-center text-3xl font-extrabold text-base-content">
@@ -75,94 +73,118 @@
     </div>
 
     <form class="mt-8 space-y-6" on:submit|preventDefault={handleSubmit}>
-      <div class="space-y-4">
-        <div>
-          <label
-            for="login"
-            class="block text-sm font-medium text-base-content"
-          >
-            Email or Username
-          </label>
-          <input
-            id="login"
-            name="login"
-            type="text"
-            autocomplete="username"
-            required
-            class="input input-bordered w-full mt-1"
-            placeholder="Enter your email or username"
-            bind:value={login}
-            on:keydown={handleKeydown}
-            disabled={loading}
-          />
-        </div>
-
-        <div>
-          <label
-            for="password"
-            class="block text-sm font-medium text-base-content"
-          >
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autocomplete="current-password"
-            required
-            class="input input-bordered w-full mt-1"
-            placeholder="Enter your password"
-            bind:value={password}
-            on:keydown={handleKeydown}
-            disabled={loading}
-          />
-        </div>
-      </div>
-
-      {#if error}
-        <div role="alert" class="alert alert-error">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6 shrink-0 stroke-current"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+      <div class="space-y-2">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Username</legend>
+          <label class="input w-full">
+            <svg
+              class="h-[1em] opacity-50"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                stroke-width="2.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </g>
+            </svg>
+            <input
+              name="login"
+              type="text"
+              autocomplete="username"
+              required
+              placeholder="Enter your email or username"
+              bind:value={login}
+              on:keydown={handleKeydown}
+              disabled={loading}
             />
-          </svg>
-          <span>{error}</span>
-        </div>
-      {/if}
+          </label>
+        </fieldset>
 
-      <div>
-        <button
-          type="submit"
-          class="btn btn-primary w-full"
-          class:loading
-          disabled={loading}
-        >
-          {#if loading}
-            Signing in...
-          {:else}
-            Sign in
-          {/if}
-        </button>
-      </div>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">Password</legend>
+          <label class="input w-full">
+            <svg
+              class="h-[1em] opacity-50"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <g
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                stroke-width="2.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"
+                ></path>
+                <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle>
+              </g>
+            </svg>
+            <input
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="Enter your password"
+              bind:value={password}
+              on:keydown={handleKeydown}
+              disabled={loading}
+            />
+          </label>
+        </fieldset>
 
-      <div class="text-center">
-        <p class="text-sm text-base-content/70">
-          Don't have an account?
-          <a
-            href="/signup"
-            class="font-medium text-primary hover:text-primary-focus"
+        {#if error}
+          <div role="alert" class="alert alert-error">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6 shrink-0 stroke-current"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{error}</span>
+          </div>
+        {/if}
+
+        <div>
+          <button
+            type="submit"
+            class="btn btn-primary w-full"
+            class:loading
+            disabled={loading}
           >
-            Sign up here
-          </a>
-        </p>
+            {#if loading}
+              Signing in...
+            {:else}
+              Sign in
+            {/if}
+          </button>
+        </div>
+
+        <div class="text-center">
+          <p class="text-sm text-base-content/70">
+            Don't have an account?
+            <a
+              href="/signup"
+              class="font-medium text-primary hover:text-primary-focus"
+            >
+              Sign up here
+            </a>
+          </p>
+        </div>
       </div>
     </form>
   </div>

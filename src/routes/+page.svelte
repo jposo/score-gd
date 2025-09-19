@@ -13,20 +13,22 @@
 <div class="container mx-auto p-4">
   <h1 class="text-3xl font-bold mb-6">Trending Levels</h1>
 
-  <button
-    class="btn btn-primary"
-    onclick={async () => {
-      fetch("/api/levels", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ pageCount: 10 }),
-      })
-        .then((response) => response.json())
-        .then((data) => console.log(data));
-    }}>Click me</button
-  >
+  {#if data.user?.role === "Admin"}
+    <button
+      class="btn btn-primary"
+      onclick={async () => {
+        fetch("/api/levels", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pageCount: 10 }),
+        })
+          .then((response) => response.json())
+          .then((data) => console.log(data));
+      }}>Click me</button
+    >
+  {/if}
 
   <!-- <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {#each data.levels as level, index (level.id)}

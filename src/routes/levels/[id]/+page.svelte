@@ -50,7 +50,7 @@
 
   async function request(formData: FormData) {
     try {
-      const response = await fetch(`/level/${data.level.id}`, {
+      const response = await fetch(`/levels/${data.level.id}`, {
         method: "POST",
         body: formData,
       });
@@ -165,7 +165,7 @@
                   >
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <fieldset class="fieldset">
-                        {#if data.level.type === "Classic"}
+                        {#if data.level.length !== "Platformer"}
                           <legend class="fieldset-legend"
                             >Completion Percentage</legend
                           >

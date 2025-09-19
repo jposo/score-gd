@@ -54,6 +54,7 @@
       }
     }
   }
+  console.log(data.user);
 </script>
 
 <svelte:head>
@@ -126,7 +127,9 @@
         <div class="stat">
           <div class="stat-title">Average Rating</div>
           <div class="stat-value text-secondary">
-            {data.user.average_rating.toFixed(1)}
+            {data.user.average_rating
+              ? data.user.average_rating.toFixed(1)
+              : "N/A"}
           </div>
           <!-- <div class="stat-desc">No demons yet</div> -->
         </div>
@@ -155,7 +158,7 @@
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
             <div class="text-center">
-              {#if data.user.recent_activity.length === 0}
+              {#if !data.user.recent_activity || data.user.recent_activity.length === 0}
                 <div class="text-6xl mb-4">📊</div>
                 <h3 class="text-lg font-semibold text-base-content/70 mb-2">
                   No activity yet
@@ -165,12 +168,12 @@
                     Start tracking your Geometry Dash progress to see activity
                     here!
                   </p>
-                  <a href="/" class="btn btn-primary"> Browse Levels </a>
+                  <a href="/levels" class="btn btn-primary"> Browse Levels </a>
                 {/if}
               {:else}
                 {#each data.user.recent_activity as a}
                   <Activity
-                    link={`/level/${a.geometry_dash_id}`}
+                    link={`/levels/${a.geometry_dash_id}`}
                     title={a.level_name}
                     rating={a.enjoyment_rating}
                     status={a.status}

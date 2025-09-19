@@ -2,7 +2,7 @@ import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 // import Database from "$lib/server/database";
 
-export const load: PageServerLoad = async () => {
+export const load: PageServerLoad = () => {
   try {
     // const db = Database.instance;
     // const levels = await db.getLevels();
