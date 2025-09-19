@@ -43,7 +43,6 @@
           new URL(window.location.href).searchParams.get("redirectTo") || "/";
         window.location.href = redirectTo;
       } else {
-        console.log("caca", data);
         error = data.error || "Login failed";
       }
     } catch (err) {

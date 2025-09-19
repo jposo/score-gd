@@ -159,7 +159,7 @@ async function main() {
         // Add a JSDoc comment for the property
         typeDefs += `  /** @db_type ${col.udt_name} */\n`;
         // Define the property, making it optional if nullable
-        typeDefs += `  ${col.column_name}: ${tsType}${isNullable ? " | null" : ""};\n`;
+        typeDefs += `  ${col.column_name}${isNullable ? "?" : ""}: ${tsType}${isNullable ? " | null" : ""};\n`;
       }
       typeDefs += "}\n\n";
     }

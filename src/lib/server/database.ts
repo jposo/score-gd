@@ -299,11 +299,12 @@ export default class Database {
 
   async updateListPlacement(progressId: number, placement: number) {
     try {
-      await this.sql`
+      const [result] = await this.sql`
         UPDATE progress
         SET placement = ${placement}
         WHERE id = ${progressId}
       `;
+      return result;
     } catch (error) {
       console.error("Error updating list placement:", error);
       return null;

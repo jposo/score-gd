@@ -2,10 +2,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { dev } from "$app/environment";
 import type { Cookies } from "@sveltejs/kit";
+import { COOKIE_NAME } from "$lib/constants";
 
 // Use environment variable or fallback to dev key
-const JWT_SECRET =
-  import.meta.env.VITE_JWT_SECRET || "dev-secret-key-change-in-production";
+const JWT_SECRET = import.meta.env.VITE_JWT_SECRET;
 
 export interface User {
   id: number;
@@ -60,8 +60,7 @@ export function verifyToken(token: string): AuthToken | null {
 
 // Extract token from request cookies
 export function getTokenFromCookies(cookies: Cookies): string | null {
-  const res = cookies.get("auth-token") || null;
-  return res;
+  return cookies.get(COOKIE_NAME) || null;
 }
 
 // Validate email format

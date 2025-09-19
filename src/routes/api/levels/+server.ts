@@ -16,24 +16,5 @@ export const POST: RequestHandler = async ({ request }) => {
   } catch (error) {
     console.log(error);
   }
-  // const { levelId, levelType } = await request.json();
-  // const db = Database.instance;
-  // await db.insertLevel({
-  //   geometry_dash_id: levelId,
-  //   type: levelType,
-  //   name: "New Level",
-  //   publisher: "Unknown",
-  //   difficulty: "Easy",
-  //   length: Number2Length[Length.Easy],
-  //   stars: 0,
-  //   downloads: 0,
-  //   plays: 0,
-  //   likes: 0,
-  //   dislikes: 0,
-  //   comments: 0,
-  //   views: 0,
-  //   created_at: new Date(),
-  //   updated_at: new Date(),
-  // });
   return json({ message: "Levels created successfully" });
 };

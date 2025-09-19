@@ -1,6 +1,6 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import Database from "$lib/server/database";
+// import Database from "$lib/server/database";
 
 export const load: PageServerLoad = async () => {
   try {
@@ -9,6 +9,6 @@ export const load: PageServerLoad = async () => {
     // return { levels };
   } catch (err) {
     console.error(err);
-    error(404, "Not found");
+    error(500, "Internal Server Error");
   }
 };

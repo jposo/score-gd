@@ -23,7 +23,7 @@
   let attempts = $state(data.progress?.total_attempts ?? undefined);
   let startDate = $state(convertDate(data.progress?.start_date ?? undefined));
   let completionDate: string | undefined = $state(
-    convertDate(data.progress?.complete_date) ?? undefined,
+    convertDate(data.progress?.completion_date) ?? undefined,
   );
   let review = $state(data.progress?.review ?? undefined);
   let isAuthenticated = data.user !== null;
@@ -221,7 +221,7 @@
                         <legend class="fieldset-legend">Completion Date</legend>
                         <label class="input w-full">
                           <input
-                            name="complete_date"
+                            name="completion_date"
                             bind:value={completionDate}
                             type="date"
                             min={startDate}

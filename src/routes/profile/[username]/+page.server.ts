@@ -29,8 +29,16 @@ export const actions: Actions = {
 
     try {
       const form = await request.formData();
-      const list = JSON.parse(form.get("list") as string);
-      console.log(form);
+      const formList = form.get("list");
+      if (formList === null) {
+        return fail(400, { error: "Invalid list data" });
+      }
+      let list;
+      try {
+        list = JSON.parse(formList as string);
+      } catch {
+        return fail(400, { error: "Invalid list format" });
+      }
       for (let p = 0; p < list.length; p++) {
         await Database.instance.updateListPlacement(list[p].id, p + 1);
       }
@@ -38,7 +46,7 @@ export const actions: Actions = {
       return { success: true };
     } catch (err) {
       console.error("Error updating list placement:", err);
-      return fail(500, { message: "Failed to update list placement" });
+      return fail(500, { error: "Failed to update list placement" });
     }
   },
 };

@@ -1,4 +1,4 @@
-import { json } from "@sveltejs/kit";
+import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import {
   hashPassword,
@@ -7,24 +7,26 @@ import {
   generateToken,
   cookieOptions,
 } from "$lib/server/auth/utils";
+import { COOKIE_NAME } from "$lib/constants";
 import Database from "$lib/server/database";
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
   try {
     const { username, email, password } = await request.json();
 
-    // Validate required fields
     if (!username || !email || !password) {
       return json(
-        { error: "Username, email, and password are required" },
+        {
+          success: false,
+          message: "Username, email, and password are required",
+        },
         { status: 400 },
       );
     }
 
-    // Validate email format
     if (!isValidEmail(email)) {
       return json(
-        { error: "Please enter a valid email address" },
+        { success: false, message: "Please enter a valid email address" },
         { status: 400 },
       );
     }
@@ -32,34 +34,38 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     // Validate password strength
     const passwordValidation = isValidPassword(password);
     if (!passwordValidation.valid) {
-      return json({ error: passwordValidation.message }, { status: 400 });
-    }
-
-    // Validate username (basic validation)
-    if (username.length < 3 || username.length > 30) {
       return json(
-        { error: "Username must be between 3 and 30 characters" },
+        { success: false, message: passwordValidation.message },
         { status: 400 },
       );
     }
 
-    // Check if username contains only valid characters
+    if (username.length < 3 || username.length > 30) {
+      return json(
+        {
+          success: false,
+          message: "Username must be between 3 and 30 characters",
+        },
+        { status: 400 },
+      );
+    }
+
     const usernameRegex = /^[a-zA-Z0-9_-]+$/;
     if (!usernameRegex.test(username)) {
       return json(
         {
-          error:
+          success: false,
+          message:
             "Username can only contain letters, numbers, hyphens, and underscores",
         },
         { status: 400 },
       );
     }
 
-    // Check if user already exists
     const existingEmailUser = await Database.instance.getUserByEmail(email);
     if (existingEmailUser) {
       return json(
-        { error: "A user with this email already exists" },
+        { success: false, message: "A user with this email already exists" },
         { status: 409 },
       );
     }
@@ -67,42 +73,35 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     const existingUsernameUser =
       await Database.instance.getUserByUsername(username);
     if (existingUsernameUser) {
-      return json({ error: "This username is already taken" }, { status: 409 });
+      return json(
+        { success: false, message: "This username is already taken" },
+        { status: 409 },
+      );
     }
 
-    // Hash password
     const passwordHash = await hashPassword(password);
 
-    // Create user
     const user = await Database.instance.insertUser({
       username,
       email,
       password_hash: passwordHash,
     });
     if (!user) {
-      return json({ error: "Failed to create user account" }, { status: 500 });
+      error(500, "Failed to create user account");
     }
 
     // Generate JWT token
     const token = generateToken(user);
 
     // Set cookie
-    cookies.set("auth-token", token, cookieOptions);
+    cookies.set(COOKIE_NAME, token, cookieOptions);
 
-    // Return success (don't include password hash)
     return json({
+      success: true,
       message: "Account created successfully",
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        bio: user.bio,
-        profile_picture_url: user.profile_picture_url,
-        created_at: user.created_at,
-      },
     });
-  } catch (error) {
-    console.error("Signup error:", error);
-    return json({ error: "Internal server error" }, { status: 500 });
+  } catch (err) {
+    console.error("Signup error:", err);
+    error(500, "Internal server error");
   }
 };

@@ -8,9 +8,7 @@ export const load: PageServerLoad = async (event) => {
   const user = await requireAuth(event);
 
   // Return user data for the edit form
-  return {
-    user,
-  };
+  return { user };
 };
 
 export const actions: Actions = {
@@ -22,10 +20,10 @@ export const actions: Actions = {
 
     try {
       const data = await request.formData();
-      console.log(data);
-      const bio = data.get("bio") as string;
-      const profilePictureUrl =
-        data.get("profile_picture_url") ?? (undefined as string | undefined);
+      const bio = data.get("bio") as string | null;
+      const profilePictureUrl = data.get("profile_picture_url") as
+        | string
+        | null;
 
       // Basic validation
       if (bio && bio.length > 500) {
@@ -42,11 +40,11 @@ export const actions: Actions = {
         profile_picture_url?: string | null;
       } = {};
 
-      if (bio !== undefined) {
+      if (bio != null) {
         updates.bio = bio.trim() || null;
       }
 
-      if (profilePictureUrl !== undefined) {
+      if (profilePictureUrl !== null) {
         updates.profile_picture_url = profilePictureUrl.trim() || null;
       }
 

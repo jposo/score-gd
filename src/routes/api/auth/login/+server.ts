@@ -7,6 +7,7 @@ import {
   cookieOptions,
 } from "$lib/server/auth/utils";
 import Database from "$lib/server/database";
+import { COOKIE_NAME } from "$lib/constants";
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
   try {
@@ -15,7 +16,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     // Validate required fields
     if (!login || !password) {
       return json(
-        { error: "Email/username and password are required" },
+        { success: false, error: "Email/username and password are required" },
         { status: 400 },
       );
     }
@@ -32,32 +33,31 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 
     // Check if user exists
     if (!user) {
-      return json({ error: "Invalid credentials" }, { status: 401 });
+      return json(
+        { success: false, error: "Invalid credentials" },
+        { status: 401 },
+      );
     }
 
     // Verify password
     const isPasswordValid = await verifyPassword(password, user.password_hash);
     if (!isPasswordValid) {
-      return json({ error: "Invalid credentials" }, { status: 401 });
+      return json(
+        { success: false, error: "Invalid credentials" },
+        { status: 401 },
+      );
     }
 
     // Generate JWT token
     const token = generateToken(user);
 
     // Set cookie
-    cookies.set("auth-token", token, cookieOptions);
+    cookies.set(COOKIE_NAME, token, cookieOptions);
 
     // Return success (don't include password hash)
     return json({
+      success: true,
       message: "Login successful",
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        bio: user.bio,
-        profile_picture_url: user.profile_picture_url,
-        created_at: user.created_at,
-      },
     });
   } catch (error) {
     console.error("Login error:", error);
