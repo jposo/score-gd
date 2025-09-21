@@ -173,7 +173,7 @@
               {:else}
                 {#each data.user.recent_activity as a}
                   <Activity
-                    link={`/levels/${a.geometry_dash_id}`}
+                    link={`/levels/${a.level_id}`}
                     title={a.level_name}
                     rating={a.enjoyment_rating}
                     status={a.status}

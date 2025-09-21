@@ -1,8 +1,8 @@
 import { redirect } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "./utils";
-import Database from "$lib/server/database";
+import Database from "../../server/database";
 import type { RequestEvent } from "@sveltejs/kit";
-import { COOKIE_NAME } from "$lib/constants";
+import { COOKIE_NAME } from "../../constants";
 
 /**
  * Middleware function to protect routes that require authentication
@@ -59,6 +59,25 @@ export async function requireAuth(event: RequestEvent, redirectTo?: string) {
     throw redirect(302, loginUrl);
   }
 
+  return user;
+}
+
+/**
+ * Middleware function to protect routes that require authentication and role
+ * @param event - The SvelteKit request event
+ * @param role - Required role for the route
+ * @param redirectTo - Optional redirect path after login (defaults to current path)
+ * @returns User object if authenticated, throws redirect if not
+ */
+export async function requireAuthWithRoles(
+  event: RequestEvent,
+  roles: string[],
+  redirectTo?: string,
+) {
+  const user = await requireAuth(event, redirectTo);
+  if (!(user.roles as string[]).some((role) => roles.includes(role))) {
+    throw redirect(302, redirectTo || "/");
+  }
   return user;
 }
 

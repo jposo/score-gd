@@ -1,12 +1,12 @@
 import postgres from "postgres";
-import type { Level, Song, User, Progress } from "$lib/db-types";
+import type { Level, Song, User, Progress } from "../db-types";
 
 // interface LoggdDatabase {
 //   getUsers();
 // }
 
 type LevelValues = Omit<Level, "id" | "created_at">;
-type SongValues = Omit<Song, "id" | "created_at">;
+type SongValues = Omit<Song, "created_at">;
 type UserValues = Omit<
   User,
   "id" | "bio" | "profile_picture_url" | "created_at"
@@ -45,22 +45,34 @@ export default class Database {
   public async getLevels(page?: number) {
     const LIMIT = 18;
     const levels = await this.sql`
-      SELECT *
-      FROM levels
-      ORDER BY id ASC
-      LIMIT ${LIMIT} OFFSET ${page ? (page - 1) * LIMIT : 0}
-    `;
-    return levels as Level[];
-  }
-
-  public async getLevel(geometry_dash_id: number) {
-    const [level] = await this.sql`
       SELECT
         l.id,
-       	l.geometry_dash_id,
         l.name,
-        l.publisher,
-        l.publisher_id,
+        a.username as publisher,
+        l.difficulty,
+        l.release_date,
+        l.length
+      FROM levels l
+      JOIN accounts a ON l.publisher_account_id = a.id
+      ORDER BY l.id ASC
+      LIMIT ${LIMIT} OFFSET ${page ? (page - 1) * LIMIT : 0}
+    `;
+    return levels as unknown as {
+      id: number;
+      name: string;
+      publisher: string;
+      difficulty: string;
+      release_date: Date;
+      length: string;
+    }[];
+  }
+
+  public async getLevel(id: number) {
+    const [level] = await this.sql`
+      SELECT
+       	l.id,
+        l.name,
+        a.username AS publisher,
         l.description,
         l.difficulty,
         l.coins,
@@ -69,7 +81,7 @@ export default class Database {
         l.length,
         l.release_date,
         l.video_url,
-        s.geometry_dash_id AS song_geometry_dash_id,
+        s.id AS song_id,
         s.title AS song_title,
         s.artist AS song_artist,
         CAST(COUNT(p.enjoyment_rating) AS INTEGER) AS progress_count,
@@ -90,16 +102,18 @@ export default class Database {
         ) FILTER (WHERE p.review IS NOT NULL
           AND p.status NOT IN ('In Progress', 'To Try')) AS reviews
       FROM levels l
-      JOIN songs s ON l.song_id = s.id
+      JOIN accounts a ON a.id = l.publisher_account_id
+      LEFT JOIN songs s ON l.song_id = s.id
       LEFT JOIN progress p ON l.id = p.level_id
       LEFT JOIN users u ON p.user_id = u.id
-      WHERE l.geometry_dash_id = ${geometry_dash_id}
-      GROUP BY l.id, s.geometry_dash_id, s.title, s.artist
+      WHERE l.id = ${id}
+      GROUP BY l.id, a.id, s.id, s.title, s.artist
       LIMIT 10;
     `;
     return (
       (level as Level & {
-        song_geometry_dash_id: number;
+        publisher: number;
+        song_id: number;
         song_title: string;
         song_artist: string;
         progress_count: number;
@@ -123,15 +137,15 @@ export default class Database {
     console.log("Inserting level with values:", values);
     const [result] = await this.sql`
       INSERT INTO levels ${this.sql(values)}
-      ON CONFLICT (geometry_dash_id) DO NOTHING
-      RETURNING geometry_dash_id;
+      ON CONFLICT (id) DO NOTHING
+      RETURNING id;
     `;
     return result as Level | null;
   }
 
   public async getSong(id: number): Promise<Song | null> {
     const song = await this.sql`
-      SELECT * FROM songs WHERE geometry_dash_id = ${id}
+      SELECT * FROM songs WHERE id = ${id}
     `;
     return (song[0] as Song) || null;
   }
@@ -139,15 +153,9 @@ export default class Database {
   public async insertSong(values: SongValues) {
     console.log("Inserting song with values:", values);
     const result = await this.sql`
-      INSERT INTO songs (
-        geometry_dash_id,
-        title,
-        artist
-      ) VALUES (
-        ${values.geometry_dash_id},
-        ${values.title},
-        ${values.artist}
-      ) RETURNING id;
+      INSERT INTO songs ${this.sql(values)}
+      ON CONFLICT (id) DO NOTHING
+      RETURNING id;
     `;
     return result[0].id;
   }
@@ -202,7 +210,7 @@ export default class Database {
           u.username,
           u.bio,
           u.profile_picture_url,
-          u.role,
+          u.roles,
           u.created_at,
           CAST(COUNT(CASE WHEN p.status = 'Completed' THEN 1 END) AS INTEGER) AS levels_completed,
           CAST(AVG(p.enjoyment_rating) AS FLOAT) AS average_rating,
@@ -210,9 +218,9 @@ export default class Database {
           json_agg(
             json_build_object(
               'id', p.id,
-           	  'geometry_dash_id', l.geometry_dash_id,
+           	  'level_id', l.id,
            	  'level_name', l.name,
-              'publisher', l.publisher,
+              'publisher', a.username,
            	  'placement', p.placement,
               'enjoyment_rating', p.enjoyment_rating,
               'attempts', p.total_attempts
@@ -221,7 +229,7 @@ export default class Database {
           ) FILTER (WHERE p.status = 'Completed') AS list,
           json_agg(
            	json_build_object(
-              'geometry_dash_id', l.geometry_dash_id,
+              'level_id', l.id,
           		'status', p.status,
           		'enjoyment_rating', p.enjoyment_rating,
           		'level_name', l.name,
@@ -229,10 +237,11 @@ export default class Database {
           		'created_at', p.created_at
            	)
             ORDER BY p.created_at DESC
-          ) FILTER (WHERE l.geometry_dash_id IS NOT NULL) AS recent_activity
+          ) FILTER (WHERE l.id IS NOT NULL) AS recent_activity
         FROM users u
         LEFT JOIN progress p ON u.id = p.user_id
         LEFT JOIN levels l ON l.id = p.level_id
+        LEFT JOIN accounts a ON a.id = l.publisher_account_id
         WHERE u.username = ${username}
         GROUP BY u.id
       `;
@@ -242,7 +251,7 @@ export default class Database {
         reviews_written: number;
         list: {
           id: number;
-          geometry_dash_id: number;
+          level_id: number;
           level_name: string;
           publisher: string;
           attempts: number;
@@ -250,7 +259,7 @@ export default class Database {
           enjoyment_rating: number;
         }[];
         recent_activity: {
-          geometry_dash_id: number;
+          level_id: number;
           status: string;
           enjoyment_rating: number;
           level_name: string;
@@ -379,18 +388,35 @@ export default class Database {
   async getRecentActivity(userId: number) {
     const activity = await this.sql`
       SELECT
-        l.geometry_dash_id,
+        l.id as level_id,
+        l.name,
         p.status,
         p.enjoyment_rating,
-        p.created_at,
-        l.name,
         p.review
+        p.created_at,
       FROM progress p
       JOIN levels l ON p.level_id = l.id
       WHERE user_id = ${userId}
       ORDER BY created_at DESC
       LIMIT 5
     `;
-    return activity;
+    return activity as unknown as {
+      level_id: number;
+      name: string;
+      status: string;
+      enjoyment_rating: number;
+      review: string;
+      created_at: Date;
+    }[];
+  }
+
+  async insertAccount(accountId: number, username: string) {
+    const [result] = await this.sql`
+      INSERT INTO accounts (id, username)
+      VALUES (${accountId}, ${username})
+      ON CONFLICT (id) DO NOTHING
+      RETURNING id;
+    `;
+    return result;
   }
 }

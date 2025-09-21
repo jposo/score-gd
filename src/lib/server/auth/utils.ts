@@ -2,8 +2,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { dev } from "$app/environment";
 import type { Cookies } from "@sveltejs/kit";
-import { COOKIE_NAME } from "$lib/constants";
-import { type User } from "$lib/db-types";
+import { COOKIE_NAME } from "../../constants";
+import { type User } from "../../db-types";
 
 // Use environment variable or fallback to dev key
 const JWT_SECRET = import.meta.env.VITE_JWT_SECRET;

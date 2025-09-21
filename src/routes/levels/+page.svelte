@@ -19,29 +19,35 @@
   }
 </script>
 
+<svelte:head>
+  <title>Levels - loggd</title>
+</svelte:head>
+
 <div class="container mx-auto p-4">
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     {#each data.levels as level, index (level.id)}
       <div
         class="card bg-base-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:bg-base-300"
-        onclick={() => navigateToLevel(level.geometry_dash_id)}
+        onclick={() => navigateToLevel(level.id)}
         onkeydown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
-            navigateToLevel(level.geometry_dash_id);
+            navigateToLevel(level.id);
           }
         }}
-        tabindex={-2 - index}
+        tabindex={-1}
         role="button"
       >
         <div class="card-body">
           <h2 class="card-title text-lg">{level.name}</h2>
           <div class="text-sm opacity-75 space-y-1">
-            <div>by <span class="font-medium">{level.publisher}</span></div>
+            <div>
+              by <span class="font-medium">{level.publisher}</span>
+            </div>
             <div class={getDifficultyColor(level.difficulty)}>
               <span class="font-semibold">{level.difficulty}</span>
             </div>
             <div class="text-xs">
-              {level.type === "Classic" ? level.length : level.type}
+              {level.length}
               {#if level.release_date}
                 &#8226;
                 {new Date(level.release_date).getFullYear()} &#8226;
@@ -50,7 +56,7 @@
           </div>
           <div class="card-actions justify-end mt-2">
             <div class="badge badge-outline text-xs">
-              #{level.geometry_dash_id}
+              #{level.id}
             </div>
           </div>
         </div>

@@ -4,10 +4,8 @@ import Database from "$lib/server/database";
 import { fail } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async (event) => {
-  // Require authentication for profile edit page
   const user = await requireAuth(event);
 
-  // Return user data for the edit form
   return { user };
 };
 

@@ -75,47 +75,8 @@
       <input type="search" placeholder="Search" />
     </label>
 
-    <!-- <ul class="menu menu-horizontal px-1">
-      <li><a href="/levels">Levels</a></li>
-      <li>
-        <details>
-          <summary>
-            <svg
-              class="fill-current w-4 h-4"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 512 512"
-            >
-              <path
-                d="M448,256c0-106-86-192-192-192V448C362,448,448,362,448,256Z"
-              />
-              <path d="M256,64C150,64,64,150,64,256s86,192,192,192V64Z" />
-            </svg>
-            Theme
-          </summary>
-          <ul class="p-2">
-            {#each themes as themeOption}
-              {@const isCurrentTheme = $theme === themeOption}
-              <li>
-                <input
-                  type="radio"
-                  name="theme-dropdown"
-                  class="theme-controller btn btn-sm btn-block {!isCurrentTheme
-                    ? 'btn-ghost'
-                    : ''} justify-start"
-                  aria-label={themeOption}
-                  value={themeOption}
-                  checked={isCurrentTheme}
-                  onchange={() => setTheme(themeOption)}
-                />
-              </li>
-            {/each}
-          </ul>
-        </details>
-      </li>
-    </ul> -->
-
     <!-- Theme Controller -->
-    <!-- <div class="dropdown dropdown-end">
+    <div class="dropdown dropdown-end">
       <div tabindex="0" role="button" class="btn btn-ghost">
         <svg
           class="fill-current w-4 h-4"
@@ -131,7 +92,7 @@
       </div>
       <ul
         tabindex="-1"
-        class="dropdown-content z-10 p-2 shadow-2xl bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
+        class="dropdown-content z-10 p-2 mt-2 shadow bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
       >
         {#each themes as themeOption}
           {@const isCurrentTheme = $theme === themeOption}
@@ -150,7 +111,7 @@
           </li>
         {/each}
       </ul>
-    </div> -->
+    </div>
 
     {#if data.user}
       <!-- Authenticated user menu -->
@@ -175,7 +136,7 @@
         </div>
         <ul
           tabindex="-1"
-          class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
+          class="menu menu-sm dropdown-content bg-base-300 rounded-box z-1 mt-2 w-52 p-2 shadow"
         >
           <li class="menu-title">
             <span>Hi, {data.user.username}!</span>
@@ -183,6 +144,9 @@
           <li>
             <a href="/profile/{data.user.username}"> Profile </a>
           </li>
+          {#if data.user.roles.includes("Admin")}
+            <li><a href="/admin">Admin</a></li>
+          {/if}
           <li><a href="/settings">Settings</a></li>
           <li><button onclick={handleLogout}>Logout</button></li>
         </ul>

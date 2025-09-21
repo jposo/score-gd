@@ -27,57 +27,75 @@ function pgTypeToTsType(
   udtName: string,
   enums: Record<string, string[]>,
 ): string {
-  // First, check if this is a known custom enum type and inline it.
-  if (enums[udtName]) {
-    return enums[udtName].map((v) => `'${v}'`).join(" | ");
+  const isArray = udtName.startsWith("_");
+  const baseType = isArray ? udtName.substring(1) : udtName;
+
+  let tsBaseType: string;
+
+  // Determine the base TypeScript type (without the array suffix)
+  if (enums[baseType]) {
+    // It's a known custom enum type
+    tsBaseType = enums[baseType].map((v) => `'${v}'`).join(" | ");
+  } else {
+    // It's a standard type
+    switch (baseType.toLowerCase()) {
+      case "int2":
+      case "int4":
+      case "int8":
+      case "float4":
+      case "float8":
+      case "numeric":
+      case "money":
+      case "oid":
+        tsBaseType = "number";
+        break;
+
+      case "varchar":
+      case "text":
+      case "char":
+      case "bpchar": // Blank-padded char
+      case "uuid":
+      case "inet":
+      case "citext": // A common case-insensitive text extension
+        tsBaseType = "string";
+        break;
+
+      case "bool":
+        tsBaseType = "boolean";
+        break;
+
+      case "date":
+      case "timestamp":
+      case "timestamptz":
+        tsBaseType = "Date"; // Using string is often safer for serialization (e.g., JSON). Can also be 'Date'.
+        break;
+
+      case "json":
+      case "jsonb":
+        tsBaseType = "any"; // Or a more specific type like 'Record<string, any>' or a 'Json' type.
+        break;
+
+      case "bytea":
+        tsBaseType = "Uint8Array";
+        break;
+
+      default:
+        console.warn(
+          `[Warning] Unknown PostgreSQL type: ${baseType}. Falling back to 'any'.`,
+        );
+        tsBaseType = "any";
+    }
   }
-  // Handle array types (which start with an underscore)
-  if (udtName.startsWith("_")) {
-    const baseType = udtName.substring(1);
-    return `${pgTypeToTsType(baseType, enums)}[]`;
+  if (isArray) {
+    // For union types (our enums), parentheses are required for correct precedence.
+    if (enums[baseType]) {
+      return `(${tsBaseType})[]`;
+    }
+    // For single types ('string', 'number', etc.), parentheses are not needed.
+    return `${tsBaseType}[]`;
   }
 
-  switch (udtName.toLowerCase()) {
-    case "int2":
-    case "int4":
-    case "int8":
-    case "float4":
-    case "float8":
-    case "numeric":
-    case "money":
-    case "oid":
-      return "number";
-
-    case "varchar":
-    case "text":
-    case "char":
-    case "bpchar": // Blank-padded char
-    case "uuid":
-    case "inet":
-    case "citext": // A common case-insensitive text extension
-      return "string";
-
-    case "bool":
-      return "boolean";
-
-    case "date":
-    case "timestamp":
-    case "timestamptz":
-      return "Date"; // Using string is often safer for serialization (e.g., JSON). Can also be 'Date'.
-
-    case "json":
-    case "jsonb":
-      return "any"; // Or a more specific type like 'Record<string, any>' or a generic 'Json' type.
-
-    case "bytea":
-      return "Uint8Array";
-
-    default:
-      console.warn(
-        `[Warning] Unknown PostgreSQL type: ${udtName}. Falling back to 'any'.`,
-      );
-      return "any";
-  }
+  return tsBaseType;
 }
 
 // --- UTILITY FUNCTIONS ---
@@ -96,7 +114,7 @@ function toPascalCase(str: string): string {
  * A simple singularization function. Works for basic plurals ending in 's'.
  * @example singularize('users') -> 'user'
  */
-function singularize(str: "string"): string {
+function singularize(str: string): string {
   if (str.toLowerCase().endsWith("ies")) {
     return str.slice(0, -3) + "y";
   }
@@ -108,7 +126,7 @@ function singularize(str: "string"): string {
 
 // --- MAIN LOGIC ---
 async function main() {
-  console.log(`Connecting to database "${DB_CONFIG.db}"...`);
+  console.log(`Connecting to database "${DB_CONFIG.database}"...`);
   const sql = postgres(DB_CONFIG);
 
   try {

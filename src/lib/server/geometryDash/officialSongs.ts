@@ -50,7 +50,7 @@ export const OfficialSongs: Record<string, { title: string; artist: string }> =
     },
     "12": {
       title: "Electroman Adventures",
-      artist: "dj-Nate",
+      artist: "Waterflame",
     },
     "13": {
       title: "Clubstep",
@@ -62,11 +62,11 @@ export const OfficialSongs: Record<string, { title: string; artist: string }> =
     },
     "15": {
       title: "Hexagon Force",
-      artist: "dj-Nate",
+      artist: "Waterflame",
     },
     "16": {
       title: "Blast Processing",
-      artist: "dj-Nate",
+      artist: "Waterflame",
     },
     "17": {
       title: "Theory of Everything 2",

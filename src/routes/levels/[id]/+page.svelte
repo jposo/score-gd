@@ -10,12 +10,20 @@
 
   let { data }: { data: PageData } = $props();
 
-  let details: HTMLDialogElement | undefined = $state();
+  let levelDetails: HTMLDialogElement | undefined = $state();
+  let progressDetails: HTMLDialogElement | undefined = $state();
   let success: string | undefined = $state();
   let error: string | undefined = $state();
   const alertDuration = 2000;
 
+  // Level Data
   let average = $state(data.level.average_rating ?? undefined);
+  let releaseDate = $state(data.level.release_date ?? undefined);
+  let difficulty = $state(data.level.difficulty ?? undefined);
+  let videoUrl = $state(data.level.video_url ?? undefined);
+  let description = $state(data.level.description ?? undefined);
+
+  // Progress Data
   let oldRating = $state(data.progress?.enjoyment_rating ?? undefined);
   let rating = $state(data.progress?.enjoyment_rating ?? undefined);
   let status = $state(data.progress?.status ?? undefined);
@@ -26,7 +34,6 @@
     convertDate(data.progress?.completion_date) ?? undefined,
   );
   let review = $state(data.progress?.review ?? undefined);
-  let isAuthenticated = data.user !== null;
 
   const ratingOptions = [
     { value: 1, label: "Terrible" },
@@ -106,6 +113,12 @@
 
     await request(form);
   }
+
+  async function handleSubmitLevel(event: Event) {
+    event.preventDefault();
+    const form = new FormData(event.target as HTMLFormElement);
+    console.log(form);
+  }
 </script>
 
 <svelte:head>
@@ -124,7 +137,114 @@
     <div class="flex flex-row gap-8">
       <div class="flex flex-col gap-4 w-1/5">
         <!-- Form -->
-        {#if isAuthenticated}
+        {#if data.user}
+          {#if data.user.roles.includes("Admin")}
+            <div class="card bg-base-200 w-full">
+              <div class="card-body">
+                <button
+                  class="btn btn-accent btn-block"
+                  onclick={() => levelDetails?.showModal()}
+                  >Edit Level Details</button
+                >
+              </div>
+            </div>
+
+            <dialog bind:this={levelDetails} class="modal">
+              <div class="modal-box">
+                <h3 class="text-lg font-bold">
+                  {data.level.name} Details
+                </h3>
+                <form
+                  onsubmit={async (event) => await handleSubmitLevel(event)}
+                >
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend">Release Date</legend>
+                      <label class="input w-full">
+                        <input
+                          name="release_date"
+                          type="date"
+                          bind:value={releaseDate}
+                        />
+                      </label>
+                    </fieldset>
+
+                    <fieldset class="fieldset">
+                      <legend class="fieldset-legend">Difficulty</legend>
+                      <select
+                        class="select"
+                        name="difficulty"
+                        bind:value={difficulty}
+                      >
+                        <option selected>Extreme Demon</option>
+                      </select>
+                    </fieldset>
+                  </div>
+
+                  <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Video URL</legend>
+                    <label class="input validator w-full">
+                      <svg
+                        class="h-[1em] opacity-50"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                      >
+                        <g
+                          stroke-linejoin="round"
+                          stroke-linecap="round"
+                          stroke-width="2.5"
+                          fill="none"
+                          stroke="currentColor"
+                        >
+                          <path
+                            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+                          ></path>
+                          <path
+                            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+                          ></path>
+                        </g>
+                      </svg>
+                      <input
+                        name="video_url"
+                        type="url"
+                        placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
+                        pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"
+                        title="Must be valid URL"
+                        bind:value={videoUrl}
+                      />
+                    </label>
+                    <p class="validator-hint hidden">Must be valid URL</p>
+                  </fieldset>
+
+                  <fieldset class="fieldset w-full">
+                    <legend class="fieldset-legend">Description</legend>
+                    <textarea
+                      name="description"
+                      class="textarea w-full"
+                      placeholder="What is this level about?"
+                      bind:value={description}
+                    ></textarea>
+                  </fieldset>
+
+                  <div class="modal-action flex justify-end gap-2">
+                    <button
+                      type="submit"
+                      class="btn btn-primary"
+                      onclick={() => levelDetails!.close()}>Save Details</button
+                    >
+                    <button
+                      type="button"
+                      class="btn"
+                      onclick={() => levelDetails!.close()}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </dialog>
+          {/if}
+
           <div class="card bg-base-200 w-full">
             <div class="card-body">
               <select
@@ -151,15 +271,15 @@
               </select>
               <button
                 class="btn btn-secondary btn-block"
-                onclick={() => details?.showModal()}>More Details</button
+                onclick={() => progressDetails?.showModal()}
+                >More Details</button
               >
-              <dialog bind:this={details} class="modal">
+              <dialog bind:this={progressDetails} class="modal">
                 <div class="modal-box">
                   <h3 class="text-lg font-bold">
                     {data.level.name} Progress
                   </h3>
                   <form
-                    id="progressForm"
                     onsubmit={async (event) =>
                       await handleSubmitProgress(event)}
                   >
@@ -275,13 +395,16 @@
                     </fieldset>
 
                     <div class="modal-action flex justify-end gap-2">
-                      <button type="submit" class="btn btn-primary"
+                      <button
+                        type="submit"
+                        class="btn btn-primary"
+                        onclick={() => progressDetails!.close()}
                         >Save Progress</button
                       >
                       <button
                         type="button"
                         class="btn"
-                        onclick={() => details!.close()}
+                        onclick={() => progressDetails!.close()}
                       >
                         Close
                       </button>
@@ -322,7 +445,7 @@
           <div class="space-y-2 w-3/5">
             <h1 class="text-4xl">
               <span class="font-bold">{data.level.name}</span>
-              <span class="text-sm">ID: {data.level.geometry_dash_id}</span>
+              <span class="text-sm">ID: {data.level.id}</span>
             </h1>
             <h2 class="text-2xl">
               {#if data.level.release_date}
@@ -338,7 +461,6 @@
                 <span class="font-semibold">{data.level.song_title}</span> by
                 <span class="font-semibold">{data.level.song_artist}</span>
               </div>
-              <div class="badge badge-warning">{data.level.rating}</div>
               <div class="badge badge-neutral">{data.level.length}</div>
               {#if data.level.two_player}
                 <div class="badge badge-neutral">2-Player</div>
@@ -346,6 +468,7 @@
               {#if data.level.coins && data.level.coins >= 1}
                 <div class="badge badge-neutral">{data.level.coins} Coins</div>
               {/if}
+              <div class="badge badge-warning">{data.level.rating}</div>
               <div class="badge badge-error">{data.level.difficulty}</div>
             </span>
           </div>

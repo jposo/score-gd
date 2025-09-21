@@ -27,7 +27,7 @@ CREATE TYPE LevelDifficulty AS ENUM (
   'N/A',
   'Auto',
   'Easy',
-  'Medium',
+  'Normal',
   'Hard',
   'Harder',
   'Insane',
@@ -54,8 +54,15 @@ CREATE TYPE ProgressStatus AS ENUM (
   'Dropped'
 );
 
+CREATE TABLE IF NOT EXISTS accounts (
+  id INT PRIMARY KEY,
+  username TEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+)
+
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
+  account_id INTEGER REFERENCES geometry_dash_accounts(id),
   username TEXT NOT NULL UNIQUE,
   email TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
@@ -70,6 +77,11 @@ CREATE TABLE IF NOT EXISTS songs (
   name TEXT NOT NULL,
   artist TEXT NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS levels (
