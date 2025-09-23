@@ -65,12 +65,18 @@ const decodeBase64 = (val: string): string | null => {
   }
 };
 
+export interface CreatorData {
+  userID: number;
+  username: string;
+  accountID: number;
+}
+
 export interface LevelData {
   id: number;
   name: string;
   description: string | null;
   version: number;
-  publisherID: number;
+  playerID: number;
   difficultyDenominator: number;
   difficultyNumerator: number;
   downloads: number;
@@ -165,10 +171,15 @@ async function parseResponse(text: string) {
   console.log(`Page Hash: ${hash}`);
   console.log(`Total: ${total}, Offset: ${offset}, Amount: ${amount}`);
 
-  const creators: Record<string, string> = {};
-  creatorsRaw.split("|").forEach((creator) => {
-    const [id, name] = creator.split(":");
-    creators[id] = name;
+  const creators: Record<number, CreatorData> = {};
+  creatorsRaw.split("|").forEach((creatorData) => {
+    const [userID, name, accountID] = creatorData.split(":");
+    const creator = {
+      userID: parseInt(userID),
+      username: name,
+      accountID: parseInt(accountID),
+    };
+    creators[parseInt(userID)] = creator;
   });
 
   const songs: Record<string, { title: string; artist: string }> = {};
@@ -185,7 +196,7 @@ async function parseResponse(text: string) {
       name: obj[2] ?? "",
       description: decodeBase64(obj[3]),
       version: toInt(obj[5]),
-      publisherID: toInt(obj[6]),
+      playerID: toInt(obj[6]),
       difficultyDenominator: toInt(obj[8]),
       difficultyNumerator: toInt(obj[9]),
       downloads: toInt(obj[10]),
@@ -223,8 +234,11 @@ async function parseResponse(text: string) {
     const rating = mapRating(data.featureScore, data.epic);
 
     // Publisher handling
-    const publisher = creators[data.publisherID];
-    await Database.instance.insertAccount(data.publisherID, publisher);
+    const publisher = creators[data.playerID];
+    await Database.instance.insertAccount(
+      publisher.accountID,
+      publisher.username,
+    );
 
     // Song handling
     let song = { artist: "", title: "" };
@@ -255,7 +269,7 @@ async function parseResponse(text: string) {
       id: data.id,
       name: data.name,
       description: data.description,
-      publisher_account_id: data.publisherID,
+      publisher_account_id: publisher.accountID,
       release_date: null,
       difficulty,
       length,
@@ -268,8 +282,8 @@ async function parseResponse(text: string) {
   }
 }
 
-export async function addLevelsToDatabase(pageCount: number) {
-  for (let i = 0; i <= pageCount; i++) {
+export async function addLevelsToDatabase(pageStart: number, pageEnd: number) {
+  for (let i = pageStart; i <= pageEnd; i++) {
     console.log(`Fetching page ${i}...`);
     const text = await fetchLevels({
       secret: "Wmfd2893gb7",

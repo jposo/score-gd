@@ -1,14 +1,17 @@
 <script lang="ts">
+  import "../app.css";
   import favicon from "$lib/assets/favicon.svg";
   import { theme, themes, setTheme } from "$lib/tools/theme";
   import { onMount } from "svelte";
-  import { page } from "$app/stores";
-  import { goto } from "$app/navigation";
-  import "../app.css";
   import type { PageData } from "./$types";
-  import type { User } from "$lib/db-types";
+  import type { KeyboardEventHandler } from "svelte/elements";
 
   let { children, data }: { children: any; data: PageData } = $props();
+
+  let searchResults:
+    | { id: number; name: string; publisher: string }[]
+    | undefined = $state();
+  let searchInput: string | undefined = $state();
 
   // Initialize theme on mount
   onMount(() => {
@@ -37,6 +40,19 @@
       console.error("Logout error:", error);
     }
   }
+
+  async function handleSearch() {
+    return;
+    if (!searchInput) return;
+    if (searchInput && searchInput.length < 4) {
+      searchResults = [];
+      return;
+    }
+
+    const response = await fetch(`/api/search?q=${searchInput}`);
+    const results = await response.json();
+    searchResults = results;
+  }
 </script>
 
 <svelte:head>
@@ -54,26 +70,51 @@
   </div>
 
   <div class="navbar-end flex gap-4">
-    <label class="input">
-      <!-- <Icon src={MagnifyingGlass} class="h-[1em] opacity-50" /> -->
-      <svg
-        class="h-[1em] opacity-50"
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-      >
-        <g
-          stroke-linejoin="round"
-          stroke-linecap="round"
-          stroke-width="2.5"
-          fill="none"
-          stroke="currentColor"
+    <div class="dropdown dropdown-end">
+      <div>
+        <label class="input">
+          <svg
+            class="h-[1em] opacity-50"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <g
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              stroke-width="2.5"
+              fill="none"
+              stroke="currentColor"
+            >
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </g>
+          </svg>
+          <input
+            type="search"
+            placeholder="Search"
+            bind:value={searchInput}
+            onkeydown={handleSearch}
+          />
+        </label>
+      </div>
+      {#if searchResults}
+        <ul
+          tabindex="-1"
+          class="dropdown-content z-10 p-2 mt-2 shadow bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
         >
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.3-4.3"></path>
-        </g>
-      </svg>
-      <input type="search" placeholder="Search" />
-    </label>
+          {#if searchResults.length > 0}
+            <li>fucky 1</li>
+            {#each searchResults as result}
+              <li>
+                {result.name}
+              </li>
+            {/each}
+          {:else}
+            <li>fucky 2</li>
+          {/if}
+        </ul>
+      {/if}
+    </div>
 
     <!-- Theme Controller -->
     <div class="dropdown dropdown-end">

@@ -1,21 +1,45 @@
+<script lang="ts">
+  import Alert from "$lib/components/Alert.svelte";
+
+  let success: string | undefined = $state();
+  let error: string | undefined = $state();
+  const alertDuration = 2000;
+</script>
+
 <svelte:head>
   <title>Admin - loggd</title>
 </svelte:head>
 
+{#if success}
+  <Alert message={success} type="success" duration={alertDuration} />
+{/if}
+{#if error}
+  <Alert message={error} type="error" duration={alertDuration} />
+{/if}
+
 <div class="container mx-auto p-4">
-  <div>hello you are admin</div>
-  <button
-    class="btn btn-primary"
-    onclick={async () => {
-      fetch("/api/levels", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ pageCount: 0 }),
-      })
-        .then((response) => response.json())
-        .then((data) => console.log(data));
-    }}>Obtain Levels</button
-  >
+  <form method="POST" action="/admin?/fetchLevels">
+    <fieldset
+      class="fieldset bg-base-200 border-base-300 rounded-box w-md border p-4"
+    >
+      <legend class="fieldset-legend">Fetch Levels</legend>
+      <div class="join gap-2">
+        <input
+          class="input join-item"
+          placeholder="Page start"
+          name="pageStart"
+          type="number"
+        />
+        <input
+          class="input join-item"
+          placeholder="Page end"
+          name="pageEnd"
+          type="number"
+        />
+        <button class="btn btn-primary join-item" type="submit"
+          >Fetch Levels</button
+        >
+      </div>
+    </fieldset>
+  </form>
 </div>

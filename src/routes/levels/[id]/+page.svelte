@@ -4,6 +4,7 @@
     convertDate,
     dateToString,
     calculateNewAverage,
+    getYouTubeEmbedUrl,
   } from "$lib/tools/utils";
   import Review from "$lib/components/Review.svelte";
   import Alert from "$lib/components/Alert.svelte";
@@ -18,7 +19,7 @@
 
   // Level Data
   let average = $state(data.level.average_rating ?? undefined);
-  let releaseDate = $state(data.level.release_date ?? undefined);
+  let releaseDate = $state(convertDate(data.level.release_date ?? undefined));
   let difficulty = $state(data.level.difficulty ?? undefined);
   let videoUrl = $state(data.level.video_url ?? undefined);
   let description = $state(data.level.description ?? undefined);
@@ -55,24 +56,30 @@
     { value: "To Try" },
   ];
 
-  async function request(formData: FormData) {
+  async function actionRequest(
+    url: string,
+    formData: FormData,
+    successMsg: string,
+    errorMsg: string,
+    networkErrorMsg: string,
+  ) {
     try {
-      const response = await fetch(`/levels/${data.level.id}`, {
+      const response = await fetch(url, {
         method: "POST",
         body: formData,
       });
 
       if (response.ok) {
-        success = "Progress updated successfully";
+        success = successMsg;
         setTimeout(() => {
           success = undefined;
         }, alertDuration);
       } else {
-        error = "Failed to update list";
+        error = errorMsg;
       }
     } catch (error) {
       console.error(error);
-      error = "An error occurred while updating the progress";
+      error = networkErrorMsg;
     } finally {
       setTimeout(() => {
         success = undefined;
@@ -100,7 +107,13 @@
       }
       oldRating = rating;
     }
-    await request(form);
+    await actionRequest(
+      `/levels/${data.level.id}?/updateProgress`,
+      form,
+      "Progress updated successfully",
+      "Failed to update list",
+      "An error occurred while updating the progress",
+    );
   }
 
   async function handleSubmitProgress(event: Event) {
@@ -111,13 +124,25 @@
     const form = new FormData(event.target as HTMLFormElement);
     form.append("status", status!);
 
-    await request(form);
+    await actionRequest(
+      `/levels/${data.level.id}?/updateProgress`,
+      form,
+      "Progress updated successfully",
+      "Failed to update list",
+      "An error occurred while updating the progress",
+    );
   }
 
-  async function handleSubmitLevel(event: Event) {
+  async function handleSubmitLevelDetails(event: Event) {
     event.preventDefault();
     const form = new FormData(event.target as HTMLFormElement);
-    console.log(form);
+    await actionRequest(
+      `/levels/${data.level.id}?/updateLevel`,
+      form,
+      "Level details updated successfully",
+      "Failed to update level details",
+      "An error occurred while updating the level details",
+    );
   }
 </script>
 
@@ -155,7 +180,8 @@
                   {data.level.name} Details
                 </h3>
                 <form
-                  onsubmit={async (event) => await handleSubmitLevel(event)}
+                  onsubmit={async (event) =>
+                    await handleSubmitLevelDetails(event)}
                 >
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <fieldset class="fieldset">
@@ -477,7 +503,7 @@
               <iframe
                 width="388"
                 height="218"
-                src="https://www.youtube.com/embed/A6xe4tKdx_c?si=qQVlAjkwWilGdjxX"
+                src={getYouTubeEmbedUrl(data.level.video_url)}
                 title="YouTube video player"
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

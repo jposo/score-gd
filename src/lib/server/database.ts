@@ -385,31 +385,6 @@ export default class Database {
     }
   }
 
-  async getRecentActivity(userId: number) {
-    const activity = await this.sql`
-      SELECT
-        l.id as level_id,
-        l.name,
-        p.status,
-        p.enjoyment_rating,
-        p.review
-        p.created_at,
-      FROM progress p
-      JOIN levels l ON p.level_id = l.id
-      WHERE user_id = ${userId}
-      ORDER BY created_at DESC
-      LIMIT 5
-    `;
-    return activity as unknown as {
-      level_id: number;
-      name: string;
-      status: string;
-      enjoyment_rating: number;
-      review: string;
-      created_at: Date;
-    }[];
-  }
-
   async insertAccount(accountId: number, username: string) {
     const [result] = await this.sql`
       INSERT INTO accounts (id, username)
@@ -418,5 +393,58 @@ export default class Database {
       RETURNING id;
     `;
     return result;
+  }
+
+  async updateLevel(
+    id: number,
+    params: Pick<
+      Level,
+      "release_date" | "difficulty" | "video_url" | "description"
+    >,
+  ) {
+    console.log(params);
+    const [result] = await this.sql`
+      UPDATE levels
+      SET ${this.sql(params)}
+      WHERE id = ${id}
+      RETURNING id;
+    `;
+    return result;
+  }
+
+  async search(query: string) {
+    const queryId = parseInt(query);
+    let result;
+    if (Number.isNaN(queryId)) {
+      [result] = await this.sql`
+        SELECT
+          l.id,
+          l.name,
+          a.username as publisher
+        FROM levels l
+        JOIN accounts a ON l.publisher_account_id = a.id
+        WHERE l.name ILIKE ${`%${query}%`}
+        OR a.username ILIKE ${`%${query}%`}
+        LIMIT 10
+      `;
+    } else {
+      [result] = await this.sql`
+        SELECT
+          l.id,
+          l.name,
+          a.username as publisher
+        FROM levels l
+        JOIN accounts a ON l.publisher_account_id = a.id
+        WHERE l.name ILIKE ${`%${query}%`}
+        OR a.username ILIKE ${`%${query}%`}
+        OR l.id = ${query}
+        LIMIT 10
+      `;
+    }
+    return result as unknown as {
+      id: number;
+      name: string;
+      publisher: string;
+    }[];
   }
 }

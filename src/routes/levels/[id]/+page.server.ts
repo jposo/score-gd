@@ -1,8 +1,9 @@
 import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
-import type { PageServerLoad, Actions } from "./$types";
+import type { PageServerLoad, Actions, RequestEvent } from "./$types";
 import Database, { type ProgressValues } from "$lib/server/database";
-import { requireAuth } from "$lib/server/auth/middleware";
-import type { RequestEvent } from "@sveltejs/kit";
+import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
+import { isVideoUrl } from "$lib/tools/utils";
+import type { Level } from "$lib/db-types";
 
 export const load: PageServerLoad = async ({
   params,
@@ -28,7 +29,7 @@ export const load: PageServerLoad = async ({
 };
 
 export const actions: Actions = {
-  default: async (event: RequestEvent) => {
+  updateProgress: async (event: RequestEvent) => {
     const { request, params } = event;
 
     const user = await requireAuth(event);
@@ -108,5 +109,36 @@ export const actions: Actions = {
       console.error(err);
       return fail(500, { message: "Internal Server Error" });
     }
+  },
+  updateLevel: async (event: RequestEvent) => {
+    const user = await requireAuthWithRoles(event, ["Admin"]);
+
+    const data = await event.request.formData();
+
+    const parameters: Pick<
+      Level,
+      "release_date" | "difficulty" | "video_url" | "description"
+    > = {};
+    const releaseDate = new Date(data.get("release_date") as string);
+    if (!Number.isNaN(releaseDate.getTime())) {
+      parameters.release_date = releaseDate;
+    }
+    const difficulty = data.get("difficulty") as string;
+    parameters.difficulty = difficulty;
+    const videoUrl = data.get("video_url") as string;
+    if (isVideoUrl(videoUrl)) {
+      parameters.video_url = videoUrl;
+    }
+    const description = data.get("description") as string;
+    parameters.description = description;
+
+    const levelId = parseInt(event.params.id!);
+
+    if (Number.isNaN(levelId)) {
+      return fail(400, { error: `Invalid level ID: ${event.params.id}` });
+    }
+
+    console.log(`User ${user.id} updated level ${levelId}`);
+    await Database.instance.updateLevel(levelId, parameters);
   },
 };

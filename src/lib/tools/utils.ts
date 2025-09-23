@@ -12,6 +12,7 @@ export function dateToString(date: Date): string {
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   };
   return date.toLocaleDateString(undefined, options);
 }
@@ -48,4 +49,26 @@ export function calculateNewAverage(
 ) {
   const total = oldAverage * count - oldRating + newRating;
   return total / count;
+}
+
+export function isVideoUrl(url: string): boolean {
+  const regex =
+    /^(https?:\/\/)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$/;
+  return regex.test(url);
+}
+
+export function getYouTubeEmbedUrl(url) {
+  let videoId = "";
+  // Use a regular expression to find the video ID in various URL formats
+  const regex =
+    /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = url.match(regex);
+
+  if (match && match[1]) {
+    videoId = match[1];
+  } else {
+    return null; // Return null if no valid ID is found
+  }
+
+  return `https://www.youtube.com/embed/${videoId}`;
 }
