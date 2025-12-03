@@ -4,7 +4,7 @@
   import Activity from "$lib/components/Activity.svelte";
   import Alert from "$lib/components/Alert.svelte";
   import List from "$lib/components/ListDragAndDrop.svelte";
-  import { formatDate } from "$lib/tools/utils";
+  import { formatDate, equalArrayOfObjectsWithIds } from "$lib/tools/utils";
   import type { ListItem } from "$lib/shared/types";
 
   let { data }: { data: PageData } = $props();
@@ -18,17 +18,21 @@
   let firstState: ListItem[] | undefined = undefined;
 
   function handleDrop(newItems: ListItem[]) {
-    if (lastState === undefined) {
-      firstState = newItems;
-    }
+    // if (lastState === undefined) {
+    //   firstState = newItems;
+    // }
     lastState = newItems;
   }
 
   async function updateListPlacement() {
+    if (!editMode) {
+      firstState = data.user.list!;
+    }
+
     editMode = !editMode;
     if (!editMode) {
       if (lastState === undefined) return;
-      if (firstState === lastState) return;
+      if (equalArrayOfObjectsWithIds(firstState || [], lastState)) return;
       const form = new FormData();
       form.append("list", JSON.stringify(lastState));
 
@@ -54,7 +58,6 @@
       }
     }
   }
-  console.log(data.user);
 </script>
 
 <svelte:head>
@@ -192,7 +195,7 @@
             List
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
-            {#if data.isUser}
+            {#if data.isUser && data.user.list && data.user.list.length > 0}
               <div class="flex justify-end">
                 <button
                   class="btn btn-sm btn-square"
@@ -206,7 +209,15 @@
                 </button>
               </div>
             {/if}
-            <List items={data.user.list!} {editMode} onDrop={handleDrop} />
+            {#if data.user.list && data.user.list.length > 0}
+              <List items={data.user.list!} {editMode} onDrop={handleDrop} />
+            {:else}
+              <div class="text-center">
+                <p class="text-base-content/50 mb-4">
+                  No levels completed yet.
+                </p>
+              </div>
+            {/if}
           </div>
         </div>
       </div>

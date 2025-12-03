@@ -23,6 +23,7 @@
   let difficulty = $state(data.level.difficulty ?? undefined);
   let videoUrl = $state(data.level.video_url ?? undefined);
   let description = $state(data.level.description ?? undefined);
+  let skillsets = $state(data.level.skillsets ?? []);
 
   // Progress Data
   let oldRating = $state(data.progress?.enjoyment_rating ?? undefined);
@@ -252,6 +253,20 @@
                     ></textarea>
                   </fieldset>
 
+                  <div>
+                    {#each data.skillsets as skillset}
+                      <input
+                        class="btn"
+                        type="checkbox"
+                        name="skillsets"
+                        value={skillset.id}
+                        aria-label={skillset.name}
+                        checked={skillsets.includes(skillset.id)}
+                      />
+                    {/each}
+                    <input class="btn btn-square" type="reset" value="×" />
+                  </div>
+
                   <div class="modal-action flex justify-end gap-2">
                     <button
                       type="submit"
@@ -479,23 +494,33 @@
                   >{dateToString(data.level.release_date)}</span
                 >
               {/if}
-              by <span class="font-semibold">{data.level.publisher}</span>
+              by
+              <span class="font-semibold">{data.level.publisher}</span>
             </h2>
             <p class="italic">{data.level.description}</p>
             <span>
               <div class="badge badge-neutral">
-                <span class="font-semibold">{data.level.song_title}</span> by
+                <span class="font-semibold">{data.level.song_title}</span>
+                by
                 <span class="font-semibold">{data.level.song_artist}</span>
               </div>
-              <div class="badge badge-neutral">{data.level.length}</div>
+              <div class="badge badge-neutral">
+                {data.level.length}
+              </div>
               {#if data.level.two_player}
                 <div class="badge badge-neutral">2-Player</div>
               {/if}
               {#if data.level.coins && data.level.coins >= 1}
-                <div class="badge badge-neutral">{data.level.coins} Coins</div>
+                <div class="badge badge-neutral">
+                  {data.level.coins} Coins
+                </div>
               {/if}
-              <div class="badge badge-warning">{data.level.rating}</div>
-              <div class="badge badge-error">{data.level.difficulty}</div>
+              <div class="badge badge-warning">
+                {data.level.rating}
+              </div>
+              <div class="badge badge-error">
+                {data.level.difficulty}
+              </div>
             </span>
           </div>
           <div class="w-2/5 flex justify-end">

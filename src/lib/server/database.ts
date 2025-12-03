@@ -1,10 +1,6 @@
 import postgres from "postgres";
 import type { Level, Song, User, Progress } from "../db-types";
 
-// interface LoggdDatabase {
-//   getUsers();
-// }
-
 type LevelValues = Omit<Level, "id" | "created_at">;
 type SongValues = Omit<Song, "created_at">;
 type UserValues = Omit<
@@ -33,10 +29,6 @@ export default class Database {
     }
     return Database.#instance;
   }
-
-  // public async connect() {
-  //   if (!this.client.connected) await this.client.connect();
-  // }
 
   public async disconnect() {
     await this.sql?.end();
@@ -67,6 +59,16 @@ export default class Database {
     }[];
   }
 
+  public async getAllSkillsets() {
+    const skillsets = await this.sql`
+      SELECT id, name FROM skillsets;
+    `;
+    return skillsets as unknown as {
+      id: number;
+      name: string;
+    }[];
+  }
+
   public async getLevel(id: number) {
     const [level] = await this.sql`
       SELECT
@@ -81,6 +83,7 @@ export default class Database {
         l.length,
         l.release_date,
         l.video_url,
+        l.skillsets,
         s.id AS song_id,
         s.title AS song_title,
         s.artist AS song_artist,
@@ -402,7 +405,6 @@ export default class Database {
       "release_date" | "difficulty" | "video_url" | "description"
     >,
   ) {
-    console.log(params);
     const [result] = await this.sql`
       UPDATE levels
       SET ${this.sql(params)}

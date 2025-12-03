@@ -21,7 +21,9 @@ export const load: PageServerLoad = async ({
       return { level };
     }
     const progress = await db.getUserProgress(user.id, id);
-    return { level, progress };
+    const skillsets = await db.getAllSkillsets();
+    console.log(progress);
+    return { level, progress, skillsets };
   } catch (err) {
     console.error(err);
     error(500, "Internal Server Error");
@@ -92,18 +94,16 @@ export const actions: Actions = {
           case "status":
             parameters[key] = value;
         }
-
-        if (parameters.completion_pct && parameters.completion_pct >= 100) {
-          parameters.completion_pct = 100;
-          parameters.status = "Completed";
-        }
-
-        const result = await Database.instance.updateUserProgress(parameters);
-        if (result) {
-          return { success: true };
-        } else {
-          return fail(400, { error: "Failed to update progress" });
-        }
+      }
+      if (parameters.completion_pct && parameters.completion_pct >= 100) {
+        parameters.completion_pct = 100;
+        parameters.status = "Completed";
+      }
+      const result = await Database.instance.updateUserProgress(parameters);
+      if (result) {
+        return { success: true };
+      } else {
+        return fail(400, { error: "Failed to update progress" });
       }
     } catch (err) {
       console.error(err);

@@ -72,3 +72,12 @@ export function getYouTubeEmbedUrl(url) {
 
   return `https://www.youtube.com/embed/${videoId}`;
 }
+
+export function equalArrayOfObjectsWithIds(arr1: object[], arr2: object[]) {
+  if (arr1.length !== arr2.length) {
+    return false;
+  }
+  const idsA = new Set(arr1.map((obj) => obj.id));
+  const idsB = new Set(arr2.map((obj) => obj.id));
+  return idsA.size === idsB.size && [...idsA].every((id) => idsB.has(id));
+}
