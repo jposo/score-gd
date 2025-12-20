@@ -244,28 +244,32 @@ async function parseResponse(text: string) {
     let song = { artist: "", title: "" };
     let songId: number | undefined;
 
-    if (data.customSongID === 0) {
-      song = OfficialSongs[data.officialSong];
-      const existing = await Database.instance.getSong(-data.officialSong);
-      songId =
-        existing?.id ??
-        (await Database.instance.insertSong({
-          id: -data.officialSong,
-          ...song,
-        }));
-    } else {
-      song = songs[data.customSongID];
-      const existing = await Database.instance.getSong(data.customSongID);
-      songId =
-        existing?.id ??
-        (await Database.instance.insertSong({
-          id: data.customSongID,
-          ...song,
-        }));
+    try {
+      if (data.customSongID === 0) {
+        song = OfficialSongs[data.officialSong];
+        const existing = await Database.instance.getSong(-data.officialSong);
+        songId =
+          existing?.id ??
+          (await Database.instance.insertSong({
+            id: -data.officialSong,
+            ...song,
+          }));
+      } else {
+        song = songs[data.customSongID];
+        const existing = await Database.instance.getSong(data.customSongID);
+        songId =
+          existing?.id ??
+          (await Database.instance.insertSong({
+            id: data.customSongID,
+            ...song,
+          }));
+      }
+    } catch (err) {
+      console.error(err);
     }
 
     // Insert level
-    await Database.instance.insertLevel({
+    const params = {
       id: data.id,
       name: data.name,
       description: data.description,
@@ -273,12 +277,16 @@ async function parseResponse(text: string) {
       release_date: null,
       difficulty,
       length,
-      song_id: songId!,
+      // song_id: songId,
       video_url: null,
       coins: data.verifiedCoins ? data.coins : 0,
       two_player: data.twoPlayer,
       rating,
-    });
+    };
+    if (songId) {
+      params["song_id"] = songId;
+    }
+    await Database.instance.insertLevel(params);
   }
 }
 

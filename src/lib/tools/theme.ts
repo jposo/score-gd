@@ -2,7 +2,7 @@ import { writable } from "svelte/store";
 import { browser } from "$app/environment";
 
 // Available DaisyUI themes
-export const themes = ["light", "silk", "dark", "dracula"];
+export const themes = ["light", "silk", "dark", "dracula", "sunset"];
 
 // Get initial theme from localStorage or default to 'light'
 function getInitialTheme(): string {

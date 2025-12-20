@@ -4,11 +4,11 @@ import postgres from "postgres";
 // Replace with your actual database connection details.
 // For better security, consider using environment variables.
 const DB_CONFIG = {
-  hostname: "localhost",
-  port: 5432,
-  user: "postgres",
-  password: "admin12345",
-  database: "loggd",
+  hostname: Deno.env.get("VITE_PGHOST"),
+  port: Deno.env.get("VITE_PGPORT"),
+  user: Deno.env.get("VITE_PGUSER"),
+  password: Deno.env.get("VITE_PGPASSWORD"),
+  database: Deno.env.get("VITE_PGDATABASE"),
   // Use 'require' for local development if you don't have SSL configured.
   // In production, prefer 'verify-full' with a CA certificate.
   // ssl: "require" as const,

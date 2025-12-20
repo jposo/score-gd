@@ -34,8 +34,8 @@ export default class Database {
     await this.sql?.end();
   }
 
-  public async getLevels(page?: number) {
-    const LIMIT = 18;
+  public async getTrendingLevels() {
+    const LIMIT = 10;
     const levels = await this.sql`
       SELECT
         l.id,
@@ -43,11 +43,14 @@ export default class Database {
         a.username as publisher,
         l.difficulty,
         l.release_date,
-        l.length
+        l.length,
+        CAST(AVG(p.enjoyment_rating) AS FLOAT) AS average_rating
       FROM levels l
       JOIN accounts a ON l.publisher_account_id = a.id
-      ORDER BY l.id ASC
-      LIMIT ${LIMIT} OFFSET ${page ? (page - 1) * LIMIT : 0}
+      JOIN progress p ON l.id = p.level_id
+      GROUP BY l.id, l.name, a.username, l.difficulty, l.release_date, l.length
+      ORDER BY average_rating DESC
+      LIMIT ${LIMIT}
     `;
     return levels as unknown as {
       id: number;
@@ -56,7 +59,52 @@ export default class Database {
       difficulty: string;
       release_date: Date;
       length: string;
+      average_rating: number;
     }[];
+  }
+
+  public async getLevels(page?: number) {
+    const LIMIT = 18;
+    const offset = page ? (page - 1) * LIMIT : 0;
+    const levels = await this.sql`
+      SELECT
+        l.id,
+        l.name,
+        a.username as publisher,
+        l.difficulty,
+        l.release_date,
+        l.length,
+        CAST(AVG(p.enjoyment_rating) AS FLOAT) AS average_rating
+      FROM levels l
+      JOIN accounts a ON l.publisher_account_id = a.id
+      LEFT JOIN progress p ON l.id = p.level_id
+      GROUP BY l.id, l.name, a.username, l.difficulty, l.release_date, l.length
+      ORDER BY l.id ASC
+      LIMIT ${LIMIT} OFFSET ${offset}
+    `;
+
+    const [{ count }] = await this.sql`
+      SELECT COUNT(id) as count FROM levels;
+    `;
+
+    const totalCount = parseInt(count, 10);
+    const currentLevelCount = levels.length;
+    const currentPage = page || 1;
+
+    const isLastPage = offset + currentLevelCount >= totalCount;
+
+    return {
+      levels: levels as unknown as {
+        id: number;
+        name: string;
+        publisher: string;
+        difficulty: string;
+        release_date: Date;
+        length: string;
+        average_rating: number;
+      }[],
+      isLastPage,
+    };
   }
 
   public async getAllSkillsets() {
@@ -418,7 +466,7 @@ export default class Database {
     const queryId = parseInt(query);
     let result;
     if (Number.isNaN(queryId)) {
-      [result] = await this.sql`
+      result = await this.sql`
         SELECT
           l.id,
           l.name,
@@ -430,7 +478,7 @@ export default class Database {
         LIMIT 10
       `;
     } else {
-      [result] = await this.sql`
+      result = await this.sql`
         SELECT
           l.id,
           l.name,

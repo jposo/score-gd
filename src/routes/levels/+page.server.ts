@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
 
     const db = Database.instance;
     const levels = await db.getLevels(parseInt(page));
-    return { levels };
+    return { page: levels };
   } catch (err) {
     console.error(err);
     error(500, "Internal server error");
