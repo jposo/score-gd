@@ -6,6 +6,7 @@
     id: number;
     name: string;
     publisher: string;
+    rating?: number;
     difficulty: string;
     length: string;
     releaseDate?: string;
@@ -18,7 +19,7 @@
 </script>
 
 <div
-  class="card bg-base-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer hover:bg-base-300"
+  class="card bg-base-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer hover:bg-base-300"
   onclick={() => navigateToLevel(props.id)}
   onkeydown={(e) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -29,20 +30,33 @@
   role="button"
 >
   <div class="card-body">
-    <h2 class="card-title text-lg">{props.name}</h2>
-    <div class="text-sm opacity-75 space-y-1">
-      <div>
-        by <span class="font-medium">{props.publisher}</span>
+    <div class="grid grid-cols-2">
+      <div class="flex flex-col">
+        <h2 class="card-title text-lg">{props.name}</h2>
+        <div class="text-sm opacity-75 space-y-1">
+          <div>
+            by <span class="font-medium">{props.publisher}</span>
+          </div>
+          <div class={getDifficultyColor(props.difficulty)}>
+            <span class="font-semibold">{props.difficulty.toLowerCase()}</span>
+          </div>
+          <div class="text-xs">
+            {props.length.toLowerCase()}
+            {#if props.releaseDate}
+              <span class="mx-1">&#8226;</span>
+              {new Date(props.releaseDate).getFullYear()}
+            {/if}
+          </div>
+        </div>
       </div>
-      <div class={getDifficultyColor(props.difficulty)}>
-        <span class="font-semibold">{props.difficulty}</span>
-      </div>
-      <div class="text-xs">
-        {props.length}
-        {#if props.releaseDate}
-          <span class="mx-1">&#8226;</span>
-          {new Date(props.releaseDate).getFullYear()}
-        {/if}
+      <div class="flex flex-col justify-items-end">
+        <div class="text-end">
+          {#if props.rating}
+            {props.rating.toFixed(1)}
+          {:else}
+            n/a
+          {/if}
+        </div>
       </div>
     </div>
     <div class="card-actions justify-end mt-2">

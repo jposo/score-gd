@@ -35,11 +35,11 @@
   use:dndzone={{ items, flipDurationMs, dragDisabled: !editMode }}
   onconsider={handleDndConsider}
   onfinalize={handleDndFinalize}
-  class="list shadow-sm"
+  class="list"
 >
   {#each items as item, index (item.id)}
     <li
-      class="list-row flex items-center"
+      class="list-row flex items-center px-0"
       animate:flip={{ duration: flipDurationMs }}
     >
       <div class="flex items-center text-4xl font-thin opacity-30 tabular-nums">
@@ -60,7 +60,7 @@
             {item.publisher}
           </span>
         </div>
-        <div class="text-xs uppercase font-semibold opacity-60">
+        <div class="text-xs lowerecase font-semibold opacity-60">
           {#if item.attempts}
             {item.attempts} attempts
           {/if}

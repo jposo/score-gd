@@ -12,6 +12,16 @@
     name: string | null;
   };
 
+  let now = $state(Date.now());
+  let target = new Date(data.updatesOn).getTime();
+
+  let diff = $derived(Math.max(0, target - now));
+  let diffHours = $derived(Math.floor(diff / (1000 * 60 * 60)));
+  let diffMinutes = $derived(
+    Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+  );
+  let diffSeconds = $derived(Math.floor((diff % (1000 * 60)) / 1000));
+
   let images = $derived(data.day.images.sort((a, b) => a.index - b.index));
   let viewImage = $state(0);
   let input = $state("");
@@ -41,10 +51,16 @@
   let alertMessage = $state("");
 
   onMount(() => {
+    const interval = setInterval(() => {
+      now = Date.now();
+    }, 1000);
+
     const storedHints = localStorage.getItem("hints");
     if (storedHints) {
       hints = JSON.parse(storedHints);
     }
+
+    return () => clearInterval(interval);
   });
 
   $effect(() => {
@@ -200,7 +216,7 @@
       {#if searchResults.length > 0}
         <ul
           tabindex="-1"
-          class="dropdown-content z-1 menu p-2 shadow bg-base-300 rounded-box w-full text-2xl **mt-2**"
+          class="dropdown-content overflow-y-auto flex-nowrap z-1 menu p-2 shadow bg-base-300 rounded-box w-full max-h-52 text-2xl **mt-2**"
         >
           {#each searchResults as result}
             <li value={result.id}>
@@ -236,15 +252,37 @@
       by
       <span class="font-bold">{answer?.publisher ?? "publisher"}</span>
     </p>
+    <p class="text-md pt-2 opacity-60">
+      come back in <span class="countdown font-mono">
+        <span
+          style="--value:{diffHours};"
+          aria-live="polite"
+          aria-label={`${diffHours}`}>{diffHours}</span
+        >
+        h
+        <span
+          style="--value:{diffMinutes};"
+          aria-live="polite"
+          aria-label={`${diffMinutes}`}>{diffMinutes}</span
+        >
+        m
+        <span
+          style="--value:{diffSeconds};"
+          aria-live="polite"
+          aria-label={`${diffSeconds}`}>{diffSeconds}</span
+        >
+        s
+      </span>
+    </p>
   </div>
 {/if}
 
 <div class="flex w-full flex-col my-4 items-center">
   {#each guesses[data.day.number]?.toReversed() ?? [] as guess}
     <div
-      class="card card-border {guess.correct
+      class="card card-border max-w-xl {guess.correct
         ? 'border-success shadow-lg shadow-success/30'
-        : ''} my-1 w-1/2 bg-base-300 rounded-box grid h-10 place-items-center"
+        : 'border-error shadow-lg shadow-error/30'} my-1 w-1/2 bg-base-300 rounded-box grid h-10 place-items-center"
     >
       {guess.guess}
     </div>

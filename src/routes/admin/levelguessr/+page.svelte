@@ -332,6 +332,13 @@
   }
 </script>
 
+<ul
+  class="menu menu-vertical lg:menu-horizontal bg-base-200 rounded-b-box w-full"
+>
+  <li><a href="/admin">loggd</a></li>
+  <li><a href="/admin/levelguessr">levelguessr</a></li>
+</ul>
+
 <div class="container mx-auto max-w-7xl p-6 space-y-8">
   <div class="flex flex-col md:flex-row justify-between items-center gap-4">
     <div>

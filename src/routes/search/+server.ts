@@ -7,7 +7,7 @@ export const GET: RequestHandler = async ({ url }) => {
   const searchTerm = url.searchParams.get("q");
   const service = url.searchParams.get("s") ?? "";
 
-  if (!searchTerm || searchTerm.length <= 3) {
+  if (!searchTerm || searchTerm.length < 3) {
     return json([]);
   }
 

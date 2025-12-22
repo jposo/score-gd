@@ -6,7 +6,8 @@
   import type { PageData } from "./$types";
   import { goto } from "$app/navigation";
   import { guessesState } from "$lib/state/guesses.svelte";
-  import type { HTMLInputTypeAttribute } from "svelte/elements";
+  import Toast from "$lib/components/Toast.svelte";
+  import { toastManager } from "$lib/state/toasts.svelte";
 
   let { children, data }: { children: any; data: PageData } = $props();
 
@@ -65,7 +66,7 @@
   });
 
   $effect(() => {
-    if (!searchInput || searchInput.trim().length < 4) {
+    if (!searchInput || searchInput.trim().length < 3) {
       searchResults = [];
       return;
     }
@@ -94,9 +95,11 @@
   <title>loggd</title>
 </svelte:head>
 
-<nav class="navbar bg-base-300 shadow-sm px-4">
+<nav
+  class="navbar bg-base-300/80 shadow-sm px-4 sticky top-0 z-10 backdrop-blur"
+>
   <div class="navbar-start gap-2">
-    <a href="/" class="btn btn-ghost text-xl">loggd</a>
+    <a href="/" class="btn btn-ghost text-2xl">loggd</a>
 
     <button class="btn btn-ghost" onclick={() => openSearch()}>
       search...
@@ -304,8 +307,8 @@
     searchInput = "";
   }}
 >
-  <div class="modal-box w-11/12 max-w-5xl h-3/4 flex flex-col gap-4">
-    <label class="input w-full border-b border-base-100">
+  <div class="modal-box w-5/6 max-w-5xl h-3/4 flex flex-col gap-4">
+    <label class="input w-full border-b border-base-100 text-lg">
       <svg
         class="h-[1em] opacity-50"
         xmlns="http://www.w3.org/2000/svg"
@@ -365,5 +368,9 @@
     <button>close</button>
   </form>
 </dialog>
+
+{#each toastManager.queue as toast (toast.id)}
+  <Toast type={toast.type} message={toast.message} />
+{/each}
 
 {@render children?.()}

@@ -6,6 +6,10 @@
   import List from "$lib/components/ListDragAndDrop.svelte";
   import { formatDate, equalArrayOfObjectsWithIds } from "$lib/tools/utils";
   import type { ListItem } from "$lib/shared/types";
+  import { toastManager } from "$lib/state/toasts.svelte";
+  import { goto } from "$app/navigation";
+  import { onMount } from "svelte";
+  import { page } from "$app/state";
 
   let { data }: { data: PageData } = $props();
 
@@ -16,6 +20,24 @@
   let editMode = $state(false);
   let lastState: ListItem[] | undefined = undefined;
   let firstState: ListItem[] | undefined = undefined;
+
+  const tabs = {
+    recent: "recent",
+    list: "list",
+    progress: "progress",
+  };
+
+  let tab = $state(tabs.recent);
+
+  onMount(() => {
+    if (page.url.hash === "#" + tabs.recent) {
+      tab = tabs.recent;
+    } else if (page.url.hash === "#" + tabs.list) {
+      tab = tabs.list;
+    } else if (page.url.hash === "#" + tabs.progress) {
+      tab = tabs.progress;
+    }
+  });
 
   function handleDrop(newItems: ListItem[]) {
     // if (lastState === undefined) {
@@ -29,10 +51,13 @@
       firstState = data.user.list!;
     }
 
+    console.log("updatelistplacement");
+
     editMode = !editMode;
     if (!editMode) {
       if (lastState === undefined) return;
-      if (equalArrayOfObjectsWithIds(firstState || [], lastState)) return;
+      // if (equalArrayOfObjectsWithIds(firstState || [], lastState)) return;
+      // console.log("not same array of objects");
       const form = new FormData();
       form.append("list", JSON.stringify(lastState));
 
@@ -43,25 +68,21 @@
         });
 
         if (response.ok) {
-          success = "List updated successfully";
+          toastManager.add("successfully updated list!", "success");
+          // success = "List updated successfully";
         } else {
-          error = "Failed to update list";
+          toastManager.add("failed to update list!", "error");
+          // error = "Failed to update list";
         }
       } catch (error) {
-        error = "An error occurred while updating the list";
-      } finally {
-        lastState = undefined;
-        setTimeout(() => {
-          success = undefined;
-          error = undefined;
-        }, alertDuration);
+        toastManager.add("an unexpected error occurred!", "error");
       }
     }
   }
 </script>
 
 <svelte:head>
-  <title>Profile - {data.user?.username} - loggd</title>
+  <title>profile - {data.user?.username} - loggd</title>
 </svelte:head>
 
 {#if success}
@@ -105,19 +126,22 @@
             </h1>
 
             <p class="text-base-content/70 mb-4">
-              Member since {formatDate(data.user.created_at)}
+              member since {formatDate(data.user.created_at)}
             </p>
 
             <p class="text-base-content/80 mb-4">
-              {data.user.bio ? data.user.bio : "No bio added yet."}
+              {data.user.bio ? data.user.bio : "no bio added yet."}
             </p>
 
             {#if data.isUser}
               <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                <a href="/profile/edit" class="btn btn-primary btn-sm">
-                  Edit Profile
+                <a
+                  href="/profile/{data.user.username}/edit"
+                  class="btn btn-primary btn-sm"
+                >
+                  edit profile
                 </a>
-                <button class="btn btn-outline btn-sm"> View Progress </button>
+                <button class="btn btn-outline btn-sm"> view progress </button>
               </div>
             {/if}
           </div>
@@ -128,7 +152,7 @@
       <!-- <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-"> -->
       <div class="stats shadow bg-base-200 w-full rounded-lg">
         <div class="stat">
-          <div class="stat-title">Average Rating</div>
+          <div class="stat-title">average rating</div>
           <div class="stat-value text-secondary">
             {data.user.average_rating
               ? data.user.average_rating.toFixed(1)
@@ -138,7 +162,7 @@
         </div>
 
         <div class="stat">
-          <div class="stat-title">Levels Completed</div>
+          <div class="stat-title">levels completed</div>
           <div class="stat-value text-primary">
             {data.user.levels_completed}
           </div>
@@ -146,7 +170,7 @@
         </div>
 
         <div class="stat">
-          <div class="stat-title">Reviews Written</div>
+          <div class="stat-title">reviews written</div>
           <div class="stat-value text-accent">{data.user.reviews_written}</div>
           <!-- <div class="stat-desc">No reviews yet</div> -->
         </div>
@@ -155,23 +179,29 @@
       <div class="bg-base-200 shadow p-6 rounded-lg">
         <div class="tabs tabs-lift">
           <label class="tab">
-            <input type="radio" name="user_activity" checked={true} />
+            <input
+              type="radio"
+              name="user_activity"
+              checked={tab === tabs.recent}
+              onclick={() => goto("#" + tabs.recent)}
+            />
             <Icon src={Clock} class="size-4 me-2" />
-            Recent Activity
+            recent activity
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
             <div class="text-center">
               {#if !data.user.recent_activity || data.user.recent_activity.length === 0}
                 <div class="text-6xl mb-4">📊</div>
                 <h3 class="text-lg font-semibold text-base-content/70 mb-2">
-                  No activity yet
+                  no activity yet
                 </h3>
                 {#if data.isUser}
                   <p class="text-base-content/50 mb-4">
-                    Start tracking your Geometry Dash progress to see activity
-                    here!
+                    start tracking your <span class="font-bold"
+                      >geometry dash</span
+                    > progress to see activity here!
                   </p>
-                  <a href="/levels" class="btn btn-primary"> Browse Levels </a>
+                  <a href="/levels" class="btn btn-primary"> browse levels </a>
                 {/if}
               {:else}
                 {#each data.user.recent_activity as a}
@@ -190,9 +220,14 @@
           </div>
 
           <label class="tab">
-            <input type="radio" name="user_activity" />
+            <input
+              type="radio"
+              name="user_activity"
+              checked={tab === tabs.list}
+              onclick={() => goto("#" + tabs.list)}
+            />
             <Icon src={ListBullet} class="size-4 me-2" />
-            List
+            list
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
             {#if data.isUser && data.user.list && data.user.list.length > 0}
@@ -214,11 +249,36 @@
             {:else}
               <div class="text-center">
                 <p class="text-base-content/50 mb-4">
-                  No levels completed yet.
+                  no levels completed yet.
                 </p>
               </div>
             {/if}
           </div>
+
+          <label class="tab">
+            <input
+              type="radio"
+              name="user_activity"
+              checked={tab === tabs.progress}
+              onclick={() => goto("#" + tabs.progress)}
+            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-4 me-2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M2.25 6 9 12.75l4.286-4.286a11.948 11.948 0 0 1 4.306 6.43l.776 2.898m0 0 3.182-5.511m-3.182 5.51-5.511-3.181"
+              />
+            </svg>
+            all progress
+          </label>
+          <div class="tab-content bg-base-100 border-base-300 p-6">hello</div>
         </div>
       </div>
     </div>

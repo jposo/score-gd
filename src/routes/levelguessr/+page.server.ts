@@ -8,7 +8,7 @@ import {
 import { PUBLIC_SUPABASE_PROJECT_ID } from "$env/static/public";
 import { error, fail } from "@sveltejs/kit";
 import * as z from "zod";
-import { getCurrentDay } from "$lib/server/index";
+import { getCurrentDay, getNextDayDateTime } from "$lib/server/index";
 
 const HINT_CONFIG = [
   { threshold: 1, when: 2, value: "rating" },
@@ -45,10 +45,11 @@ export const load: PageServerLoad = async ({ url }) => {
 
   const rawDay = await fetchDay(dayNumber);
   if (!rawDay) {
-    error(500, "Day not found");
+    error(404, "Day not found");
   }
 
   return {
+    updatesOn: getNextDayDateTime(dayNumber).toISOString(),
     day: {
       number: rawDay.day,
       images: rawDay.images.map((i) => ({

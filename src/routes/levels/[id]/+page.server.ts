@@ -1,9 +1,21 @@
 import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad, Actions, RequestEvent } from "./$types";
-import Database, { type ProgressValues } from "$lib/server/database";
+import Database from "$lib/server/database";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { isVideoUrl } from "$lib/tools/utils";
 import type { Level } from "$lib/db-types";
+import * as z from "zod";
+
+const ProgressForm = z.object({
+  status: z.enum(["To Try", "In Progress", "Completed", "Dropped"]),
+  completionPercentage: z.coerce.number().min(0).max(100).nullable(),
+  attempts: z.coerce.number().min(0).nullable(),
+  rating: z.coerce.number().min(1).max(10).nullable(),
+  startDate: z.coerce.date().nullable(),
+  completionDate: z.coerce.date().nullable(),
+  videoUrl: z.url().nullable(),
+  review: z.string().min(0).max(1024).nullable(),
+});
 
 export const load: PageServerLoad = async ({
   params,
@@ -22,7 +34,6 @@ export const load: PageServerLoad = async ({
     }
     const progress = await db.getUserProgress(user.id, id);
     const skillsets = await db.getAllSkillsets();
-    console.log(progress);
     return { level, progress, skillsets };
   } catch (err) {
     console.error(err);
@@ -36,74 +47,49 @@ export const actions: Actions = {
 
     const user = await requireAuth(event);
 
-    const allowedFormKeys = new Set([
-      "status",
-      "completion_pct",
-      "total_attempts",
-      "enjoyment_rating",
-      "start_date",
-      "completion_date",
-      "video_url",
-      "review",
-    ]);
-
     const levelId = parseInt(params.id!);
 
     if (Number.isNaN(levelId)) {
       return fail(400, { error: `Invalid level ID: ${params.id}` });
     }
 
-    try {
-      const data = await request.formData();
+    const form = await request.formData();
 
-      const parameters: ProgressValues = {
+    const result = ProgressForm.safeParse({
+      status: form.get("status"),
+      completionPercentage: form.get("completionPercentage") || null,
+      attempts: form.get("attempts") || null,
+      rating: form.get("rating") || null,
+      startDate: form.get("startDate") || null,
+      completionDate: form.get("completionDate") || null,
+      videoUrl: form.get("videoUrl") || null,
+      review: form.get("review") || null,
+    });
+
+    if (!result.success) {
+      return fail(400, { message: result.error.message });
+    }
+
+    const data = result.data;
+
+    try {
+      console.log("updating progress");
+      const result = await Database.instance.updateUserProgress({
         user_id: user.id,
         level_id: levelId,
-        status: "In Progress",
-      };
-
-      for (const [key, value] of data.entries()) {
-        if (value === "" || typeof value !== "string") {
-          continue;
-        }
-
-        if (!allowedFormKeys.has(key)) {
-          return fail(400, { error: `Invalid key: ${key}` });
-        }
-
-        switch (key) {
-          case "completion_pct":
-          case "total_attempts":
-          case "enjoyment_rating": {
-            const num = parseInt(value, 10);
-            if (!Number.isNaN(num)) {
-              parameters[key] = num;
-            }
-            break;
-          }
-          case "start_date":
-          case "completion_date": {
-            const date = new Date(value);
-            if (!Number.isNaN(date.getTime())) {
-              parameters[key] = date;
-            }
-            break;
-          }
-          case "video_url":
-          case "review":
-          case "status":
-            parameters[key] = value;
-        }
-      }
-      if (parameters.completion_pct && parameters.completion_pct >= 100) {
-        parameters.completion_pct = 100;
-        parameters.status = "Completed";
-      }
-      const result = await Database.instance.updateUserProgress(parameters);
+        status: data.status,
+        completion_pct: data.completionPercentage,
+        total_attempts: data.attempts,
+        start_date: data.startDate,
+        completion_date: data.completionDate,
+        enjoyment_rating: data.rating,
+        video_url: data.videoUrl,
+        review: data.review,
+      });
       if (result) {
         return { success: true };
       } else {
-        return fail(400, { error: "Failed to update progress" });
+        return fail(422, { error: "Failed to update progress" });
       }
     } catch (err) {
       console.error(err);

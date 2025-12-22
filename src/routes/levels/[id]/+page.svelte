@@ -7,17 +7,15 @@
     getYouTubeEmbedUrl,
   } from "$lib/tools/utils";
   import Review from "$lib/components/Review.svelte";
-  import Alert from "$lib/components/Alert.svelte";
+  import { toastManager } from "$lib/state/toasts.svelte";
+  import { onMount } from "svelte";
 
   let { data }: { data: PageData } = $props();
 
   let levelDetails: HTMLDialogElement | undefined = $state();
   let progressDetails: HTMLDialogElement | undefined = $state();
-  let success: string | undefined = $state();
-  let error: string | undefined = $state();
-  const alertDuration = 2000;
 
-  // Level Data
+  // level Data
   let average = $state(data.level.average_rating ?? undefined);
   let releaseDate = $state(convertDate(data.level.release_date ?? undefined));
   let difficulty = $state(data.level.difficulty ?? undefined);
@@ -25,7 +23,7 @@
   let description = $state(data.level.description ?? undefined);
   let skillsets = $state(data.level.skillsets ?? []);
 
-  // Progress Data
+  // rogress Data
   let oldRating = $state(data.progress?.enjoyment_rating ?? undefined);
   let rating = $state(data.progress?.enjoyment_rating ?? undefined);
   let status = $state(data.progress?.status ?? undefined);
@@ -37,67 +35,86 @@
   );
   let review = $state(data.progress?.review ?? undefined);
 
+  $effect(() => {
+    // level data
+    average = data.level.average_rating ?? undefined;
+    releaseDate = convertDate(data.level.release_date ?? undefined);
+    difficulty = data.level.difficulty ?? undefined;
+    videoUrl = data.level.video_url ?? undefined;
+    description = data.level.description ?? undefined;
+    skillsets = data.level.skillsets ?? [];
+
+    // progress data
+    oldRating = data.progress?.enjoyment_rating ?? undefined;
+    rating = data.progress?.enjoyment_rating ?? undefined;
+    status = data.progress?.status ?? undefined;
+    completionPercentage = data.progress?.completion_pct ?? undefined;
+    attempts = data.progress?.total_attempts ?? undefined;
+    startDate = convertDate(data.progress?.start_date ?? undefined);
+    completionDate = convertDate(data.progress?.completion_date) ?? undefined;
+    review = data.progress?.review ?? undefined;
+  });
+
   const ratingOptions = [
-    { value: 1, label: "Terrible" },
-    { value: 2, label: "Horrible" },
-    { value: 3, label: "Very Bad" },
-    { value: 4, label: "Bad" },
-    { value: 5, label: "Mediocre" },
-    { value: 6, label: "Fine" },
-    { value: 7, label: "Good" },
-    { value: 8, label: "Very Good" },
-    { value: 9, label: "Excellent" },
-    { value: 10, label: "Perfect" },
+    { value: 1, label: "terrible" },
+    { value: 2, label: "horrible" },
+    { value: 3, label: "very Bad" },
+    { value: 4, label: "bad" },
+    { value: 5, label: "mediocre" },
+    { value: 6, label: "fine" },
+    { value: 7, label: "good" },
+    { value: 8, label: "very good" },
+    { value: 9, label: "excellent" },
+    { value: 10, label: "perfect" },
   ];
 
   const statusOptions = [
-    { value: "In Progress" },
-    { value: "Completed" },
-    { value: "Dropped" },
-    { value: "To Try" },
+    { value: "In Progress", label: "in progress" },
+    { value: "Completed", label: "completed" },
+    { value: "Dropped", label: "dropped" },
+    { value: "To Try", label: "to try" },
   ];
 
   async function actionRequest(
     url: string,
     formData: FormData,
-    successMsg: string,
-    errorMsg: string,
-    networkErrorMsg: string,
+    successMessage: string,
+    errorMessage: string,
+    unexpectedMessage: string,
   ) {
     try {
       const response = await fetch(url, {
         method: "POST",
         body: formData,
       });
+      const data = await response.json();
 
-      if (response.ok) {
-        success = successMsg;
-        setTimeout(() => {
-          success = undefined;
-        }, alertDuration);
+      if (data.status.toString().startsWith("2")) {
+        console.log(data);
+        toastManager.add(successMessage, "success");
       } else {
-        error = errorMsg;
+        console.error(data);
+        toastManager.add(errorMessage, "error");
       }
     } catch (error) {
       console.error(error);
-      error = networkErrorMsg;
-    } finally {
-      setTimeout(() => {
-        success = undefined;
-        error = undefined;
-      }, alertDuration);
+      toastManager.add(unexpectedMessage, "error");
     }
   }
 
-  async function handleSelectChange(event: Event) {
-    event.preventDefault();
-    if (!status || !statusOptions.some((o) => o.value === status))
+  async function updateProgress(additionalData?: FormData) {
+    // ensure status has a valid value
+    if (!status || !statusOptions.some((o) => o.value === status)) {
       status = "In Progress";
+    }
 
-    const form = new FormData();
+    const form = additionalData || new FormData();
     form.append("status", status);
-    if (rating && typeof rating === "number" && !Number.isNaN(rating)) {
+
+    // add rating if valid
+    if (rating && !isNaN(rating)) {
       form.append("enjoyment_rating", rating.toString());
+
       if (average && oldRating) {
         average = calculateNewAverage(
           data.level.progress_count,
@@ -108,30 +125,29 @@
       }
       oldRating = rating;
     }
+
+    if (status === "Completed" && !completionPercentage) {
+      completionPercentage = 100;
+    }
+
     await actionRequest(
       `/levels/${data.level.id}?/updateProgress`,
       form,
-      "Progress updated successfully",
-      "Failed to update list",
-      "An error occurred while updating the progress",
+      "successfully updated progress!",
+      "failed to update progress!",
+      "an unexpected error occurred!",
     );
   }
 
-  async function handleSubmitProgress(event: Event) {
+  async function quickUpdate(event: Event) {
     event.preventDefault();
-    if (!status || !statusOptions.some((o) => o.value === status))
-      status = "In Progress";
+    await updateProgress();
+  }
 
+  async function detailedUpdate(event: Event) {
+    event.preventDefault();
     const form = new FormData(event.target as HTMLFormElement);
-    form.append("status", status!);
-
-    await actionRequest(
-      `/levels/${data.level.id}?/updateProgress`,
-      form,
-      "Progress updated successfully",
-      "Failed to update list",
-      "An error occurred while updating the progress",
-    );
+    await updateProgress(form);
   }
 
   async function handleSubmitLevelDetails(event: Event) {
@@ -140,9 +156,9 @@
     await actionRequest(
       `/levels/${data.level.id}?/updateLevel`,
       form,
-      "Level details updated successfully",
-      "Failed to update level details",
-      "An error occurred while updating the level details",
+      "successfully updated level details!",
+      "failed to update level details!",
+      "an unexpected error occurred!",
     );
   }
 </script>
@@ -150,13 +166,6 @@
 <svelte:head>
   <title>{data.level.name} - loggd</title>
 </svelte:head>
-
-{#if success}
-  <Alert message={success} type="success" duration={alertDuration} />
-{/if}
-{#if error}
-  <Alert message={error} type="error" duration={alertDuration} />
-{/if}
 
 <div class="container mx-auto p-4">
   {#if data.level}
@@ -170,310 +179,54 @@
                 <button
                   class="btn btn-accent btn-block"
                   onclick={() => levelDetails?.showModal()}
-                  >Edit Level Details</button
+                  >edit level details</button
                 >
               </div>
             </div>
-
-            <dialog bind:this={levelDetails} class="modal">
-              <div class="modal-box">
-                <h3 class="text-lg font-bold">
-                  {data.level.name} Details
-                </h3>
-                <form
-                  onsubmit={async (event) =>
-                    await handleSubmitLevelDetails(event)}
-                >
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <fieldset class="fieldset">
-                      <legend class="fieldset-legend">Release Date</legend>
-                      <label class="input w-full">
-                        <input
-                          name="release_date"
-                          type="date"
-                          bind:value={releaseDate}
-                        />
-                      </label>
-                    </fieldset>
-
-                    <fieldset class="fieldset">
-                      <legend class="fieldset-legend">Difficulty</legend>
-                      <select
-                        class="select"
-                        name="difficulty"
-                        bind:value={difficulty}
-                      >
-                        <option selected>Extreme Demon</option>
-                      </select>
-                    </fieldset>
-                  </div>
-
-                  <fieldset class="fieldset w-full">
-                    <legend class="fieldset-legend">Video URL</legend>
-                    <label class="input validator w-full">
-                      <svg
-                        class="h-[1em] opacity-50"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                      >
-                        <g
-                          stroke-linejoin="round"
-                          stroke-linecap="round"
-                          stroke-width="2.5"
-                          fill="none"
-                          stroke="currentColor"
-                        >
-                          <path
-                            d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-                          ></path>
-                          <path
-                            d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-                          ></path>
-                        </g>
-                      </svg>
-                      <input
-                        name="video_url"
-                        type="url"
-                        placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
-                        pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"
-                        title="Must be valid URL"
-                        bind:value={videoUrl}
-                      />
-                    </label>
-                    <p class="validator-hint hidden">Must be valid URL</p>
-                  </fieldset>
-
-                  <fieldset class="fieldset w-full">
-                    <legend class="fieldset-legend">Description</legend>
-                    <textarea
-                      name="description"
-                      class="textarea w-full"
-                      placeholder="What is this level about?"
-                      bind:value={description}
-                    ></textarea>
-                  </fieldset>
-
-                  <div>
-                    {#each data.skillsets as skillset}
-                      <input
-                        class="btn"
-                        type="checkbox"
-                        name="skillsets"
-                        value={skillset.id}
-                        aria-label={skillset.name}
-                        checked={skillsets.includes(skillset.id)}
-                      />
-                    {/each}
-                    <input class="btn btn-square" type="reset" value="×" />
-                  </div>
-
-                  <div class="modal-action flex justify-end gap-2">
-                    <button
-                      type="submit"
-                      class="btn btn-primary"
-                      onclick={() => levelDetails!.close()}>Save Details</button
-                    >
-                    <button
-                      type="button"
-                      class="btn"
-                      onclick={() => levelDetails!.close()}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </dialog>
           {/if}
 
           <div class="card bg-base-200 w-full">
             <div class="card-body">
-              <select
-                class="select"
-                bind:value={rating}
-                onchange={handleSelectChange}
-              >
-                <option disabled selected>Rating</option>
+              <select class="select" bind:value={rating} onchange={quickUpdate}>
+                <option disabled selected value={undefined}>rating</option>
                 {#each ratingOptions as option}
                   <option value={option.value}
                     >{option.value} - {option.label}</option
                   >
                 {/each}
               </select>
-              <select
-                class="select"
-                bind:value={status}
-                onchange={handleSelectChange}
-              >
-                <option disabled selected>Status</option>
+              <select class="select" bind:value={status} onchange={quickUpdate}>
+                <option disabled selected value={undefined}>status</option>
                 {#each statusOptions as option}
-                  <option value={option.value}>{option.value}</option>
+                  <option value={option.value}>{option.label}</option>
                 {/each}
               </select>
               <button
                 class="btn btn-secondary btn-block"
                 onclick={() => progressDetails?.showModal()}
-                >More Details</button
+                >more details</button
               >
-              <dialog bind:this={progressDetails} class="modal">
-                <div class="modal-box">
-                  <h3 class="text-lg font-bold">
-                    {data.level.name} Progress
-                  </h3>
-                  <form
-                    onsubmit={async (event) =>
-                      await handleSubmitProgress(event)}
-                  >
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <fieldset class="fieldset">
-                        {#if data.level.length !== "Platformer"}
-                          <legend class="fieldset-legend"
-                            >Completion Percentage</legend
-                          >
-                          <label class="input w-full">
-                            <input
-                              bind:value={completionPercentage}
-                              name="completion_pct"
-                              type="number"
-                              min="0"
-                              max="100"
-                            />
-                            <span class="label">%</span>
-                          </label>
-                        {:else}
-                          <legend class="fieldset-legend"
-                            >Completion Time</legend
-                          >
-                          <label class="input w-full">
-                            <input
-                              name="completion_time"
-                              type="number"
-                              min="0"
-                            />
-                          </label>
-                        {/if}
-                      </fieldset>
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Attempts</legend>
-                        <label class="input w-full">
-                          <input
-                            bind:value={attempts}
-                            name="total_attempts"
-                            type="number"
-                            min="0"
-                          />
-                        </label>
-                      </fieldset>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Start Date</legend>
-                        <label class="input w-full">
-                          <input
-                            name="start_date"
-                            bind:value={startDate}
-                            type="date"
-                            max={completionDate}
-                          />
-                        </label>
-                      </fieldset>
-                      <fieldset class="fieldset">
-                        <legend class="fieldset-legend">Completion Date</legend>
-                        <label class="input w-full">
-                          <input
-                            name="completion_date"
-                            bind:value={completionDate}
-                            type="date"
-                            min={startDate}
-                          />
-                        </label>
-                      </fieldset>
-                    </div>
-
-                    <fieldset class="fieldset w-full">
-                      <legend class="fieldset-legend">Video URL</legend>
-                      <label class="input validator w-full">
-                        <svg
-                          class="h-[1em] opacity-50"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                        >
-                          <g
-                            stroke-linejoin="round"
-                            stroke-linecap="round"
-                            stroke-width="2.5"
-                            fill="none"
-                            stroke="currentColor"
-                          >
-                            <path
-                              d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
-                            ></path>
-                            <path
-                              d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-                            ></path>
-                          </g>
-                        </svg>
-                        <input
-                          name="video_url"
-                          type="url"
-                          placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
-                          pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"
-                          title="Must be valid URL"
-                        />
-                      </label>
-                      <p class="validator-hint hidden">Must be valid URL</p>
-                    </fieldset>
-
-                    <fieldset class="fieldset w-full">
-                      <legend class="fieldset-legend">Review</legend>
-                      <textarea
-                        name="review"
-                        bind:value={review}
-                        class="textarea w-full"
-                        placeholder="Enter your thoughts..."
-                      ></textarea>
-                    </fieldset>
-
-                    <div class="modal-action flex justify-end gap-2">
-                      <button
-                        type="submit"
-                        class="btn btn-primary"
-                        onclick={() => progressDetails!.close()}
-                        >Save Progress</button
-                      >
-                      <button
-                        type="button"
-                        class="btn"
-                        onclick={() => progressDetails!.close()}
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </dialog>
             </div>
           </div>
         {/if}
         <!-- Stats -->
         <div class="stats stats-vertical shadow bg-base-200 w-full">
           <div class="stat">
-            <div class="stat-title">Enjoyment</div>
+            <div class="stat-title">enjoyment</div>
             <div class="stat-value">
               {average ? average.toFixed(1) : "N/A"}
             </div>
           </div>
 
           <div class="stat">
-            <div class="stat-title">Completions</div>
+            <div class="stat-title">completions</div>
             <div class="stat-value">
               {data.level.completion_count}
             </div>
           </div>
 
           <div class="stat">
-            <div class="stat-title">Reviews</div>
+            <div class="stat-title">reviews</div>
             <div class="stat-value">
               {data.level.review_count}
             </div>
@@ -486,7 +239,7 @@
           <div class="space-y-2 w-3/5">
             <h1 class="text-4xl">
               <span class="font-bold">{data.level.name}</span>
-              <span class="text-sm">ID: {data.level.id}</span>
+              <span class="text-sm">id: {data.level.id}</span>
             </h1>
             <h2 class="text-2xl">
               {#if data.level.release_date}
@@ -505,21 +258,21 @@
                 <span class="font-semibold">{data.level.song_artist}</span>
               </div>
               <div class="badge badge-neutral">
-                {data.level.length}
+                {data.level.length.toLowerCase()}
               </div>
               {#if data.level.two_player}
-                <div class="badge badge-neutral">2-Player</div>
+                <div class="badge badge-neutral">two-player</div>
               {/if}
               {#if data.level.coins && data.level.coins >= 1}
                 <div class="badge badge-neutral">
-                  {data.level.coins} Coins
+                  {data.level.coins} coins
                 </div>
               {/if}
               <div class="badge badge-warning">
-                {data.level.rating}
+                {data.level.rating.toLowerCase()}
               </div>
               <div class="badge badge-error">
-                {data.level.difficulty}
+                {data.level.difficulty.toLowerCase()}
               </div>
             </span>
           </div>
@@ -540,9 +293,9 @@
         </div>
         <!-- Reviews -->
         <div class="flex flex-col gap-4">
-          <h3 class="text-xl">Reviews</h3>
+          <h3 class="text-xl">reviews</h3>
           {#if !data.level.reviews || data.level.reviews.length == 0}
-            <div class="opacity-50">No reviews yet.</div>
+            <div class="opacity-50">no reviews yet.</div>
           {:else}
             {#each data.level.reviews as r}
               <Review
@@ -564,3 +317,225 @@
     <p>No level found</p>
   {/if}
 </div>
+
+<dialog bind:this={levelDetails} class="modal backdrop-blur-sm">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">
+      {data.level.name} details
+    </h3>
+    <form onsubmit={async (event) => await handleSubmitLevelDetails(event)}>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">release Date</legend>
+          <label class="input w-full">
+            <input name="release_date" type="date" bind:value={releaseDate} />
+          </label>
+        </fieldset>
+
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">difficulty</legend>
+          <select class="select" name="difficulty" bind:value={difficulty}>
+            <option selected>Extreme Demon</option>
+          </select>
+        </fieldset>
+      </div>
+
+      <fieldset class="fieldset w-full">
+        <legend class="fieldset-legend">video url</legend>
+        <label class="input validator w-full">
+          <svg
+            class="h-[1em] opacity-50"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <g
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              stroke-width="2.5"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+              ></path>
+              <path
+                d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+              ></path>
+            </g>
+          </svg>
+          <input
+            name="video_url"
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
+            pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"
+            title="Must be valid URL"
+            bind:value={videoUrl}
+          />
+        </label>
+        <p class="validator-hint hidden">must be valid url</p>
+      </fieldset>
+
+      <fieldset class="fieldset w-full">
+        <legend class="fieldset-legend">description</legend>
+        <textarea
+          name="description"
+          class="textarea w-full"
+          placeholder="What is this level about?"
+          bind:value={description}
+        ></textarea>
+      </fieldset>
+
+      <div>
+        {#each data.skillsets as skillset}
+          <input
+            class="btn"
+            type="checkbox"
+            name="skillsets"
+            value={skillset.id}
+            aria-label={skillset.name}
+            checked={skillsets.includes(skillset.id)}
+          />
+        {/each}
+        <input class="btn btn-square" type="reset" value="×" />
+      </div>
+
+      <div class="modal-action flex justify-end gap-2">
+        <button type="button" class="btn" onclick={() => levelDetails!.close()}>
+          close
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          onclick={() => levelDetails!.close()}>save details</button
+        >
+      </div>
+    </form>
+  </div>
+</dialog>
+
+<dialog bind:this={progressDetails} class="modal backdrop-blur-sm">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">
+      {data.level.name} progress
+    </h3>
+    <form onsubmit={async (event) => await detailedUpdate(event)}>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <fieldset class="fieldset">
+          {#if data.level.length !== "Platformer"}
+            <legend class="fieldset-legend">completion percentage</legend>
+            <label class="input w-full">
+              <input
+                bind:value={completionPercentage}
+                name="completion_pct"
+                type="number"
+                min="0"
+                max="100"
+              />
+              <span class="label">%</span>
+            </label>
+          {:else}
+            <legend class="fieldset-legend">completion time</legend>
+            <label class="input w-full">
+              <input name="completion_time" type="number" min="0" />
+            </label>
+          {/if}
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">attempts</legend>
+          <label class="input w-full">
+            <input
+              bind:value={attempts}
+              name="total_attempts"
+              type="number"
+              min="0"
+            />
+          </label>
+        </fieldset>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">start date</legend>
+          <label class="input w-full">
+            <input
+              name="start_date"
+              bind:value={startDate}
+              type="date"
+              max={completionDate}
+            />
+          </label>
+        </fieldset>
+        <fieldset class="fieldset">
+          <legend class="fieldset-legend">completion date</legend>
+          <label class="input w-full">
+            <input
+              name="completion_date"
+              bind:value={completionDate}
+              type="date"
+              min={startDate}
+            />
+          </label>
+        </fieldset>
+      </div>
+
+      <fieldset class="fieldset w-full">
+        <legend class="fieldset-legend">video url</legend>
+        <label class="input validator w-full">
+          <svg
+            class="h-[1em] opacity-50"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+          >
+            <g
+              stroke-linejoin="round"
+              stroke-linecap="round"
+              stroke-width="2.5"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"
+              ></path>
+              <path
+                d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
+              ></path>
+            </g>
+          </svg>
+          <input
+            name="video_url"
+            type="url"
+            placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
+            pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"
+            title="Must be valid URL"
+          />
+        </label>
+        <p class="validator-hint hidden">must be valid url</p>
+      </fieldset>
+
+      <fieldset class="fieldset w-full">
+        <legend class="fieldset-legend">review</legend>
+        <textarea
+          name="review"
+          bind:value={review}
+          class="textarea w-full"
+          placeholder="enter your thoughts..."
+        ></textarea>
+      </fieldset>
+
+      <div class="modal-action flex justify-end gap-2">
+        <button
+          type="button"
+          class="btn"
+          onclick={() => progressDetails!.close()}
+        >
+          close
+        </button>
+        <button
+          type="submit"
+          class="btn btn-primary"
+          onclick={() => progressDetails!.close()}>save progress</button
+        >
+      </div>
+    </form>
+  </div>
+</dialog>

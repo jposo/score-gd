@@ -27,13 +27,13 @@
 
       // If successful, redirect to profile
       if (form?.success) {
-        goto(`/profile/${data.user.id}`);
+        goto(`/profile/${data.user.username}`);
       }
     };
   }
 
   function handleCancel() {
-    goto("/profile");
+    goto(`/profile/${data.user.username}`);
   }
 </script>
 

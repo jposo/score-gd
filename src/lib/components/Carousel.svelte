@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
+
   interface Props {
     images: { src: string; caption?: string }[];
     select?: number;
@@ -19,10 +21,13 @@
   let loaded: boolean[] = $state(Array(images.length).fill(false));
 </script>
 
-<div class="relative">
+<div class="relative flex justify-center max-w-6xl mx-auto">
   {#if images[currentIndex]?.caption}
     {@const caption = images[currentIndex].caption}
-    <div class="badge badge-xl badge-neutral text-xl absolute top-2 left-2">
+    <div
+      class="badge badge-xl badge-neutral text-xl absolute top-2 left-2 z-5 shadow-md shadow-black/50"
+      transition:fade={{ duration: 300 }}
+    >
       {#if caption?.startsWith("rating")}
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -133,13 +138,15 @@
       {caption}
     </div>
   {/if}
-  <div class="carousel w-full">
+  <div class="carousel w-full shadow-sm">
     {#each images as image, index}
       <div id="image{index + 1}" class="carousel-item w-full">
         <img
           alt="Freeze frame of a level"
           src={image.src}
-          class="w-full aspect-video object-cover {loaded[index]
+          class="w-full rounded-b-box aspect-video object-cover overflow-hidden {loaded[
+            index
+          ]
             ? 'block'
             : 'hidden'}"
           onload={() => {

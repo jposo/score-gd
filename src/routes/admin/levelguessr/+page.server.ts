@@ -16,6 +16,7 @@ import { Levels } from "$lib/server/tools/gd";
 import { randomUUID } from "crypto";
 import { Jimp } from "jimp";
 import * as z from "zod";
+import { Buffer } from "node:buffer";
 
 const MAX_FILE_SIZE = 1024 * 100; //100 kb
 

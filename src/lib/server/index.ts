@@ -9,6 +9,14 @@ export function getCurrentDay() {
   return currentDay;
 }
 
+export function getNextDayDateTime(day: number) {
+  const startingDate = new Date(STARTING_DATE);
+  const nextDayDateTime = new Date(
+    startingDate.getTime() + day * 24 * 60 * 60 * 1000,
+  );
+  return nextDayDateTime;
+}
+
 export function getProjectedDate(day: number) {
   const startingDate = new Date(STARTING_DATE);
   const projectedDate = new Date(
