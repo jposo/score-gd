@@ -1,13 +1,13 @@
 import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad, Actions, RequestEvent } from "./$types";
-import Database from "$lib/server/database";
+import Database from "$lib/server/db/index";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { isVideoUrl } from "$lib/tools/utils";
 import type { Level } from "$lib/db-types";
 import * as z from "zod";
 
 const ProgressForm = z.object({
-  status: z.enum(["To Try", "In Progress", "Completed", "Dropped"]),
+  status: z.enum(["to try", "in progress", "completed", "dropped"]),
   completionPercentage: z.coerce.number().min(0).max(100).nullable(),
   attempts: z.coerce.number().min(0).nullable(),
   rating: z.coerce.number().min(1).max(10).nullable(),
@@ -16,6 +16,8 @@ const ProgressForm = z.object({
   videoUrl: z.url().nullable(),
   review: z.string().min(0).max(1024).nullable(),
 });
+
+const db = Database.instance;
 
 export const load: PageServerLoad = async ({
   params,
@@ -27,13 +29,12 @@ export const load: PageServerLoad = async ({
     if (Number.isNaN(id)) {
       error(400, "Invalid level ID");
     }
-    const db = Database.instance;
-    const level = await db.getLevel(id);
+    const level = await db.findLevelById(id);
     if (!user) {
       return { level };
     }
-    const progress = await db.getUserProgress(user.id, id);
-    const skillsets = await db.getAllSkillsets();
+    const progress = await db.findUserProgressByLevelId(user.id, id);
+    const skillsets = ["2.0"];
     return { level, progress, skillsets };
   } catch (err) {
     console.error(err);
@@ -76,15 +77,15 @@ export const actions: Actions = {
     try {
       console.log("updating progress");
       const result = await Database.instance.updateUserProgress({
-        user_id: user.id,
-        level_id: levelId,
+        userId: user.id,
+        levelId: levelId,
         status: data.status,
-        completion_pct: data.completionPercentage,
-        total_attempts: data.attempts,
-        start_date: data.startDate,
-        completion_date: data.completionDate,
-        enjoyment_rating: data.rating,
-        video_url: data.videoUrl,
+        completionPercentage: data.completionPercentage,
+        attempts: data.attempts,
+        startedAt: data.startDate?.toISOString().split("T")[0],
+        completedAt: data.completionDate?.toISOString().split("T")[0],
+        rating: data.rating,
+        videoUrl: data.videoUrl,
         review: data.review,
       });
       if (result) {

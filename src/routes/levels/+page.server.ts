@@ -1,6 +1,8 @@
 import { error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import Database from "$lib/server/database";
+import Database from "$lib/server/db/index";
+
+const db = Database.instance;
 
 export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
   try {
@@ -9,8 +11,7 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
       error(400, "Invalid page parameter");
     }
 
-    const db = Database.instance;
-    const levels = await db.getLevels(parseInt(page));
+    const levels = await db.findLevelsByPage(parseInt(page));
     return { page: levels };
   } catch (err) {
     console.error(err);

@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { requireAuth } from "$lib/server/auth/middleware";
-import Database from "$lib/server/database";
+import Database from "$lib/server/db/index";
 import { fail } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async (event) => {

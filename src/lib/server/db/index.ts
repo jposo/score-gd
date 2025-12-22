@@ -458,7 +458,7 @@ export default class Database {
     return user[0] || null;
   }
 
-  async findDays() {
+  async findAllDays() {
     const result = await this.db
       .select({
         id: schema.levels.id,
@@ -473,7 +473,7 @@ export default class Database {
     return result;
   }
 
-  async latestDay() {
+  async findLatestDay() {
     const result = await this.db
       .select({
         maxDay: max(schema.days.day),
@@ -482,10 +482,7 @@ export default class Database {
     return result[0]?.maxDay;
   }
 
-  async findDay(day: number, full: boolean = false) {
-    if (full) {
-      return this.dayFull(day);
-    }
+  async findDaySimple(day: number) {
     const result = await this.db
       .select({
         day: schema.days.day,
@@ -498,11 +495,12 @@ export default class Database {
     return result[0] || null;
   }
 
-  private async dayFull(day: number) {
+  async findDayFull(day: number) {
     const result = await this.db
       .select({
         id: schema.levels.id,
         day: schema.days.day,
+        images: schema.days.images,
         name: schema.levels.name,
         rating: schema.levels.rating,
         difficulty: schema.levels.difficulty,
@@ -539,7 +537,7 @@ export default class Database {
       .where(lte(schema.days.day, currentDay))
       .orderBy(asc(schema.days.day));
 
-    return result[0] || null;
+    return result || null;
   }
 
   async findSources() {

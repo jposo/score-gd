@@ -23,6 +23,11 @@ import {
 //   publisher: text("publisher"),
 // });
 
+type Image = {
+  index: number;
+  url: string;
+}
+
 export const sources = pgTable("sources", {
   id: serial("id").primaryKey(),
   name: text("name"),
@@ -32,7 +37,7 @@ export const sources = pgTable("sources", {
 export const days = pgTable("days", {
   id: serial("id").primaryKey(),
   day: integer("day").notNull(),
-  images: jsonb("images").notNull(),
+  images: jsonb("images").$type<Image[]>().notNull(),
   levelId: integer("level_id")
     .notNull()
     .references(() => levels.id),

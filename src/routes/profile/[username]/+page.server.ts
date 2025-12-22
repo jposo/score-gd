@@ -1,11 +1,13 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { fail, error } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
-import Database from "$lib/server/database";
+import Database from "$lib/server/db/index";
+
+const db = Database.instance;
 
 export const load: PageServerLoad = async (event) => {
   const username = event.params.username as string;
-  const user = await Database.instance.getUserInfo(username);
+  const user = await db.findUserInfoByUsername(username);
   if (!user) {
     error(404, "User not found");
   }

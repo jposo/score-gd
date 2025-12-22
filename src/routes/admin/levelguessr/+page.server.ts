@@ -1,13 +1,5 @@
 import type { Actions, PageServerLoad, RequestEvent } from "./$types";
-import {
-  updateId,
-  fetchAllLevels,
-  fetchLatestDay,
-  fetchDayLevels,
-  insertDay,
-  fetchSources,
-  insertLevel,
-} from "$lib/server/db/index";
+import Database from "$lib/server/db/index";
 import { getCurrentDay, getProjectedDate } from "$lib/server/index";
 import { fail } from "@sveltejs/kit";
 import { uploadImages } from "$lib/server/db/supabase";
@@ -19,6 +11,8 @@ import * as z from "zod";
 import { Buffer } from "node:buffer";
 
 const MAX_FILE_SIZE = 1024 * 100; //100 kb
+
+const db = Database.instance;
 
 const QueueForm = z.object({
   levelId: z.coerce.number().min(1),
@@ -37,16 +31,16 @@ const QueueForm = z.object({
 export const load: PageServerLoad = async (event) => {
   const user = await requireAuthWithRoles(event, ["Admin", "Owner"]);
 
-  const levels = await fetchDayLevels();
-  const latestDay = await fetchLatestDay();
-  const sources = await fetchSources();
+  const levels = await db.findAllDays();
+  const latestDay = await db.findLatestDay();
+  const sources = await db.findSources();
 
   return {
     user,
     levels,
     sources,
     latestDay,
-    projectedDate: getProjectedDate(latestDay),
+    projectedDate: getProjectedDate(latestDay!),
   };
 };
 
@@ -72,7 +66,7 @@ export const actions: Actions = {
 
     const data = result.data;
 
-    const day = (await fetchLatestDay()) + 1;
+    const day = (await db.findLatestDay())! + 1;
 
     data.frames.sort((a, b) => a.index - b.index);
 
@@ -111,7 +105,12 @@ export const actions: Actions = {
       }));
 
       // insert into database
-      await insertDay(day, data.levelId, images, data.sourceId);
+      await db.insertDay({
+        day, 
+        levelId: data.levelId, 
+        images, 
+        sourceId: data.sourceId
+      });
 
       return {
         success: true,
@@ -122,49 +121,49 @@ export const actions: Actions = {
       return fail(500, { message: "Failed to upload files" });
     }
   },
-  update: async () => {
-    let success = 0;
-    let fails = 0;
+  // update: async () => {
+  //   let success = 0;
+  //   let fails = 0;
 
-    for (let page = 60; page < 70; page++) {
-      const result = await Levels.search(
-        {
-          type: "Most Downloaded",
-          rating: "Star",
-          page,
-        },
-        // true,
-      );
+  //   for (let page = 60; page < 70; page++) {
+  //     const result = await Levels.search(
+  //       {
+  //         type: "Most Downloaded",
+  //         rating: "Star",
+  //         page,
+  //       },
+  //       // true,
+  //     );
 
-      for (const level of result) {
-        // attempt to update level if it exists
-        try {
-          const result = await updateId(
-            level.name,
-            level.rating,
-            level.difficulty,
-            level.id,
-          );
-          if (result.length === 1) {
-            success++;
-          } else if (result.length > 1) {
-            console.error(
-              "Multiple levels with same name, rating, and difficulty",
-            );
-            fails++;
-          }
-        } catch (error) {
-          console.error(error);
-          fails++;
-        }
-      }
-    }
+  //     for (const level of result) {
+  //       // attempt to update level if it exists
+  //       try {
+  //         const result = await updateId(
+  //           level.name,
+  //           level.rating,
+  //           level.difficulty,
+  //           level.id,
+  //         );
+  //         if (result.length === 1) {
+  //           success++;
+  //         } else if (result.length > 1) {
+  //           console.error(
+  //             "Multiple levels with same name, rating, and difficulty",
+  //           );
+  //           fails++;
+  //         }
+  //       } catch (error) {
+  //         console.error(error);
+  //         fails++;
+  //       }
+  //     }
+  //   }
 
-    // await insertLevels(rowsToInsert);
+  //   // await insertLevels(rowsToInsert);
 
-    return {
-      success: true,
-      message: `Updates successful (${success} successful, ${fails} failed)`,
-    };
-  },
+  //   return {
+  //     success: true,
+  //     message: `Updates successful (${success} successful, ${fails} failed)`,
+  //   };
+  // },
 };

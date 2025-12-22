@@ -1,15 +1,16 @@
 import type { LayoutServerLoad } from "./$types";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
-import Database from "$lib/server/database";
 import { error } from "@sveltejs/kit";
-import { fetchVault } from "$lib/server/db";
+import Database from "$lib/server/db/index";
 import { getCurrentDay } from "$lib/server/index";
+
+const db = Database.instance;
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
   try {
     // Get token from cookies
     const token = getTokenFromCookies(cookies);
-    const vault = (await fetchVault(getCurrentDay())).map((d) => d.day);
+    const vault = (await db.findVault(getCurrentDay())).map((d) => d.day);
 
     if (!token) {
       console.log("No token");
@@ -24,7 +25,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
     }
 
     // Get full user data from database
-    const user = await Database.instance.getUserInfo(authToken.username);
+    const user = await db.findUserInfoByUsername(authToken.username);
 
     return { vault, user };
   } catch (err) {

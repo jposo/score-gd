@@ -1,10 +1,5 @@
 import type { PageServerLoad, Actions } from "./$types";
-import {
-  fetchDay,
-  validateGuess,
-  fetchLevel,
-  fetchLevelByName,
-} from "$lib/server/db";
+import Database from "$lib/server/db";
 import { PUBLIC_SUPABASE_PROJECT_ID } from "$env/static/public";
 import { error, fail } from "@sveltejs/kit";
 import * as z from "zod";
@@ -37,13 +32,15 @@ const Guess = z.object({
   guessId: z.coerce.number().min(1).optional(),
 });
 
+const db = Database.instance;
+
 export const load: PageServerLoad = async ({ url }) => {
   const currentDay = getCurrentDay();
   const requestedDay = parseInt(url.searchParams.get("day") ?? "");
 
   const dayNumber = !Number.isNaN(requestedDay) ? requestedDay : currentDay;
 
-  const rawDay = await fetchDay(dayNumber);
+  const rawDay = await db.findDaySimple(dayNumber);
   if (!rawDay) {
     error(404, "Day not found");
   }
@@ -80,19 +77,19 @@ export const actions = {
     const data = result.data;
 
     if (!data.guessId) {
-      const fallbackLevel = await fetchLevelByName(data.guess);
+      const fallbackLevel = await db.findLevelByNameSimple(data.guess);
       if (!fallbackLevel) {
         return fail(400, { message: "Invalid Level" });
       }
       data.guessId = fallbackLevel.id;
     }
 
-    const levelGuess = await fetchLevel(data.guessId);
+    const levelGuess = await db.findLevelById(data.guessId);
     if (!levelGuess) {
       return fail(404, { message: "Level Not Found" });
     }
 
-    const answer = await validateGuess(data.day);
+    const answer = await db.findDayFull(data.day);
     const correct = answer.id == data.guessId ? true : false;
     const lost = !correct && data.guessCount === 6;
 
