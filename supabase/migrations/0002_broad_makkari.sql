@@ -1,0 +1,1 @@
+ALTER TABLE "progress" RENAME COLUMN "integer" TO "rating";

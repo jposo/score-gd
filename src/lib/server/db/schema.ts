@@ -145,7 +145,7 @@ export const progress = pgTable("progress", {
     .notNull()
     .references(() => levels.id),
   status: statusEnum("status"),
-  rating: smallint("integer"),
+  rating: smallint("rating"),
   completionPercentage: smallint("completion_percentage"),
   completionTime: interval("completion_time"),
   attempts: integer("attempts"),
@@ -154,8 +154,8 @@ export const progress = pgTable("progress", {
   videoUrl: text("video_url"),
   review: text("review"),
   listPlacement: integer("list_placement"),
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const rolesEnum = pgEnum("role", ["owner", "admin", "user"]);
