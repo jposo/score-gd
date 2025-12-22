@@ -2,13 +2,14 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 import { env } from "$env/dynamic/private";
-import { sql, eq, desc, and, or, ilike } from "drizzle-orm";
+import { sql, eq, desc, and, or, ilike, SQL, asc, lte, avg, count, max } from "drizzle-orm";
 
 export default class Database {
   static #instance: Database;
   private db: ReturnType<typeof drizzle>;
 
   private constructor() {
+    const client = postgres(env.DATABASE_URL);
     this.db = drizzle(client, { schema });
   }
 
@@ -29,7 +30,7 @@ export default class Database {
         publisher: schema.gdUsers.username,
       })
       .from(schema.levels)
-      .innerJoin(
+      .leftJoin(
         schema.gdUsers,
         eq(schema.levels.publisherId, schema.gdUsers.id),
       )
@@ -45,7 +46,7 @@ export default class Database {
     return result;
   }
 
-  async trendingLevels() {
+  async findTrendingLevels() {
     const LIMIT = 20;
 
     const result = await this.db
@@ -56,14 +57,14 @@ export default class Database {
         difficulty: schema.levels.difficulty,
         releaseDate: schema.levels.releaseDate,
         length: schema.levels.length,
-        averageRating: sql<number>`CAST(AVG(${schema.progress.rating}) AS FLOAT)`,
+        averageRating: avg(schema.progress.rating),
       })
       .from(schema.levels)
-      .innerJoin(
+      .leftJoin(
         schema.gdUsers,
         eq(schema.levels.publisherId, schema.gdUsers.id),
       )
-      .innerJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
+      .leftJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
       .groupBy(
         schema.levels.id,
         schema.levels.name,
@@ -72,13 +73,13 @@ export default class Database {
         schema.levels.releaseDate,
         schema.levels.length,
       )
-      .orderBy(desc(sql`AVG(${schema.progress.rating})`))
+      .orderBy(desc(avg(schema.progress.rating)))
       .limit(LIMIT);
 
     return result;
   }
 
-  async levels(page: number = 0) {
+  async findLevelsByPage(page: number = 0) {
     const LIMIT = 18;
 
     const offset = page * LIMIT;
@@ -91,14 +92,14 @@ export default class Database {
         difficulty: schema.levels.difficulty,
         releaseDate: schema.levels.releaseDate,
         length: schema.levels.length,
-        averageRating: sql<number>`CAST(AVG(${schema.progress.rating}) AS FLOAT)`,
+        averageRating: avg(schema.progress.rating),
       })
       .from(schema.levels)
-      .innerJoin(
+      .leftJoin(
         schema.gdUsers,
         eq(schema.levels.publisherId, schema.gdUsers.id),
       )
-      .innerJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
+      .leftJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
       .groupBy(
         schema.levels.id,
         schema.levels.name,
@@ -107,12 +108,12 @@ export default class Database {
         schema.levels.releaseDate,
         schema.levels.length,
       )
-      .orderBy(desc(sql`AVG(${schema.progress.rating})`))
+      .orderBy(desc(avg(schema.progress.rating)))
       .limit(LIMIT)
       .offset(offset);
 
     const [totalCount] = await this.db
-      .select({ count: sql<number>`COUNT(${schema.levels.id})` })
+      .select({ count: count(schema.levels.id) })
       .from(schema.levels);
 
     const pageCount = levels.length;
@@ -125,7 +126,49 @@ export default class Database {
     };
   }
 
-  async level(id: number) {
+  async findLevelByIdSimple(id: number) {
+    const result = await this.db
+      .select({
+        id: schema.levels.id,
+        name: schema.levels.name,
+        rating: schema.levels.rating,
+        difficulty: schema.levels.difficulty,
+        songTitle: schema.songs.title,
+        songArtist: schema.songs.artist,
+        releaseYear: schema.levels.releaseDate,
+        publisher: schema.users.username,
+      })
+      .from(schema.levels)
+      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
+      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
+      .where(eq(schema.levels.id, id))
+      .limit(1)
+
+    return result[0] || null;
+  }
+
+  async findLevelByNameSimple(name: string) {
+    const result = await this.db
+      .select({
+        id: schema.levels.id,
+        name: schema.levels.name,
+        rating: schema.levels.rating,
+        difficulty: schema.levels.difficulty,
+        songTitle: schema.songs.title,
+        songArtist: schema.songs.artist,
+        releaseYear: schema.levels.releaseDate,
+        publisher: schema.users.username,
+      })
+      .from(schema.levels)
+      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
+      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
+      .where(eq(schema.levels.name, name))
+      .limit(1)
+
+    return result[0] || null;
+  }
+
+  async findLevelById(id: number) {
     const result = await this.db
       .select({
         id: schema.levels.id,
@@ -142,12 +185,14 @@ export default class Database {
         songId: schema.songs.id,
         songTitle: schema.songs.title,
         songArtist: schema.songs.artist,
-        progressCount: sql<number>`CAST(COUNT(${schema.progress.review}) AS INTEGER)`,
-        averageRating: sql<
-          number | null
-        >`CAST(AVG(${schema.progress.review}) AS FLOAT)`,
-        completionCount: sql<number>`CAST(COUNT(CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END) AS INTEGER)`,
-        reviewCount: sql<number>`CAST(COUNT(CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END) AS INTEGER)`,
+        progressCount: count(schema.progress.rating), 
+        averageRating: avg(schema.progress.review),
+        completionCount: count(
+          sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`
+        ),
+        reviewCount: count(
+          sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`
+        ),
         reviews: sql`json_agg(
               json_build_object(
                 'username', ${schema.users.username},
@@ -211,7 +256,7 @@ export default class Database {
     return result[0] || null;
   }
 
-  async song(id: number) {
+  async findSongById(id: number) {
     const result = await this.db
       .select()
       .from(schema.songs)
@@ -233,7 +278,7 @@ export default class Database {
     return result[0] || null;
   }
 
-  async userByEmail(email: string) {
+  async findUserByEmail(email: string) {
     const user = await this.db
       .select({
         id: schema.users.id,
@@ -250,7 +295,7 @@ export default class Database {
     return user[0] || null;
   }
 
-  async userByUsername(username: string) {
+  async findUserByUsername(username: string) {
     const user = await this.db
       .select({
         id: schema.users.id,
@@ -267,7 +312,7 @@ export default class Database {
     return user[0] || null;
   }
 
-  async userInfo(username: string) {
+  async findUserInfoByUsername(username: string) {
     const user = await this.db
       .select({
         id: schema.users.id,
@@ -276,11 +321,13 @@ export default class Database {
         profile_picture_url: schema.users.profilePicturePath,
         roles: schema.users.extraRoles,
         created_at: schema.users.createdAt,
-        levels_completed: sql<number>`CAST(COUNT(CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END) AS INTEGER)`,
-        average_rating: sql<
-          number | null
-        >`CAST(AVG(${schema.progress.review}) AS FLOAT)`,
-        reviews_written: sql<number>`CAST(COUNT(CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END) AS INTEGER)`,
+        levels_completed: count(
+          sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`
+        ),
+        average_rating: avg(schema.progress.review),
+        reviews_written: count(
+          sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`
+        ),
         list: sql`json_agg(
                 json_build_object(
                   'id', ${schema.progress.id},
@@ -302,7 +349,7 @@ export default class Database {
                   'review', ${schema.progress.review},
                   'createdAt', ${schema.progress.createdAt}
                 )
-                ORDER BY ${schema.progress.createdAt} DESC
+                ORDER BY ${schema.progress.updatedAt} DESC
               ) FILTER (WHERE ${schema.levels.id} IS NOT NULL)`,
       })
       .from(schema.users)
@@ -329,10 +376,7 @@ export default class Database {
     return user[0];
   }
 
-  async updateUser(
-    id: number,
-    updates: Partial<Pick<schema.SelectUser, "bio" | "profilePicturePath">>,
-  ) {
+  async updateUser(id: number, updates: schema.SelectUser) {
     const user = await this.db
       .update(schema.users)
       .set({
@@ -351,7 +395,7 @@ export default class Database {
     return user[0] || null;
   }
 
-  async userProgress(userId: number, levelId: number) {
+  async findUserProgressByLevelId(userId: number, levelId: number) {
     const progress = await this.db
       .select()
       .from(schema.progress)
@@ -413,90 +457,49 @@ export default class Database {
 
     return user[0] || null;
   }
-}
 
-if (!env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
-
-const client = postgres(env.DATABASE_URL);
-
-export const db = drizzle(client, { schema });
-
-export async function searchLevels(searchQuery: string) {
-  return await db
-    .select({
-      id: schema.levels.id,
-      name: schema.levels.name,
-      publisher: schema.gdUsers.username,
-    })
-    .from(schema.levels)
-    .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
-    .where(sql`name ILIKE ${`%${searchQuery}%`}`);
-}
-
-export async function fetchAllLevels() {
-  return await db
-    .select({
-      id: schema.levels.id,
-      name: schema.levels.name,
-      publisher: schema.users.username,
-      day: schema.days.day,
-    })
-    .from(schema.levels)
-    .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
-    .leftJoin(schema.days, eq(schema.levels.id, schema.days.levelId));
-}
-
-export async function fetchDayLevels() {
-  return await db
-    .select({
-      id: schema.levels.id,
-      name: schema.levels.name,
-      publisher: schema.gdUsers.username,
-      day: schema.days.day,
-    })
-    .from(schema.levels)
-    .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
-    .innerJoin(schema.days, eq(schema.levels.id, schema.days.levelId));
-}
-
-export async function fetchLatestDay() {
-  return (
-    await db
+  async findDays() {
+    const result = await this.db
       .select({
+        id: schema.levels.id,
+        name: schema.levels.name,
+        publisher: schema.users.username,
         day: schema.days.day,
       })
-      .from(schema.days)
-      .orderBy(sql`day DESC`)
-      .limit(1)
-  )[0].day;
-}
+      .from(schema.levels)
+      .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
+      .leftJoin(schema.days, eq(schema.levels.id, schema.days.levelId));
 
-export async function fetchDay(day: number) {
-  return (
-    await db
+    return result;
+  }
+
+  async latestDay() {
+    const result = await this.db
+      .select({
+        maxDay: max(schema.days.day),
+      })
+      .from(schema.days);
+    return result[0]?.maxDay;
+  }
+
+  async findDay(day: number, full: boolean = false) {
+    if (full) {
+      return this.dayFull(day);
+    }
+    const result = await this.db
       .select({
         day: schema.days.day,
         images: schema.days.images,
       })
       .from(schema.days)
-      .where(sql`day=${day}`)
-      .limit(1)
-  )[0] as { day: number; images: { url: string; index: number }[] };
-}
+      .where(eq(schema.days.day, day))
+      .limit(1);
 
-export async function fetchVault(currentDay: number) {
-  return await db
-    .select({
-      day: schema.days.day,
-    })
-    .from(schema.days)
-    .where(sql`day <= ${currentDay}`)
-    .orderBy(sql`day ASC`);
-}
+    return result[0] || null;
+  }
 
-export async function validateGuess(day: number) {
-  return (
-    await db
+  private async dayFull(day: number) {
+    const result = await this.db
       .select({
         id: schema.levels.id,
         day: schema.days.day,
@@ -512,109 +515,42 @@ export async function validateGuess(day: number) {
       .innerJoin(schema.levels, eq(schema.days.levelId, schema.levels.id))
       .innerJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
       .innerJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
-      .where(sql`day = ${day}`)
+      .where(eq(schema.days.day, day))
       .limit(1)
-  )[0];
-}
 
-export async function fetchLevel(id: number) {
-  return (
-    await db
+    return result[0] || null;
+  }
+
+  async insertDay(values: schema.InsertDay) {
+    const result = await this.db
+      .insert(schema.days)
+      .values(values)
+      .returning();
+
+    return result[0] || null;
+  }
+
+  async findVault(currentDay: number) {
+    const result = await this.db
       .select({
-        id: schema.levels.id,
-        name: schema.levels.name,
-        rating: schema.levels.rating,
-        difficulty: schema.levels.difficulty,
-        songTitle: schema.songs.title,
-        songArtist: schema.songs.artist,
-        releaseYear: schema.levels.releaseDate,
-        publisher: schema.users.username,
+        day: schema.days.day,
       })
-      .from(schema.levels)
-      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
-      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
-      .where(sql`id = ${id}`)
-      .limit(1)
-  )[0];
-}
+      .from(schema.days)
+      .where(lte(schema.days.day, currentDay))
+      .orderBy(asc(schema.days.day));
 
-export async function fetchLevelByName(name: string) {
-  return (
-    await db
+    return result[0] || null;
+  }
+
+  async findSources() {
+    const result = await this.db
       .select({
-        id: schema.levels.id,
-        name: schema.levels.name,
-        rating: schema.levels.rating,
-        difficulty: schema.levels.difficulty,
-        songTitle: schema.songs.title,
-        songArtist: schema.songs.artist,
-        releaseYear: schema.levels.releaseDate,
-        publisher: schema.users.username,
+        id: schema.sources.id,
+        name: schema.sources.name,
+        url: schema.sources.url,
       })
-      .from(schema.levels)
-      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
-      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
-      .where(sql`name = ${name}`)
-      .limit(1)
-  )[0];
-}
+      .from(schema.sources);
 
-export async function insertDay(
-  day: number,
-  levelId: number,
-  images: { url: string; index: number }[],
-  sourceId: number,
-) {
-  await db.insert(schema.days).values({
-    day,
-    levelId,
-    images,
-    sourceId,
-  });
-}
-
-export async function fetchSources() {
-  return await db
-    .select({
-      id: schema.sources.id,
-      name: schema.sources.name,
-      url: schema.sources.url,
-    })
-    .from(schema.sources);
-}
-
-// export async function updateId(
-//   name: string,
-//   rating: string,
-//   difficulty: string,
-//   newId: number,
-// ) {
-//   console.log("Updating ID:", name, rating, difficulty, newId);
-//   return await db
-//     .update(schema.levels)
-//     .set({ id: newId })
-//     .where(sql`name = ${name.trim()}`)
-//     .returning({ id: schema.levels.id });
-// }
-
-// export async function updateIds(
-//     values: {
-//         name: string;
-//         rating: string;
-//         difficulty: string;
-//         newId: number;
-//     }[],
-// ) {
-//     console.log("Updating IDs:", name, rating, difficulty, newId, newIds);
-//     return await db
-//         .update(schema.levels)
-//         .set({ id: newId })
-//         .where(
-//             sql`name = ${name} AND rating = ${rating} AND difficulty = ${difficulty}`,
-//         )
-//         .returning({ id: schema.levels.id });
-// }
-
-export async function insertLevel(values: schema.InsertLevel) {
-  await db.insert(schema.levels).values(values);
+    return result;
+  }
 }
