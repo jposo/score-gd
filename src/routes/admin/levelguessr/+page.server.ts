@@ -6,7 +6,7 @@ import {
   fetchDayLevels,
   insertDay,
   fetchSources,
-  insertLevels,
+  insertLevel,
 } from "$lib/server/db/index";
 import { getCurrentDay, getProjectedDate } from "$lib/server/index";
 import { fail } from "@sveltejs/kit";

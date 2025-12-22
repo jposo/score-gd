@@ -15,9 +15,10 @@ export async function searchLevels(searchQuery: string) {
     .select({
       id: schema.levels.id,
       name: schema.levels.name,
-      publisher: schema.levels.publisher,
+      publisher: schema.gdUsers.username,
     })
     .from(schema.levels)
+    .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
     .where(sql`name ILIKE ${`%${searchQuery}%`}`);
 }
 
@@ -26,10 +27,11 @@ export async function fetchAllLevels() {
     .select({
       id: schema.levels.id,
       name: schema.levels.name,
-      publisher: schema.levels.publisher,
+      publisher: schema.users.username,
       day: schema.days.day,
     })
     .from(schema.levels)
+    .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
     .leftJoin(schema.days, eq(schema.levels.id, schema.days.levelId));
 }
 
@@ -38,10 +40,11 @@ export async function fetchDayLevels() {
     .select({
       id: schema.levels.id,
       name: schema.levels.name,
-      publisher: schema.levels.publisher,
+      publisher: schema.gdUsers.username,
       day: schema.days.day,
     })
     .from(schema.levels)
+    .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
     .innerJoin(schema.days, eq(schema.levels.id, schema.days.levelId));
 }
 
@@ -89,12 +92,15 @@ export async function validateGuess(day: number) {
         name: schema.levels.name,
         rating: schema.levels.rating,
         difficulty: schema.levels.difficulty,
-        song: schema.levels.song,
-        releaseYear: schema.levels.releaseYear,
-        publisher: schema.levels.publisher,
+        songTitle: schema.songs.title,
+        songArtist: schema.songs.artist,
+        releaseYear: schema.levels.releaseDate,
+        publisher: schema.users.username,
       })
       .from(schema.days)
       .innerJoin(schema.levels, eq(schema.days.levelId, schema.levels.id))
+      .innerJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
+      .innerJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(sql`day = ${day}`)
       .limit(1)
   )[0];
@@ -108,11 +114,14 @@ export async function fetchLevel(id: number) {
         name: schema.levels.name,
         rating: schema.levels.rating,
         difficulty: schema.levels.difficulty,
-        song: schema.levels.song,
-        releaseYear: schema.levels.releaseYear,
-        publisher: schema.levels.publisher,
+        songTitle: schema.songs.title,
+        songArtist: schema.songs.artist,
+        releaseYear: schema.levels.releaseDate,
+        publisher: schema.users.username,
       })
       .from(schema.levels)
+      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
+      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(sql`id = ${id}`)
       .limit(1)
   )[0];
@@ -126,11 +135,14 @@ export async function fetchLevelByName(name: string) {
         name: schema.levels.name,
         rating: schema.levels.rating,
         difficulty: schema.levels.difficulty,
-        song: schema.levels.song,
-        releaseYear: schema.levels.releaseYear,
-        publisher: schema.levels.publisher,
+        songTitle: schema.songs.title,
+        songArtist: schema.songs.artist,
+        releaseYear: schema.levels.releaseDate,
+        publisher: schema.users.username,
       })
       .from(schema.levels)
+      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
+      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(sql`name = ${name}`)
       .limit(1)
   )[0];
@@ -160,19 +172,19 @@ export async function fetchSources() {
     .from(schema.sources);
 }
 
-export async function updateId(
-  name: string,
-  rating: string,
-  difficulty: string,
-  newId: number,
-) {
-  console.log("Updating ID:", name, rating, difficulty, newId);
-  return await db
-    .update(schema.levels)
-    .set({ id: newId })
-    .where(sql`name = ${name.trim()}`)
-    .returning({ id: schema.levels.id });
-}
+// export async function updateId(
+//   name: string,
+//   rating: string,
+//   difficulty: string,
+//   newId: number,
+// ) {
+//   console.log("Updating ID:", name, rating, difficulty, newId);
+//   return await db
+//     .update(schema.levels)
+//     .set({ id: newId })
+//     .where(sql`name = ${name.trim()}`)
+//     .returning({ id: schema.levels.id });
+// }
 
 // export async function updateIds(
 //     values: {
@@ -192,16 +204,6 @@ export async function updateId(
 //         .returning({ id: schema.levels.id });
 // }
 
-export async function insertLevels(
-  levels: {
-    id: number;
-    name: string;
-    rating: string;
-    song: string;
-    difficulty: string;
-    releaseYear: number;
-    publisher: string;
-  }[],
-) {
-  await db.insert(schema.levels).values(levels);
+export async function insertLevel(values: schema.InsertLevel) {
+  await db.insert(schema.levels).values(values);
 }

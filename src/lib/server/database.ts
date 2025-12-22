@@ -104,6 +104,7 @@ export default class Database {
         average_rating: number;
       }[],
       isLastPage,
+      s,
     };
   }
 
