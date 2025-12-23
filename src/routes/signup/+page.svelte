@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { page } from "$app/stores";
+  import { page } from "$app/state";
   import { onMount } from "svelte";
 
   let username = "";
@@ -12,7 +12,7 @@
 
   // Redirect if already logged in
   onMount(() => {
-    if ($page.data.user) {
+    if (page.data.user) {
       goto("/");
     }
   });
@@ -64,7 +64,7 @@
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === "Enter") {
-      handleSubmit();
+      handleSubmit(event);
     }
   }
 </script>

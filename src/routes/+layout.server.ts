@@ -25,9 +25,13 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
     }
 
     // Get full user data from database
-    const user = await db.findUserInfoByUsername(authToken.username);
-
-    return { vault, user };
+    try {
+      const user = await db.findUserInfoByUsername(authToken.username);
+      return { vault, user };
+    } catch (error) {
+      console.error(error);
+      return { vault, user: null };
+    }
   } catch (err) {
     console.error(err);
     error(500, "Internal Server Error");
