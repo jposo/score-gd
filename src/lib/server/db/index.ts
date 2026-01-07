@@ -2,7 +2,19 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
 import { env } from "$env/dynamic/private";
-import { sql, eq, desc, and, or, ilike, SQL, asc, lte, avg, count, max } from "drizzle-orm";
+import {
+  sql,
+  eq,
+  desc,
+  and,
+  or,
+  ilike,
+  asc,
+  lte,
+  avg,
+  count,
+  max,
+} from "drizzle-orm";
 
 export default class Database {
   static #instance: Database;
@@ -142,7 +154,7 @@ export default class Database {
       .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
       .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(eq(schema.levels.id, id))
-      .limit(1)
+      .limit(1);
 
     return result[0] || null;
   }
@@ -163,7 +175,7 @@ export default class Database {
       .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
       .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(eq(schema.levels.name, name))
-      .limit(1)
+      .limit(1);
 
     return result[0] || null;
   }
@@ -185,13 +197,13 @@ export default class Database {
         songId: schema.songs.id,
         songTitle: schema.songs.title,
         songArtist: schema.songs.artist,
-        progressCount: count(schema.progress.rating), 
+        progressCount: count(schema.progress.rating),
         averageRating: avg(schema.progress.review),
         completionCount: count(
-          sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`
+          sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`,
         ),
         reviewCount: count(
-          sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`
+          sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`,
         ),
         reviews: sql`json_agg(
               json_build_object(
@@ -240,6 +252,18 @@ export default class Database {
     return result[0] || null;
   }
 
+  async insertLevels(values: schema.InsertLevel[]) {
+    console.log("Inserting levels with values:", values);
+
+    const result = await this.db
+      .insert(schema.levels)
+      .values(values)
+      .onConflictDoNothing()
+      .returning({ id: schema.levels.id });
+
+    return result;
+  }
+
   async updateLevel(
     id: number,
     updates: Pick<
@@ -286,6 +310,7 @@ export default class Database {
         email: schema.users.email,
         passwordHash: schema.users.passwordHash,
         profilePicturePath: schema.users.profilePicturePath,
+        extraRoles: schema.users.extraRoles,
         createdAt: schema.users.createdAt,
       })
       .from(schema.users)
@@ -303,6 +328,7 @@ export default class Database {
         email: schema.users.email,
         passwordHash: schema.users.passwordHash,
         profilePicturePath: schema.users.profilePicturePath,
+        extraRoles: schema.users.extraRoles,
         createdAt: schema.users.createdAt,
       })
       .from(schema.users)
@@ -318,15 +344,15 @@ export default class Database {
         id: schema.users.id,
         username: schema.users.username,
         bio: schema.users.bio,
-        profile_picture_url: schema.users.profilePicturePath,
+        profilePicturePath: schema.users.profilePicturePath,
         roles: schema.users.extraRoles,
-        created_at: schema.users.createdAt,
-        levels_completed: count(
-          sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`
+        createdAt: schema.users.createdAt,
+        levelsCompleted: count(
+          sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`,
         ),
-        average_rating: avg(schema.progress.review),
-        reviews_written: count(
-          sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`
+        averageRating: avg(schema.progress.rating),
+        reviewsWritten: count(
+          sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`,
         ),
         list: sql`json_agg(
                 json_build_object(
@@ -340,9 +366,9 @@ export default class Database {
                 )
                 ORDER BY ${schema.progress.listPlacement} ASC
               ) FILTER (WHERE ${schema.progress.status} = 'completed')`,
-        recent_activity: sql`json_agg(
+        recentActivity: sql`json_agg(
                 json_build_object(
-                  'level_id', ${schema.levels.id},
+                  'levelId', ${schema.levels.id},
                   'status', ${schema.progress.status},
                   'rating', ${schema.progress.rating},
                   'levelName', ${schema.levels.name},
@@ -370,6 +396,7 @@ export default class Database {
       id: schema.users.id,
       username: schema.users.username,
       email: schema.users.email,
+      extraRoles: schema.users.extraRoles,
       createdAt: schema.users.createdAt,
     });
 
@@ -467,7 +494,10 @@ export default class Database {
         day: schema.days.day,
       })
       .from(schema.levels)
-      .innerJoin(schema.gdUsers, eq(schema.levels.publisherId, schema.gdUsers.id))
+      .innerJoin(
+        schema.gdUsers,
+        eq(schema.levels.publisherId, schema.gdUsers.id),
+      )
       .leftJoin(schema.days, eq(schema.levels.id, schema.days.levelId));
 
     return result;
@@ -514,16 +544,13 @@ export default class Database {
       .innerJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
       .innerJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(eq(schema.days.day, day))
-      .limit(1)
+      .limit(1);
 
     return result[0] || null;
   }
 
   async insertDay(values: schema.InsertDay) {
-    const result = await this.db
-      .insert(schema.days)
-      .values(values)
-      .returning();
+    const result = await this.db.insert(schema.days).values(values).returning();
 
     return result[0] || null;
   }

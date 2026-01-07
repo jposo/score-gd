@@ -22,6 +22,20 @@
       "when": 1766383207760,
       "tag": "0002_broad_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1766467786952,
+      "tag": "0003_orange_kingpin",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1766469172733,
+      "tag": "0004_legal_justice",
+      "breakpoints": true
     }
   ]
 }

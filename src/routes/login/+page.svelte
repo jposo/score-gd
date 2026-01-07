@@ -2,11 +2,11 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
+  import { toastManager } from "$lib/state/toasts.svelte";
 
   let login = "";
   let password = "";
   let loading = false;
-  let error = "";
 
   // Redirect if already logged in
   onMount(() => {
@@ -17,12 +17,9 @@
 
   async function handleSubmit() {
     if (!login || !password) {
-      error = "Please fill in all fields";
+      toastManager.add("please fill in all fields", "error");
       return;
     }
-
-    loading = true;
-    error = "";
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -37,19 +34,20 @@
       });
 
       const data = await response.json();
-      if (response.ok) {
+      console.log(data);
+      if (data.success) {
         // Redirect to home page or the page they came from
+        toastManager.add("successfully logged in", "success");
         const redirectTo =
           new URL(window.location.href).searchParams.get("redirectTo") || "/";
         window.location.href = redirectTo;
       } else {
-        error = data.error || "Login failed";
+        toastManager.add("login failed", "error");
+        console.error(data.error);
       }
     } catch (err) {
       console.error("Login error:", err);
-      error = "Network error. Please try again.";
-    } finally {
-      loading = false;
+      toastManager.add("login failed", "error");
     }
   }
 
@@ -139,25 +137,6 @@
             />
           </label>
         </fieldset>
-
-        {#if error}
-          <div role="alert" class="alert alert-error">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6 shrink-0 stroke-current"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{error}</span>
-          </div>
-        {/if}
 
         <div>
           <button

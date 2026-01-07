@@ -6,8 +6,10 @@ import {
   generateToken,
   cookieOptions,
 } from "$lib/server/auth/utils";
-import Database from "$lib/server/database";
+import Database from "$lib/server/db/index";
 import { COOKIE_NAME } from "$lib/constants";
+
+const db = Database.instance;
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
   try {
@@ -26,9 +28,9 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     let user;
 
     if (isEmail) {
-      user = await Database.instance.getUserByEmail(login);
+      user = await db.findUserByEmail(login);
     } else {
-      user = await Database.instance.getUserByUsername(login);
+      user = await db.findUserByUsername(login);
     }
 
     // Check if user exists
@@ -40,7 +42,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     }
 
     // Verify password
-    const isPasswordValid = await verifyPassword(password, user.password_hash);
+    const isPasswordValid = await verifyPassword(password, user.passwordHash);
     if (!isPasswordValid) {
       return json(
         { success: false, error: "Invalid credentials" },
@@ -49,7 +51,11 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     }
 
     // Generate JWT token
-    const token = generateToken(user);
+    const token = generateToken({
+      id: user.id,
+      username: user.username,
+      extraRoles: user.extraRoles ?? [],
+    });
 
     // Set cookie
     cookies.set(COOKIE_NAME, token, cookieOptions);

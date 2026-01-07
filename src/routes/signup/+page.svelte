@@ -2,6 +2,7 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
+  import { toastManager } from "$lib/state/toasts.svelte";
 
   let username = "";
   let email = "";
@@ -21,12 +22,12 @@
     event.preventDefault();
     // Basic validation
     if (!username || !email || !password || !confirmPassword) {
-      error = "Please fill in all fields";
+      toastManager.add("please fill in all fields", "error");
       return;
     }
 
     if (password !== confirmPassword) {
-      error = "Passwords do not match";
+      toastManager.add("passwords do not match", "error");
       return;
     }
 
@@ -47,16 +48,17 @@
       });
 
       const data = await response.json();
+      console.log(data);
 
-      if (response.ok) {
+      if (data.status?.toString().startsWith("2")) {
         // Redirect to home page
+        toastManager.add(data.error, "success");
         window.location.href = "/";
       } else {
-        error = data.error || "Registration failed";
+        toastManager.add(data.error, "error");
       }
-    } catch (err) {
-      console.error("Signup error:", err);
-      error = "Network error. Please try again.";
+    } catch (_) {
+      toastManager.add("sign up failed", "error");
     } finally {
       loading = false;
     }

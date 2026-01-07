@@ -3,6 +3,7 @@ import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import { error } from "@sveltejs/kit";
 import Database from "$lib/server/db/index";
 import { getCurrentDay } from "$lib/server/index";
+import { COOKIE_NAME } from "$lib/constants";
 
 const db = Database.instance;
 
@@ -29,7 +30,10 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
       const user = await db.findUserInfoByUsername(authToken.username);
       return { vault, user };
     } catch (error) {
+      // delete cookie
       console.error(error);
+      console.log("deleting cookie");
+      cookies.set(COOKIE_NAME, "", { path: "/" });
       return { vault, user: null };
     }
   } catch (err) {

@@ -5,45 +5,37 @@ import {
   smallint,
   serial,
   text,
-  jsonb,
   timestamp,
   date,
   boolean,
   interval,
   primaryKey,
 } from "drizzle-orm/pg-core";
-
-// export const gdLevels = pgTable("gd_levels", {
-//   id: integer("id").primaryKey(),
-//   name: text("name"),
-//   rating: text("rating"),
-//   song: text("song"),
-//   difficulty: text("difficulty"),
-//   releaseYear: integer("release_year"),
-//   publisher: text("publisher"),
-// });
-
-type Image = {
-  index: number;
-  url: string;
-}
+import { sql } from "drizzle-orm";
 
 export const sources = pgTable("sources", {
   id: serial("id").primaryKey(),
   name: text("name"),
   url: text("url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const days = pgTable("days", {
   id: serial("id").primaryKey(),
   day: integer("day").notNull(),
-  images: jsonb("images").$type<Image[]>().notNull(),
+  imagePaths: text("image_paths")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
   levelId: integer("level_id")
     .notNull()
     .references(() => levels.id),
   sourceId: integer("source_id")
     .notNull()
     .references(() => sources.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const gdUsers = pgTable("gd_users", {
@@ -51,6 +43,7 @@ export const gdUsers = pgTable("gd_users", {
   accountId: integer("account_id"),
   username: text("username").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+  lastSyncedAt: timestamp("last_synced_at").defaultNow(),
 });
 
 export const difficultyEnum = pgEnum("difficulty", [
@@ -129,9 +122,7 @@ export const levelCreators = pgTable(
       .notNull()
       .references(() => gdUsers.id),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.levelId, table.creatorId] }),
-  }),
+  (table) => [primaryKey({ columns: [table.levelId, table.creatorId] })],
 );
 
 export const statusEnum = pgEnum("status", [

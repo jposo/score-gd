@@ -1,8 +1,10 @@
 import { redirect } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "./utils";
-import Database from "../../server/database";
+import Database from "$lib/server/db/index";
 import type { RequestEvent } from "@sveltejs/kit";
 import { COOKIE_NAME } from "../../constants";
+
+const db = Database.instance;
 
 /**
  * Middleware function to protect routes that require authentication
@@ -42,7 +44,7 @@ export async function requireAuth(event: RequestEvent, redirectTo?: string) {
   }
 
   // Get full user data from database
-  const user = await Database.instance.getUserInfo(authToken.username);
+  const user = await db.findUserInfoByUsername(authToken.username);
   if (!user) {
     // User doesn't exist in database, clear token and redirect
     cookies.set(COOKIE_NAME, "", {
@@ -106,7 +108,7 @@ export async function redirectIfAuthenticated(
   }
 
   // Check if user still exists in database
-  const user = await Database.instance.getUserInfo(authToken.username);
+  const user = await db.findUserInfoByUsername(authToken.username);
   if (!user) {
     // User doesn't exist, clear token and allow access
     cookies.set(COOKIE_NAME, "", {
@@ -145,6 +147,6 @@ export async function getAuthenticatedUser(event: RequestEvent) {
   }
 
   // Get full user data from database
-  const user = await Database.instance.getUserInfo(authToken.username);
+  const user = await db.findUserInfoByUsername(authToken.username);
   return user;
 }

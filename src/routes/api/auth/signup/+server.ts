@@ -8,7 +8,9 @@ import {
   cookieOptions,
 } from "$lib/server/auth/utils";
 import { COOKIE_NAME } from "$lib/constants";
-import Database from "$lib/server/database";
+import Database from "$lib/server/db/index";
+
+const db = Database.instance;
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
   try {
@@ -62,7 +64,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       );
     }
 
-    const existingEmailUser = await Database.instance.getUserByEmail(email);
+    const existingEmailUser = await db.findUserByEmail(email);
     if (existingEmailUser) {
       return json(
         { success: false, message: "A user with this email already exists" },
@@ -70,8 +72,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       );
     }
 
-    const existingUsernameUser =
-      await Database.instance.getUserByUsername(username);
+    const existingUsernameUser = await db.findUserByUsername(username);
     if (existingUsernameUser) {
       return json(
         { success: false, message: "This username is already taken" },
@@ -84,14 +85,18 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     const user = await Database.instance.insertUser({
       username,
       email,
-      password_hash: passwordHash,
+      passwordHash: passwordHash,
     });
     if (!user) {
       error(500, "Failed to create user account");
     }
 
     // Generate JWT token
-    const token = generateToken(user);
+    const token = generateToken({
+      id: user.id,
+      username: user.username,
+      extraRoles: user.extraRoles ?? [],
+    });
 
     // Set cookie
     cookies.set(COOKIE_NAME, token, cookieOptions);

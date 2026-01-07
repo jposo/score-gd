@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import { dev } from "$app/environment";
 import type { Cookies } from "@sveltejs/kit";
 import { COOKIE_NAME } from "../../constants";
-import { type User } from "../../db-types";
+import type { SelectUser } from "$lib/server/db/schema";
 
 // Use environment variable or fallback to dev key
 const JWT_SECRET = import.meta.env.VITE_JWT_SECRET;
@@ -11,7 +11,7 @@ const JWT_SECRET = import.meta.env.VITE_JWT_SECRET;
 export interface AuthToken {
   userId: number;
   username: string;
-  role: string;
+  extraRoles: string[];
 }
 
 // Hash password
@@ -29,11 +29,15 @@ export async function verifyPassword(
 }
 
 // Generate JWT token
-export function generateToken(user: User): string {
+export function generateToken(user: {
+  id: number;
+  username: string;
+  extraRoles: string[];
+}): string {
   const payload: AuthToken = {
     userId: user.id,
     username: user.username,
-    role: user.role!,
+    extraRoles: user.extraRoles,
   };
 
   return jwt.sign(payload, JWT_SECRET, {

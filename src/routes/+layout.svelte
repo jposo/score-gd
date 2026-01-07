@@ -27,6 +27,7 @@
     const savedTheme = localStorage.getItem("theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
     theme.set(savedTheme);
+    console.log(data.user);
   });
 
   // Logout function
@@ -227,15 +228,15 @@
         <div
           tabindex="0"
           role="button"
-          class="btn btn-ghost btn-circle avatar {data.user.profile_picture_url
+          class="btn btn-ghost btn-circle avatar {data.user.profilePicturePath
             ? ''
             : 'avatar-placeholder'} "
         >
           <div class="w-10 rounded-full text-neutral-content bg-neutral">
-            {#if data.user.profile_picture_url}
+            {#if data.user.profilePicturePath}
               <img
                 alt={data.user.username}
-                src={data.user.profile_picture_url}
+                src={data.user.profilePicturePath}
               />
             {:else}
               <span class="text-sm">{data.user.username.charAt(0)}</span>
@@ -252,7 +253,7 @@
           <li>
             <a href="/profile/{data.user.username}">profile</a>
           </li>
-          {#if data.user.roles.includes("Admin")}
+          {#if data.user.roles?.includes("admin")}
             <li><a href="/admin">admin</a></li>
           {/if}
           <li><a href="/settings">settings</a></li>
