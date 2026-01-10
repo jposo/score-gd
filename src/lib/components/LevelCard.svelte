@@ -30,7 +30,7 @@
   role="button"
 >
   <div class="card-body">
-    <div class="grid grid-cols-2">
+    <div class="flex flex-row justify-between">
       <div class="flex flex-col">
         <h2 class="card-title text-lg">{props.name}</h2>
         <div class="text-sm opacity-75 space-y-1">
