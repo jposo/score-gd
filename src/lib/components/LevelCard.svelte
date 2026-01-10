@@ -5,11 +5,11 @@
   let props: {
     id: number;
     name: string;
-    publisher: string;
+    publisher: string | null;
     rating?: number;
     difficulty: string;
     length: string;
-    releaseDate?: string;
+    releaseDate?: string | null;
     tabIndex: number;
   } = $props();
 
@@ -35,7 +35,7 @@
         <h2 class="card-title text-lg">{props.name}</h2>
         <div class="text-sm opacity-75 space-y-1">
           <div>
-            by <span class="font-medium">{props.publisher}</span>
+            by <span class="font-medium">{props.publisher ?? "unknown"}</span>
           </div>
           <div class={getDifficultyColor(props.difficulty)}>
             <span class="font-semibold">{props.difficulty.toLowerCase()}</span>

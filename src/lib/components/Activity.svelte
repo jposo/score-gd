@@ -21,7 +21,9 @@
       <span class="font-bold text-primary hover:underline"
         ><a href={props.link}>{props.title}</a></span
       >
-      <span class="opacity-50">{dateToString(props.createdAt)}</span>
+      <span class="opacity-50"
+        >{dateToString(props.createdAt).toLocaleLowerCase()}</span
+      >
     </div>
     <div class="font-semibold">{subtitle}</div>
   </div>

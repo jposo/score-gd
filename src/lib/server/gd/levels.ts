@@ -1,7 +1,7 @@
-import { Parser } from "./parser";
+import { Parser, type LevelSearchResponse } from "./parser";
 import { BaseQuery } from "./query";
 
-export class LevelQuery extends BaseQuery<any> {
+export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
   type(
     type:
       | "search"
@@ -54,14 +54,17 @@ export class LevelQuery extends BaseQuery<any> {
     return this;
   }
 
-  search(query: string) {
-    this.query.str = query;
+  search(query: string | number, setType: boolean = true) {
+    if (setType) {
+      this.query.type = 0;
+    }
+    this.query.str = query.toString();
     return this;
   }
 
   ids(ids: number[]) {
     this.query.type = 10;
-    return this.search(ids.join(","));
+    return this.search(ids.join(","), false);
   }
 
   page(page: number) {
@@ -155,7 +158,7 @@ export class LevelQuery extends BaseQuery<any> {
     return this;
   }
 
-  protected async execute(): Promise<any> {
+  protected async execute(): Promise<LevelSearchResponse | null> {
     const response = await fetch(
       this.BOOMLINGS_BASE_API + "/getGJLevels21.php",
       {

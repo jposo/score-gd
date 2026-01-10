@@ -5,6 +5,7 @@ import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { isVideoUrl } from "$lib/tools/utils";
 import type { Level } from "$lib/db-types";
 import * as z from "zod";
+import { get } from "$lib/server/gd/client";
 
 const ProgressForm = z.object({
   status: z.enum(["to try", "in progress", "completed", "dropped"]),
@@ -27,18 +28,45 @@ export const load: PageServerLoad = async ({
   try {
     const id = parseInt(params.id!);
     if (Number.isNaN(id)) {
-      error(400, "Invalid level ID");
+      error(400, "invalid level id");
     }
-    const level = await db.findLevelById(id);
+    // const level = await db.findLevelById(id);
+    const result = await get("levels").search(id);
+    if (!result) {
+      error(404, "level not found");
+    }
+    const gdl = result.levels[0];
+    const progress = (await db.accrueProgressByLevelId(gdl.id))[0];
+    const level = {
+      id: gdl.id,
+      name: gdl.name,
+      publisher: gdl.creator?.username,
+      description: gdl.description,
+      difficulty: gdl.difficulty,
+      releaseDate: null,
+      coins: gdl.coins.count,
+      twoPlayer: gdl.twoPlayer,
+      rating: gdl.rating,
+      length: gdl.length,
+      videoUrl: null,
+      songId: gdl.song?.id,
+      songTitle: gdl.song?.name,
+      songArtist: gdl.song?.artist.name,
+      progressCount: progress?.progressCount ?? 0,
+      averageRating: progress?.averageRating ?? 0,
+      completionCount: progress?.completionCount ?? 0,
+      reviewCount: progress?.reviewCount ?? 0,
+      reviews: progress?.reviews ?? [],
+    };
     if (!user) {
       return { level };
     }
-    const progress = await db.findUserProgressByLevelId(user.id, id);
+    const userProgress = await db.findUserProgressByLevelId(user.id, id);
     const skillsets = ["2.0"];
-    return { level, progress, skillsets };
+    return { level, progress: userProgress, skillsets };
   } catch (err) {
     console.error(err);
-    error(500, "Internal Server Error");
+    error(500, "internal server error");
   }
 };
 
@@ -51,7 +79,7 @@ export const actions: Actions = {
     const levelId = parseInt(params.id!);
 
     if (Number.isNaN(levelId)) {
-      return fail(400, { error: `Invalid level ID: ${params.id}` });
+      return fail(400, { error: `invalid level id: ${params.id}` });
     }
     // check here if level id exists (maybe)
 
@@ -76,7 +104,7 @@ export const actions: Actions = {
 
     try {
       console.log("updating progress");
-      const result = await Database.instance.updateUserProgress({
+      const result = await Database.instance.upsertUserProgress({
         userId: user.id,
         levelId: levelId,
         status: data.status,
@@ -88,18 +116,19 @@ export const actions: Actions = {
         videoUrl: data.videoUrl,
         review: data.review,
       });
+
       if (result) {
         return { success: true };
       } else {
-        return fail(422, { error: "Failed to update progress" });
+        return fail(422, { error: "failed to update progress" });
       }
     } catch (err) {
       console.error(err);
-      return fail(500, { message: "Internal Server Error" });
+      return fail(500, { message: "internal server error" });
     }
   },
   updateLevel: async (event: RequestEvent) => {
-    const user = await requireAuthWithRoles(event, ["Admin"]);
+    const user = await requireAuthWithRoles(event, ["admin"]);
 
     const data = await event.request.formData();
 

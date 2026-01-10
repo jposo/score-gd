@@ -2,15 +2,52 @@ import type { PageServerLoad, Actions } from "./$types";
 import { fail, error } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import Database from "$lib/server/db/index";
+import { get } from "$lib/server/gd/client";
 
 const db = Database.instance;
 
 export const load: PageServerLoad = async (event) => {
   const username = event.params.username as string;
   const user = await db.findUserInfoByUsername(username);
+
   if (!user) {
     error(404, "User not found");
   }
+
+  const listLevelIds = user.list.map((item) => item.levelId);
+  const recentActivityLevelIds = user.recentActivity.map(
+    (item) => item.levelId,
+  );
+  const allIds = [...new Set([...listLevelIds, ...recentActivityLevelIds])];
+
+  const allLevels = await get("levels").ids(allIds);
+
+  if (!allLevels) {
+    error(500, "failed to fetch levels");
+  }
+  const levelMap = new Map(
+    allLevels.levels.map((level) => [
+      level.id,
+      {
+        name: level.name,
+        publisher: level.creator?.username,
+      },
+    ]),
+  );
+  const enrichedList = user.list.map((item) => ({
+    ...item,
+    details: levelMap.get(item.levelId) || null,
+  }));
+  const enrichedActivity = user.recentActivity.map((item) => ({
+    ...item,
+    details: levelMap.get(item.levelId) || null,
+  }));
+
+  const enrichedUser = {
+    ...user,
+    list: enrichedList,
+    recentActivity: enrichedActivity,
+  };
 
   const token = getTokenFromCookies(event.cookies);
   let isUser = false;
@@ -20,7 +57,7 @@ export const load: PageServerLoad = async (event) => {
   }
 
   return {
-    user,
+    user: enrichedUser,
     isUser,
   };
 };

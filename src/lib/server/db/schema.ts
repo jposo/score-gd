@@ -10,6 +10,7 @@ import {
   boolean,
   interval,
   primaryKey,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -28,9 +29,7 @@ export const days = pgTable("days", {
     .array()
     .notNull()
     .default(sql`'{}'::text[]`),
-  levelId: integer("level_id")
-    .notNull()
-    .references(() => levels.id),
+  levelId: integer("level_id").notNull(),
   sourceId: integer("source_id")
     .notNull()
     .references(() => sources.id),
@@ -132,27 +131,34 @@ export const statusEnum = pgEnum("status", [
   "dropped",
 ]);
 
-export const progress = pgTable("progress", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-  levelId: integer("level_id")
-    .notNull()
-    .references(() => levels.id),
-  status: statusEnum("status"),
-  rating: smallint("rating"),
-  completionPercentage: smallint("completion_percentage"),
-  completionTime: interval("completion_time"),
-  attempts: integer("attempts"),
-  startedAt: date("started_at"),
-  completedAt: date("completed_at"),
-  videoUrl: text("video_url"),
-  review: text("review"),
-  listPlacement: integer("list_placement"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+export const progress = pgTable(
+  "progress",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id),
+    levelId: integer("level_id").notNull(),
+    status: statusEnum("status"),
+    rating: smallint("rating"),
+    completionPercentage: smallint("completion_percentage"),
+    completionTime: interval("completion_time"),
+    attempts: integer("attempts"),
+    startedAt: date("started_at"),
+    completedAt: date("completed_at"),
+    videoUrl: text("video_url"),
+    review: text("review"),
+    listPlacement: integer("list_placement"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    userLevelIndex: uniqueIndex("user_level_index").on(
+      table.userId,
+      table.levelId,
+    ),
+  }),
+);
 
 export const rolesEnum = pgEnum("role", ["owner", "admin", "user"]);
 

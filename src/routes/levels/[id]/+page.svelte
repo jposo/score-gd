@@ -16,42 +16,47 @@
   let progressDetails: HTMLDialogElement | undefined = $state();
 
   // level Data
-  let average = $state(data.level.average_rating ?? undefined);
-  let releaseDate = $state(convertDate(data.level.release_date ?? undefined));
+  let average = $state(data.level.averageRating ?? undefined);
+  let releaseDate = $state(convertDate(data.level.releaseDate ?? undefined));
   let difficulty = $state(data.level.difficulty ?? undefined);
-  let videoUrl = $state(data.level.video_url ?? undefined);
+  let videoUrl = $state(data.level.videoUrl ?? undefined);
   let description = $state(data.level.description ?? undefined);
-  let skillsets = $state(data.level.skillsets ?? []);
+  // let skillsets = $state(data.level.skillsets ?? []);
 
   // rogress Data
-  let oldRating = $state(data.progress?.enjoyment_rating ?? undefined);
-  let rating = $state(data.progress?.enjoyment_rating ?? undefined);
+  let oldRating = $state(data.progress?.rating ?? undefined);
+  let rating = $state(data.progress?.rating ?? undefined);
   let status = $state(data.progress?.status ?? undefined);
-  let completionPercentage = $state(data.progress?.completion_pct ?? undefined);
-  let attempts = $state(data.progress?.total_attempts ?? undefined);
-  let startDate = $state(convertDate(data.progress?.start_date ?? undefined));
+  let completionPercentage = $state(
+    data.progress?.completionPercentage ?? undefined,
+  );
+  let attempts = $state(data.progress?.attempts ?? undefined);
+  let startDate = $state(
+    convertDate(new Date(data.progress?.startedAt!) ?? undefined),
+  );
   let completionDate: string | undefined = $state(
-    convertDate(data.progress?.completion_date) ?? undefined,
+    convertDate(new Date(data.progress?.completedAt!)) ?? undefined,
   );
   let review = $state(data.progress?.review ?? undefined);
 
   $effect(() => {
     // level data
-    average = data.level.average_rating ?? undefined;
-    releaseDate = convertDate(data.level.release_date ?? undefined);
+    average = data.level.averageRating ?? undefined;
+    releaseDate = convertDate(data.level.releaseDate ?? undefined);
     difficulty = data.level.difficulty ?? undefined;
-    videoUrl = data.level.video_url ?? undefined;
+    videoUrl = data.level.videoUrl ?? undefined;
     description = data.level.description ?? undefined;
-    skillsets = data.level.skillsets ?? [];
+    // skillsets = data.level.skillsets ?? [];
 
     // progress data
-    oldRating = data.progress?.enjoyment_rating ?? undefined;
-    rating = data.progress?.enjoyment_rating ?? undefined;
+    oldRating = data.progress?.rating ?? undefined;
+    rating = data.progress?.rating ?? undefined;
     status = data.progress?.status ?? undefined;
-    completionPercentage = data.progress?.completion_pct ?? undefined;
-    attempts = data.progress?.total_attempts ?? undefined;
-    startDate = convertDate(data.progress?.start_date ?? undefined);
-    completionDate = convertDate(data.progress?.completion_date) ?? undefined;
+    completionPercentage = data.progress?.completionPercentage ?? undefined;
+    attempts = data.progress?.attempts ?? undefined;
+    startDate = convertDate(new Date(data.progress?.startedAt!)) ?? undefined;
+    completionDate =
+      convertDate(new Date(data.progress?.completedAt!)) ?? undefined;
     review = data.progress?.review ?? undefined;
   });
 
@@ -69,10 +74,10 @@
   ];
 
   const statusOptions = [
-    { value: "In Progress", label: "in progress" },
-    { value: "Completed", label: "completed" },
-    { value: "Dropped", label: "dropped" },
-    { value: "To Try", label: "to try" },
+    { value: "in progress", label: "in progress" },
+    { value: "completed", label: "completed" },
+    { value: "dropped", label: "dropped" },
+    { value: "to try", label: "to try" },
   ];
 
   async function actionRequest(
@@ -105,7 +110,7 @@
   async function updateProgress(additionalData?: FormData) {
     // ensure status has a valid value
     if (!status || !statusOptions.some((o) => o.value === status)) {
-      status = "In Progress";
+      status = "in progress";
     }
 
     const form = additionalData || new FormData();
@@ -113,11 +118,11 @@
 
     // add rating if valid
     if (rating && !isNaN(rating)) {
-      form.append("enjoyment_rating", rating.toString());
+      form.append("rating", rating.toString());
 
       if (average && oldRating) {
         average = calculateNewAverage(
-          data.level.progress_count,
+          data.level.progressCount,
           average,
           oldRating,
           rating,
@@ -126,7 +131,7 @@
       oldRating = rating;
     }
 
-    if (status === "Completed" && !completionPercentage) {
+    if (status === "completed" && !completionPercentage) {
       completionPercentage = 100;
     }
 
@@ -173,7 +178,7 @@
       <div class="flex flex-col gap-4 w-1/5">
         <!-- Form -->
         {#if data.user}
-          {#if data.user.roles.includes("Admin")}
+          {#if data.user.roles?.includes("admin")}
             <div class="card bg-base-200 w-full">
               <div class="card-body">
                 <button
@@ -221,14 +226,14 @@
           <div class="stat">
             <div class="stat-title">completions</div>
             <div class="stat-value">
-              {data.level.completion_count}
+              {data.level.completionCount}
             </div>
           </div>
 
           <div class="stat">
             <div class="stat-title">reviews</div>
             <div class="stat-value">
-              {data.level.review_count}
+              {data.level.reviewCount}
             </div>
           </div>
         </div>
@@ -242,9 +247,9 @@
               <span class="text-sm">id: {data.level.id}</span>
             </h1>
             <h2 class="text-2xl">
-              {#if data.level.release_date}
+              {#if data.level.releaseDate}
                 released on <span class="font-semibold"
-                  >{dateToString(data.level.release_date)}</span
+                  >{dateToString(data.level.releaseDate)}</span
                 >
               {/if}
               by
@@ -253,14 +258,14 @@
             <p class="italic">{data.level.description}</p>
             <span>
               <div class="badge badge-neutral">
-                <span class="font-semibold">{data.level.song_title}</span>
+                <span class="font-semibold">{data.level.songTitle}</span>
                 by
-                <span class="font-semibold">{data.level.song_artist}</span>
+                <span class="font-semibold">{data.level.songArtist}</span>
               </div>
               <div class="badge badge-neutral">
                 {data.level.length.toLowerCase()}
               </div>
-              {#if data.level.two_player}
+              {#if data.level.twoPlayer}
                 <div class="badge badge-neutral">two-player</div>
               {/if}
               {#if data.level.coins && data.level.coins >= 1}
@@ -277,11 +282,11 @@
             </span>
           </div>
           <div class="w-2/5 flex justify-end">
-            {#if data.level.video_url}
+            {#if data.level.videoUrl}
               <iframe
                 width="388"
                 height="218"
-                src={getYouTubeEmbedUrl(data.level.video_url)}
+                src={getYouTubeEmbedUrl(data.level.videoUrl)}
                 title="YouTube video player"
                 frameborder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -300,11 +305,11 @@
             {#each data.level.reviews as r}
               <Review
                 username={r.username}
-                profilePictureUrl={r.profile_picture_url}
-                rating={r.enjoyment_rating}
-                attempts={r.total_attempts}
+                profilePictureUrl={r.profilePicturePath}
+                rating={r.rating}
+                attempts={r.attempts}
                 status={r.status}
-                date={new Date(r.updated_at)}
+                date={new Date(r.updatedAt)}
                 review={r.review!}
               />
               <div class="divider"></div>
@@ -328,7 +333,7 @@
         <fieldset class="fieldset">
           <legend class="fieldset-legend">release Date</legend>
           <label class="input w-full">
-            <input name="release_date" type="date" bind:value={releaseDate} />
+            <input name="releaseDate" type="date" bind:value={releaseDate} />
           </label>
         </fieldset>
 
@@ -364,7 +369,7 @@
             </g>
           </svg>
           <input
-            name="video_url"
+            name="videoUrl"
             type="url"
             placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
             pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"
@@ -385,7 +390,7 @@
         ></textarea>
       </fieldset>
 
-      <div>
+      <!-- <div>
         {#each data.skillsets as skillset}
           <input
             class="btn"
@@ -397,7 +402,7 @@
           />
         {/each}
         <input class="btn btn-square" type="reset" value="×" />
-      </div>
+      </div> -->
 
       <div class="modal-action flex justify-end gap-2">
         <button type="button" class="btn" onclick={() => levelDetails!.close()}>
@@ -421,12 +426,12 @@
     <form onsubmit={async (event) => await detailedUpdate(event)}>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <fieldset class="fieldset">
-          {#if data.level.length !== "Platformer"}
+          {#if data.level.length !== "platformer"}
             <legend class="fieldset-legend">completion percentage</legend>
             <label class="input w-full">
               <input
                 bind:value={completionPercentage}
-                name="completion_pct"
+                name="completionPercentage"
                 type="number"
                 min="0"
                 max="100"
@@ -436,7 +441,7 @@
           {:else}
             <legend class="fieldset-legend">completion time</legend>
             <label class="input w-full">
-              <input name="completion_time" type="number" min="0" />
+              <input name="completionTime" type="number" min="0" />
             </label>
           {/if}
         </fieldset>
@@ -445,7 +450,7 @@
           <label class="input w-full">
             <input
               bind:value={attempts}
-              name="total_attempts"
+              name="attempts"
               type="number"
               min="0"
             />
@@ -458,7 +463,7 @@
           <legend class="fieldset-legend">start date</legend>
           <label class="input w-full">
             <input
-              name="start_date"
+              name="startedAt"
               bind:value={startDate}
               type="date"
               max={completionDate}
@@ -469,7 +474,7 @@
           <legend class="fieldset-legend">completion date</legend>
           <label class="input w-full">
             <input
-              name="completion_date"
+              name="completedAt"
               bind:value={completionDate}
               type="date"
               min={startDate}
@@ -502,7 +507,7 @@
             </g>
           </svg>
           <input
-            name="video_url"
+            name="videoUrl"
             type="url"
             placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
             pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"

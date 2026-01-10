@@ -1,7 +1,7 @@
 import { fail } from "@sveltejs/kit";
 import type { PageServerLoad, Actions, RequestEvent } from "./$types";
 import { requireAuthWithRoles } from "$lib/server/auth/middleware";
-import { addLevelsToDatabase } from "$lib/server/geometryDash/levels";
+// import { addLevelsToDatabase } from "$lib/server/geometryDash/levels";
 import { Levels } from "$lib/server/tools/gd";
 import Database from "$lib/server/db/index";
 import * as z from "zod";
@@ -17,14 +17,14 @@ const FetchLevels = z
   });
 
 export const load: PageServerLoad = async (event) => {
-  const user = await requireAuthWithRoles(event, ["Admin", "Owner"]);
+  const user = await requireAuthWithRoles(event, ["admin"]);
 
   return { user };
 };
 
 export const actions: Actions = {
   fetchLevels: async (event: RequestEvent) => {
-    const user = await requireAuthWithRoles(event, ["Admin", "Owner"]);
+    const user = await requireAuthWithRoles(event, ["admin"]);
 
     const form = await event.request.formData();
 

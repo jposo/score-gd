@@ -1,25 +1,27 @@
 export default function getDifficultyColor(difficulty: string): string {
   switch (difficulty) {
-    case "Extreme Demon":
-      return "text-error";
-    case "Insane Demon":
-      return "text-warning";
-    case "Hard Demon":
-      return "text-orange-500";
-    case "Medium Demon":
+    case "extreme demon":
+      return "text-red-800";
+    case "insane demon":
+      return "text-rose-700";
+    case "hard demon":
+      return "text-rose-500";
+    case "medium demon":
+      return "text-pink-600";
+    case "easy demon":
+      return "text-purple-400";
+    case "insane":
+      return "text-fuchsia-400";
+    case "harder":
+      return "text-red-500";
+    case "hard":
       return "text-yellow-500";
-    case "Easy Demon":
-      return "text-green-500";
-    case "Insane":
-      return "text-purple-500";
-    case "Harder":
-      return "text-blue-500";
-    case "Hard":
-      return "text-cyan-500";
-    case "Normal":
+    case "normal":
       return "text-green-400";
-    case "Easy":
-      return "text-gray-400";
+    case "easy":
+      return "text-blue-800";
+    case "auto":
+      return "text-amber-500";
     default:
       return "text-base-content";
   }

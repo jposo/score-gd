@@ -4,13 +4,14 @@ import { PUBLIC_SUPABASE_PROJECT_ID } from "$env/static/public";
 import { error, fail } from "@sveltejs/kit";
 import * as z from "zod";
 import { getCurrentDay, getNextDayDateTime } from "$lib/server/index";
+import { get } from "$lib/server/gd/client";
 
 const HINT_CONFIG = [
-  { threshold: 1, when: 2, value: "rating" },
-  { threshold: 2, when: 3, value: "difficulty" },
-  { threshold: 3, when: 4, value: "releaseYear" },
-  { threshold: 4, when: 5, value: "song" },
-  { threshold: 5, when: 6, value: "publisher" },
+  { threshold: 0, when: 1, value: "rating" },
+  { threshold: 1, when: 2, value: "difficulty" },
+  { threshold: 2, when: 3, value: "releaseYear" },
+  { threshold: 3, when: 4, value: "song" },
+  { threshold: 4, when: 5, value: "publisher" },
 ];
 
 function giveHints(guessCount: number) {
@@ -27,9 +28,8 @@ function giveHints(guessCount: number) {
 
 const Guess = z.object({
   day: z.coerce.number().min(1).max(9999),
-  guess: z.coerce.string().max(20),
   guessCount: z.coerce.number().max(6),
-  guessId: z.coerce.number().min(1).optional(),
+  guessId: z.coerce.number().min(1),
 });
 
 const db = Database.instance;
@@ -40,19 +40,19 @@ export const load: PageServerLoad = async ({ url }) => {
 
   const dayNumber = !Number.isNaN(requestedDay) ? requestedDay : currentDay;
 
-  const rawDay = await db.findDaySimple(dayNumber);
-  if (!rawDay) {
-    error(404, "Day not found");
+  const day = await db.findDaySimple(dayNumber);
+  if (!day) {
+    error(404, "day not found");
   }
 
   return {
     updatesOn: getNextDayDateTime(dayNumber).toISOString(),
     day: {
-      number: rawDay.day,
-      images: rawDay.images.map((i) => ({
-        index: i.index,
-        url: `https://${PUBLIC_SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/images/${i.url}`,
-      })),
+      number: day.day,
+      images: day.imagePaths.map(
+        (image) =>
+          `https://${PUBLIC_SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/images/${image}`,
+      ),
     },
   };
 };
@@ -63,34 +63,47 @@ export const actions = {
 
     const result = Guess.safeParse({
       day: form.get("day"),
-      guess: form.get("guess"),
       guessCount: form.get("guessCount"),
       guessId: form.get("guessId"),
     });
 
     if (!result.success) {
       return fail(400, {
-        message: `Invalid form data: ${result.error.message}`,
+        message: "invalid request",
+        error: result.error.message,
       });
     }
 
     const data = result.data;
 
-    if (!data.guessId) {
-      const fallbackLevel = await db.findLevelByNameSimple(data.guess);
-      if (!fallbackLevel) {
-        return fail(400, { message: "Invalid Level" });
-      }
-      data.guessId = fallbackLevel.id;
+    // if (!data.guessId) {
+    // const fallbackLevel = await db.findLevelByNameSimple(data.guess);
+    // if (!fallbackLevel) {
+    //   return fail(400, { message: "Invalid Level" });
+    // }
+    // data.guessId = fallbackLevel.id;
+    // }
+
+    const level = await get("levels").search(data.guessId);
+    // const levelGuess = await db.findLevelById(data.guessId);
+    if (!level) {
+      return fail(404, { message: "guess not found" });
     }
 
-    const levelGuess = await db.findLevelById(data.guessId);
-    if (!levelGuess) {
-      return fail(404, { message: "Level Not Found" });
+    const answerId = await db.findDayFull(data.day);
+    const correct = answerId.id == data.guessId ? true : false;
+    const answerResult = (await get("levels").search(answerId.id))?.levels[0];
+    if (!answerResult) {
+      return fail(404, { message: "answer not found" });
     }
-
-    const answer = await db.findDayFull(data.day);
-    const correct = answer.id == data.guessId ? true : false;
+    const answer = {
+      name: answerResult.name,
+      publisher: answerResult.creator?.username,
+      difficulty: answerResult.difficulty,
+      rating: answerResult.rating,
+      song: answerResult.song?.name,
+      releaseYear: 2000,
+    };
     const lost = !correct && data.guessCount === 6;
 
     const hintsKeys = giveHints(correct ? 6 : data.guessCount);
@@ -100,7 +113,7 @@ export const actions = {
         if (hintKey === answerKey) {
           hints[parseInt(hintIndex)] = {
             hint: hintKey,
-            value: answerValue,
+            value: answerValue ?? null,
           };
         }
       }

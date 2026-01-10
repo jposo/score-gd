@@ -1,7 +1,7 @@
 import type { Actions, PageServerLoad, RequestEvent } from "./$types";
 import Database from "$lib/server/db/index";
 import { getCurrentDay, getProjectedDate } from "$lib/server/index";
-import { fail } from "@sveltejs/kit";
+import { error, fail } from "@sveltejs/kit";
 import { uploadImages } from "$lib/server/db/supabase";
 import { requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { Levels } from "$lib/server/tools/gd";
@@ -17,27 +17,29 @@ const db = Database.instance;
 const QueueForm = z.object({
   levelId: z.coerce.number().min(1),
   sourceId: z.coerce.number().min(1),
-  frames: z
-    .array(
-      z.object({
-        data: z.string(),
-        index: z.coerce.number().min(1).max(6),
-      }),
-    )
-    .max(6)
-    .min(6),
+  frames: z.preprocess((value) => {
+    if (typeof value !== "string") return value;
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }, z.array(z.string()).length(6)),
 });
 
 export const load: PageServerLoad = async (event) => {
-  const user = await requireAuthWithRoles(event, ["Admin", "Owner"]);
+  const user = await requireAuthWithRoles(event, ["admin", "owner"]);
 
-  const levels = await db.findAllDays();
+  const storedDays = await db.findAllDays();
   const latestDay = await db.findLatestDay();
+  if (latestDay === null) {
+    error(404, "no latest day found");
+  }
   const sources = await db.findSources();
 
   return {
     user,
-    levels,
+    storedDays: storedDays,
     sources,
     latestDay,
     projectedDate: getProjectedDate(latestDay!),
@@ -46,11 +48,13 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   enqueue: async (event) => {
-    await requireAuthWithRoles(event, ["Admin", "Owner"]);
+    await requireAuthWithRoles(event, ["admin", "owner"]);
 
     const { request } = event;
 
     const form = await request.formData();
+
+    console.log(form);
 
     const result = QueueForm.safeParse({
       levelId: form.get("levelId"),
@@ -60,7 +64,7 @@ export const actions: Actions = {
 
     if (!result.success) {
       return fail(400, {
-        message: `Invalid form data: ${result.error.message}`,
+        message: `invalid form data: ${result.error.message}`,
       });
     }
 
@@ -68,14 +72,14 @@ export const actions: Actions = {
 
     const day = (await db.findLatestDay())! + 1;
 
-    data.frames.sort((a, b) => a.index - b.index);
+    // data.frames.sort((a, b) => a.index - b.index);
 
     const files: { file: Buffer; filepath: string }[] = [];
     for (const frame of data.frames) {
       const filename = randomUUID();
       const filepath = `${day}/${filename}`;
 
-      const buffer = Buffer.from(frame.data.split(",")[1], "base64");
+      const buffer = Buffer.from(frame.split(",")[1], "base64");
 
       // compress image
       const image = await Jimp.read(buffer);
@@ -87,7 +91,7 @@ export const actions: Actions = {
 
       if (compressedBuffer.byteLength > MAX_FILE_SIZE) {
         return fail(400, {
-          message: "Image size exceeds limit even after compression",
+          message: "image size exceeds limit even after compression",
         });
       } else {
         files.push({ file: compressedBuffer, filepath });
@@ -97,28 +101,25 @@ export const actions: Actions = {
     try {
       // upload images to supabase storage
       const uploadedFiles = await uploadImages(files);
-      console.log(`${uploadImages.length} file(s) uploaded successfully`);
+      console.log(`${uploadedFiles.length} file(s) uploaded successfully`);
 
-      const images = uploadedFiles.map((file, index) => ({
-        url: file.path,
-        index: index + 1,
-      }));
+      const images = uploadedFiles.map((file) => file.path);
 
       // insert into database
       await db.insertDay({
-        day, 
-        levelId: data.levelId, 
-        images, 
-        sourceId: data.sourceId
+        day,
+        levelId: data.levelId,
+        imagePaths: images,
+        sourceId: data.sourceId,
       });
 
       return {
         success: true,
-        message: `Frames saved successfully`,
+        message: "frames saved successfully",
       };
     } catch (error) {
       console.error(error);
-      return fail(500, { message: "Failed to upload files" });
+      return fail(500, { message: "failed to upload files" });
     }
   },
   // update: async () => {

@@ -1,3 +1,5 @@
+import { safeB64Encode } from "./utils";
+
 interface RawLevel {
   $raw: Record<string, string>;
   id?: number;
@@ -162,6 +164,7 @@ export interface Level {
     count: number;
     verified: boolean;
   };
+  twoPlayer: boolean;
   song?: BaseSong;
 }
 
@@ -264,7 +267,7 @@ export interface User {
 }
 
 export class Parser {
-  parseLevelSearch(response: string) {
+  parseLevelSearch(response: string): LevelSearchResponse | null {
     if (response === "-1") {
       return null;
     }
@@ -289,14 +292,16 @@ export class Parser {
       ) ?? {
         userId: level.playerId!,
       };
-      let song = level.customSongId
+      const song = level.customSongId
         ? this.parseCustomSong(level, songs)
         : this.parseOfficialSong(level);
+
+      let description: string | null = null;
 
       return {
         id: level.id!,
         name: level.name!,
-        description: atob(level.description ?? ""),
+        description: safeB64Encode(level.description ?? ""),
         versions: {
           level: level.version!,
           game: this.parseGameVersion(level.gameVersion!),
@@ -316,6 +321,7 @@ export class Parser {
           count: level.coins!,
           verified: level.verifiedCoins!,
         },
+        twoPlayer: level.twoPlayer!,
         song,
       } satisfies Level;
     });

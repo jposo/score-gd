@@ -13,7 +13,7 @@
         id={level.id}
         name={level.name}
         publisher={level.publisher}
-        rating={level.average_rating}
+        rating={level.averageRating}
         difficulty={level.difficulty}
         length={level.length}
         tabIndex={index}

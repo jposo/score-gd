@@ -22,12 +22,14 @@
   let searchInput: string | undefined = $state();
   let search: HTMLInputElement;
 
+  const greetings = ["hi", "hello", "hey", "howdy", "greetings", "yo"];
+  const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+
   // Initialize theme on mount
   onMount(() => {
     const savedTheme = localStorage.getItem("theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
     theme.set(savedTheme);
-    console.log(data.user);
   });
 
   // Logout function
@@ -152,7 +154,7 @@
     </div>
   </div>
 
-  <div class="navbar-end gap-2">
+  <div class="navbar-end gap-0">
     <div class="dropdown dropdown-hover">
       <div tabindex="0" role="button" class="btn btn-ghost">levelguessr</div>
       <ul
@@ -248,7 +250,7 @@
           class="menu menu-sm dropdown-content bg-base-300 rounded-box z-1 mt-2 w-52 p-2 shadow"
         >
           <li class="menu-title">
-            <span>hi, {data.user.username}!</span>
+            <span>{greeting}, {data.user.username}!</span>
           </li>
           <li>
             <a href="/profile/{data.user.username}">profile</a>
@@ -308,7 +310,7 @@
     searchInput = "";
   }}
 >
-  <div class="modal-box w-5/6 max-w-5xl h-3/4 flex flex-col gap-4">
+  <div class="modal-box w-5/6 max-w-5xl h-3/5 flex flex-col gap-4">
     <label class="input w-full border-b border-base-100 text-lg">
       <svg
         class="h-[1em] opacity-50"

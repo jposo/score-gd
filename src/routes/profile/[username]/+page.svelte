@@ -18,8 +18,8 @@
   const alertDuration = 2000;
 
   let editMode = $state(false);
-  let lastState: ListItem[] | undefined = undefined;
-  let firstState: ListItem[] | undefined = undefined;
+  let lastState: number[] | undefined = undefined;
+  let firstState: number[] | undefined = undefined;
 
   const tabs = {
     recent: "recent",
@@ -43,12 +43,12 @@
     // if (lastState === undefined) {
     //   firstState = newItems;
     // }
-    lastState = newItems;
+    lastState = newItems.map((item) => item.id);
   }
 
   async function updateListPlacement() {
     if (!editMode) {
-      firstState = data.user.list!;
+      firstState = data.user.list!.map((item) => item.id);
     }
 
     console.log("updatelistplacement");
@@ -102,14 +102,14 @@
         >
           <!-- Profile Picture -->
           <div
-            class={data.user.profile_picture_url
+            class={data.user.profilePicturePath
               ? ""
               : "avatar avatar-placeholder"}
           >
             <div class="w-32 h-32 rounded-full text-neutral-content bg-neutral">
-              {#if data.user.profile_picture_url}
+              {#if data.user.profilePicturePath}
                 <img
-                  src={data.user.profile_picture_url}
+                  src={data.user.profilePicturePath}
                   alt={data.user.username}
                   class="w-full h-full object-cover"
                 />
@@ -126,7 +126,9 @@
             </h1>
 
             <p class="text-base-content/70 mb-4">
-              member since {formatDate(data.user.created_at)}
+              member since <b
+                >{formatDate(data.user.createdAt!).toLowerCase()}</b
+              >
             </p>
 
             <p class="text-base-content/80 mb-4">
@@ -154,8 +156,8 @@
         <div class="stat">
           <div class="stat-title">average rating</div>
           <div class="stat-value text-secondary">
-            {data.user.average_rating
-              ? data.user.average_rating.toFixed(1)
+            {data.user.averageRating
+              ? data.user.averageRating.toFixed(1)
               : "N/A"}
           </div>
           <!-- <div class="stat-desc">No demons yet</div> -->
@@ -164,14 +166,14 @@
         <div class="stat">
           <div class="stat-title">levels completed</div>
           <div class="stat-value text-primary">
-            {data.user.levels_completed}
+            {data.user.levelsCompleted}
           </div>
           <!-- <div class="stat-desc">Pump those numbers up!</div> -->
         </div>
 
         <div class="stat">
           <div class="stat-title">reviews written</div>
-          <div class="stat-value text-accent">{data.user.reviews_written}</div>
+          <div class="stat-value text-accent">{data.user.reviewsWritten}</div>
           <!-- <div class="stat-desc">No reviews yet</div> -->
         </div>
       </div>
@@ -190,7 +192,7 @@
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
             <div class="text-center">
-              {#if !data.user.recent_activity || data.user.recent_activity.length === 0}
+              {#if !data.user.recentActivity || data.user.recentActivity.length === 0}
                 <div class="text-6xl mb-4">📊</div>
                 <h3 class="text-lg font-semibold text-base-content/70 mb-2">
                   no activity yet
@@ -204,13 +206,13 @@
                   <a href="/levels" class="btn btn-primary"> browse levels </a>
                 {/if}
               {:else}
-                {#each data.user.recent_activity as a}
+                {#each data.user.recentActivity as a}
                   <Activity
-                    link={`/levels/${a.level_id}`}
-                    title={a.level_name}
-                    rating={a.enjoyment_rating}
+                    link={`/levels/${a.levelId}`}
+                    title={a.details?.name ?? "unknown level"}
+                    rating={a.rating}
                     status={a.status}
-                    createdAt={new Date(a.created_at)}
+                    createdAt={new Date(a.createdAt)}
                     review={a.review}
                   />
                   <div class="divider"></div>
@@ -245,7 +247,17 @@
               </div>
             {/if}
             {#if data.user.list && data.user.list.length > 0}
-              <List items={data.user.list!} {editMode} onDrop={handleDrop} />
+              <List
+                items={data.user.list.map((item) => ({
+                  id: item.id,
+                  levelName: item.details?.name ?? "unknown level",
+                  publisher: item.details?.publisher ?? "unknown publisher",
+                  attempts: item.attempts,
+                  rating: item.rating,
+                }))!}
+                {editMode}
+                onDrop={handleDrop}
+              />
             {:else}
               <div class="text-center">
                 <p class="text-base-content/50 mb-4">

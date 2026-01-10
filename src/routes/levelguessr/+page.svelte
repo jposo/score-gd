@@ -4,12 +4,14 @@
   import type { PageProps } from "./$types";
   import { enhance } from "$app/forms";
   import { guessesState } from "$lib/state/guesses.svelte";
+  import { toastManager } from "$lib/state/toasts.svelte";
 
   let { data }: PageProps = $props();
 
   type SearchResult = {
     id: number;
     name: string | null;
+    publisher: string | null;
   };
 
   let now = $state(Date.now());
@@ -22,7 +24,8 @@
   );
   let diffSeconds = $derived(Math.floor((diff % (1000 * 60)) / 1000));
 
-  let images = $derived(data.day.images.sort((a, b) => a.index - b.index));
+  // let images = $derived(data.day.images.sort((a, b) => a.index - b.index));
+
   let viewImage = $state(0);
   let input = $state("");
   let guessId = $state<number>();
@@ -44,6 +47,7 @@
       Record<number, { hint: string; value: string | number | null }>
     >
   >({});
+
   let answer = $derived(
     guesses[data.day.number]?.filter((guess) => guess.answer)?.[0]?.answer,
   );
@@ -63,6 +67,17 @@
     return () => clearInterval(interval);
   });
 
+  let images = $derived(
+    data.day.images
+      .map((image, index) => ({
+        src: image,
+        caption: hints[data.day.number]?.[index]
+          ? `${hints[data.day.number]?.[index]?.hint ?? ""}: ${hints[data.day.number]?.[index]?.value ?? ""}`.toLowerCase()
+          : "",
+      }))
+      .slice(0, status === "correct" ? data.day.images.length : currentGuess),
+  );
+
   $effect(() => {
     viewImage = Math.max(0, Math.min(currentGuess - 1, images.length - 1));
   });
@@ -79,7 +94,7 @@
         const response = await fetch(`/search?q=${input}&s=levelguessr`);
         if (response.ok) {
           const results = await response.json();
-          console.log(`Search successful, returned ${results.length} results.`);
+          // console.log(`Search successful, returned ${results.length} results.`);
           searchResults = results;
         }
       } catch (error) {
@@ -98,17 +113,17 @@
     searchResults = [];
   }
 
-  function displayError(message: string) {
-    console.error(message);
-    showAlert = true;
-    alertMessage = message;
-    setTimeout(() => {
-      showAlert = false;
-    }, 3000);
-  }
+  // function displayError(message: string) {
+  //   console.error(message);
+  //   showAlert = true;
+  //   alertMessage = message;
+  //   setTimeout(() => {
+  //     showAlert = false;
+  //   }, 3000);
+  // }
 </script>
 
-{#if showAlert}
+<!-- {#if showAlert}
   <div
     role="alert"
     class="alert alert-error fixed top-4 left-1/2 -translate-x-1/2 w-96 transition-all"
@@ -128,19 +143,9 @@
     </svg>
     <span>{alertMessage}</span>
   </div>
-{/if}
+{/if} -->
 
-<Carousel
-  images={images
-    .map((i) => ({
-      src: i.url,
-      caption: hints[data.day.number]?.[i.index]
-        ? `${hints[data.day.number]?.[i.index]?.hint ?? ""}: ${hints[data.day.number]?.[i.index]?.value ?? ""}`.toLowerCase()
-        : "",
-    }))
-    .slice(0, status === "correct" ? images.length : currentGuess)}
-  select={viewImage}
-/>
+<Carousel {images} select={viewImage} />
 
 {#if status === "ongoing"}
   <div class="flex w-full justify-center">
@@ -149,6 +154,7 @@
         method="POST"
         use:enhance={() => {
           return async ({ result }) => {
+            console.log(result);
             if (result.type === "success") {
               guessesState.addGuess(data.day.number, {
                 guess: input,
@@ -161,17 +167,25 @@
                 hints[day] = {};
               }
 
+              const newHints = result.data?.hints ?? {};
+
               hints[day] = {
                 ...hints[day],
-                ...result.data.hints,
+                ...newHints,
               };
 
               localStorage.setItem("hints", JSON.stringify(hints));
 
               input = "";
               guessId = undefined;
+            } else if (result.type === "failure") {
+              toastManager.add(
+                (result.data?.message as string) ?? "unknown error",
+                "error",
+              );
             } else {
-              displayError(result.data.message);
+              toastManager.add("unknown error", "error");
+              console.log(result);
             }
           };
         }}
@@ -228,7 +242,10 @@
                     e.preventDefault();
                     selectResult(result);
                   }
-                }}>{result.name}</button
+                }}
+                >{result.name}<span class="text-base text-right opacity-60"
+                  >{result.publisher}</span
+                ></button
               >
             </li>
           {/each}
@@ -285,6 +302,7 @@
         : 'border-error shadow-lg shadow-error/30'} my-1 w-1/2 bg-base-300 rounded-box grid h-10 place-items-center"
     >
       {guess.guess}
+      <!-- <span class="font-bold">{guess.publisher}</span> -->
     </div>
   {/each}
 </div>

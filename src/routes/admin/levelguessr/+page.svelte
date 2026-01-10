@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PageProps, SubmitFunction } from "./$types";
   import { enhance } from "$app/forms";
+  import { toastManager } from "$lib/state/toasts.svelte";
 
   let { data }: PageProps = $props();
 
@@ -35,17 +36,18 @@
   let video = $derived(files?.item(0) ?? null);
   let duration = $state<number>();
   let extractedFrames = $state<Frame[]>([]);
-  let selectedFrames = $derived.by(() => {
-    const frames: { data: string; index: number }[] = [];
-    let index = 1;
-    for (const [key, value] of Object.entries(
-      extractedFrames.filter((frame) => frame.saved),
-    )) {
-      frames.push({ data: value.data, index: index++ });
-      // console.log(key, value.data, value.originalData);
-    }
-    return frames;
-  });
+  // let selectedFrames = $derived.by(() => {
+  //   const frames: { data: string; index: number }[] = [];
+  //   let index = 1;
+  //   for (const [key, value] of Object.entries(
+  //     extractedFrames.filter((frame) => frame.saved),
+  //   )) {
+  //     frames.push({ data: value.data, index: index++ });
+  //     // console.log(key, value.data, value.originalData);
+  //   }
+  //   return frames;
+  // });
+  let selectedFrames = $state<{ data: string; originalIndex: number }[]>([]);
   let frameCount = $derived(Math.floor(duration ?? 0));
   let videoSrc = $derived.by(() => {
     if (files && files.length > 0) {
@@ -278,11 +280,42 @@
     console.log("compressed to quality: ", quality);
 
     const croppedDataUrl = compressedDataUrl;
+    const frameIndex = cropSettings.frameIndex;
 
     extractedFrames[cropSettings.frameIndex].data = croppedDataUrl;
-    extractedFrames[cropSettings.frameIndex].cropSettings = cropSettings;
+    // extractedFrames[cropSettings.frameIndex].cropSettings = cropSettings;
     extractedFrames[cropSettings.frameIndex].saved = true;
+
+    const existingIdx = selectedFrames.findIndex(
+      (f) => f.originalIndex === frameIndex,
+    );
+    if (existingIdx === -1) {
+      selectedFrames.push({
+        data: croppedDataUrl,
+        originalIndex: frameIndex,
+      });
+    } else {
+      selectedFrames[existingIdx].data = croppedDataUrl;
+    }
     currentImage = null;
+  }
+
+  function moveFrame(index: number, direction: "up" | "down") {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+
+    if (newIndex >= 0 && newIndex < selectedFrames.length) {
+      const temp = selectedFrames[index];
+      selectedFrames[index] = selectedFrames[newIndex];
+      selectedFrames[newIndex] = temp;
+    }
+  }
+
+  function removeSelection(index: number) {
+    const originalIdx = selectedFrames[index].originalIndex;
+    extractedFrames[originalIdx].saved = false;
+    extractedFrames[originalIdx].data =
+      extractedFrames[originalIdx].originalData;
+    selectedFrames.splice(index, 1);
   }
 
   $effect(() => {
@@ -294,7 +327,7 @@
           searchResults = [];
           return;
         }
-        const response = await fetch(`/search?q=${input}`);
+        const response = await fetch(`/search?q=${input}&s=levelguessr`);
         if (response.ok) {
           const results = await response.json();
           console.log(`Search successful, returned ${results.length} results.`);
@@ -315,21 +348,6 @@
     levelId = result.id;
     searchResults = [];
   }
-
-  function formHandler() {
-    return async ({ result }) => {
-      if (result.type === "success") {
-        alert(result.data?.message);
-      } else if (result.type === "failure") {
-        alert(
-          "An error occurred while enqueuing the frames: " +
-            result.data?.message,
-        );
-      } else {
-        alert("An unexpected error occurred" + result.data?.message);
-      }
-    };
-  }
 </script>
 
 <ul
@@ -342,9 +360,9 @@
 <div class="container mx-auto max-w-7xl p-6 space-y-8">
   <div class="flex flex-col md:flex-row justify-between items-center gap-4">
     <div>
-      <h1 class="text-4xl font-extrabold text-primary">Frame Processor</h1>
+      <h1 class="text-4xl font-extrabold text-primary">frame processor</h1>
       <p class="text-base-content/60">
-        Queue levels and extractr frames for day #{nextDay}
+        queue levels and extractr frames for day #{nextDay}
       </p>
     </div>
 
@@ -359,18 +377,87 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="card bg-base-200 shadow-xl h-fit">
       <div class="card-body gap-4">
-        <h2 class="text-3xl font-bold">Job Details</h2>
+        <h2 class="text-3xl font-bold">job details</h2>
+
+        {#if selectedFrames.length > 0}
+          <div class="space-y-2 mb-4">
+            <p class="text-sm font-bold opacity-70">selection order</p>
+            <div class="grid grid-cols-3 gap-2">
+              {#each selectedFrames as frame, index}
+                <div
+                  class="relative group border border-primary rounded overflow-hidden"
+                >
+                  <img
+                    src={frame.data}
+                    alt="selected"
+                    class="w-full aspect-video object-cover"
+                  />
+                  <div
+                    class="absolute inset-0 bg-black/60 opacity 0 group-hover:opacity-100 flex items-center justify-center gap-1 transition-opacity"
+                  >
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-circle"
+                      onclick={() => moveFrame(index, "up")}
+                      disabled={index === 0}>&lt;</button
+                    >
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-circle"
+                      onclick={() => removeSelection(index)}>&times;</button
+                    >
+                    <button
+                      type="button"
+                      class="btn btn-xs btn-circle"
+                      onclick={() => moveFrame(index, "down")}
+                      disabled={index === selectedFrames.length - 1}
+                      >&gt;</button
+                    >
+                  </div>
+                  <div
+                    class="absolute top-0 left-0 bg-primary text-primary-content text-sm px-1 font-bold"
+                  >
+                    {index + 1}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          </div>
+        {/if}
 
         <form
           method="POST"
           action="?/enqueue"
-          use:enhance={formHandler}
+          use:enhance={() => {
+            return async ({ result }) => {
+              if (result.type === "success") {
+                toastManager.add(
+                  (result.data?.message as string) ?? "success",
+                  "success",
+                );
+                nextDay++;
+              } else if (result.type === "failure") {
+                toastManager.add(
+                  "an error occurred while enqueuing the frames",
+                  "error",
+                );
+                console.error(result.data?.message);
+              } else {
+                toastManager.add("an unexpected error occurred", "error");
+                console.error(result);
+              }
+            };
+          }}
           class="space-y-4"
         >
           <input
             type="hidden"
             name="frames"
-            value={JSON.stringify(selectedFrames)}
+            value={JSON.stringify(
+              selectedFrames
+                .toSorted((a, b) => a.originalIndex - b.originalIndex)
+                .map((frame) => frame.data),
+            )}
           />
           <input type="hidden" name="levelId" value={levelId} />
 
@@ -407,8 +494,8 @@
                 class="dropdown-content z-1 menu p-2 shadow bg-base-300 rounded-box w-full text-2xl **mt-2**"
               >
                 {#each searchResults as result}
-                  {@const played = data.levels.find(
-                    (level) => level.id === result.id,
+                  {@const played = data.storedDays.find(
+                    (day) => day.id === result.id,
                   )}
                   <li value={result.id}>
                     <button
@@ -418,7 +505,7 @@
                       <span>{result.name}</span>
                       {#if played}
                         <span class="badge badge-sm badge-neutral"
-                          >Day #{played.day}</span
+                          >day #{played.day}</span
                         >
                       {/if}
                     </button>
@@ -430,7 +517,7 @@
 
           <div class="form-control">
             <select name="sourceId" class="select w-full">
-              <option disabled selected>Pick a Source</option>
+              <option disabled selected>pick a source</option>
               {#each data.sources as source}
                 <option value={source.id}>{source.name}</option>
               {/each}
@@ -442,7 +529,7 @@
           <button
             type="submit"
             class="btn btn-primary w-full shadow-lg shadow-primary/30"
-            >Submit Job</button
+            >submit job</button
           >
         </form>
       </div>
@@ -451,7 +538,7 @@
     <div class="col-span-1 lg:col-span-2 space-y-6">
       <div class="card bg-base-200 border-base-200 shadow-xl">
         <div class="card-body items-center text-center py-8">
-          <h2 class="card-title">Upload Video</h2>
+          <h2 class="card-title">upload video</h2>
           <input
             bind:files
             type="file"
@@ -467,11 +554,11 @@
             <div class="flex flex-wrap gap-4 items-center justify-between">
               <div>
                 <button class="btn btn-primary btn-lg" onclick={extractFrames}
-                  >Extract Frames (1/sec)</button
+                  >extract frames (1/sec)</button
                 >
-                <button type="submit" class="btn btn-lg btn-accent"
-                  >Queue</button
-                >
+                <!-- <button type="submit" class="btn btn-lg btn-accent"
+                  >queue</button
+                > -->
               </div>
 
               <div class="flex gap-2">
@@ -546,7 +633,7 @@
   </div>
 
   {#if extractedFrames.length > 0}
-    <div class="divider">Extracted Frames</div>
+    <div class="divider">extracted frames</div>
 
     <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
       {#each extractedFrames as frame, index}
@@ -575,7 +662,7 @@
                   stroke-linejoin="round"
                   ><polyline points="20 6 9 17 4 12" /></svg
                 >
-                Saved
+                saved
               </div>
             {/if}
 
@@ -588,7 +675,7 @@
                   openCropModal(index);
                 }}
               >
-                Crop Frame
+                crop frame
               </button>
             </div>
           </figure>
@@ -598,7 +685,7 @@
                 {frame.time.toFixed(2)}
               </span>
               {#if !frame.saved}
-                <span class="badge badge-xs badge-ghost">Pending</span>
+                <span class="badge badge-xs badge-ghost">pending</span>
               {/if}
             </div>
             <!-- <div class="card-actions justify-end">
@@ -620,7 +707,7 @@
     class="modal-box w-11/12 max-w-6xl space-y-2 p-0 overflow-hidden bg-base-200"
   >
     <div class="p-4 border-b border-base-300 flex justify-between items-center">
-      <h3 class="text-lg font-bold">Crop Selection</h3>
+      <h3 class="text-lg font-bold">crop selection</h3>
 
       <form method="dialog">
         <button class="btn btn-sm btn-circle btn-ghost text-xl">&times;</button>
@@ -639,7 +726,7 @@
 
     <div class="modal-action p-4 bg-base-100 m-0 border-t border-base-300">
       <form method="dialog" class="flex gap-2 w-full justify-end">
-        <button class="btn">Cancel</button>
+        <button class="btn">cancel</button>
         <button class="btn btn-primary px-8" onclick={handleSaveFrame}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -656,7 +743,7 @@
             /><polyline points="17 21 17 13 7 13 7 21" /><polyline
               points="7 3 7 8 15 8"
             /></svg
-          >Save</button
+          >save</button
         >
       </form>
     </div>

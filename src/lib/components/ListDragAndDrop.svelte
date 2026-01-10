@@ -11,10 +11,10 @@
   }: {
     items: {
       id: number;
-      level_name: string;
+      levelName: string;
       publisher: string;
       attempts: number;
-      enjoyment_rating: number;
+      rating: number;
     }[];
     editMode: boolean;
     onDrop: (newItems: ListItem[]) => void;
@@ -55,7 +55,7 @@
       </div> -->
       <div class="list-col-grow">
         <div class="text-xl bold">
-          {item.level_name}
+          {item.levelName}
           <span class="text-xs font-semibold opacity-60">
             {item.publisher}
           </span>
@@ -64,8 +64,8 @@
           {#if item.attempts}
             {item.attempts} attempts
           {/if}
-          {#if item.enjoyment_rating}
-            {item.enjoyment_rating}/10
+          {#if item.rating}
+            {item.rating}/10
           {/if}
         </div>
       </div>

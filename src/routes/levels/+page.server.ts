@@ -1,74 +1,42 @@
 import { error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import Database from "$lib/server/db/index";
+import { get } from "$lib/server/gd/client";
 
 const db = Database.instance;
 
 export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
   try {
-    const page = url.searchParams.get("page") || "1";
-    if (!page.match(/^[1-9]\d*$/)) {
+    const pageParam = url.searchParams.get("page") || "1";
+    if (!pageParam.match(/^[1-9]\d*$/)) {
       error(400, "Invalid page parameter");
     }
+    const page = parseInt(pageParam);
 
-    const levels = await db.findLevelsByPage(parseInt(page));
-    return { page: levels };
+    // const levels = await db.findLevelsByPage(parseInt(page));
+    const result = await get("levels").type("most liked").page(page);
+    if (!result) {
+      error(404, "Levels not found");
+    }
+    const stats = await db.accrueProgressByLevelIds(
+      result.levels.map((level) => level.id),
+    );
+    const statsMap = new Map(stats.map((stat) => [stat.levelId, stat]));
+    const levels = result.levels.map((level) => ({
+      id: level.id,
+      name: level.name,
+      publisher: level.creator?.username,
+      difficulty: level.difficulty,
+      releaseDate: null,
+      length: level.length,
+      averageRating: statsMap.get(level.id)?.averageRating || 0,
+    }));
+    return {
+      levels,
+      page,
+    };
   } catch (err) {
     console.error(err);
     error(500, "Internal server error");
   }
 };
-
-// import { json, error } from "@sveltejs/kit";
-// import type { Actions } from "./$types";
-// import { requireAuth } from "$lib/server/auth/middleware";
-// import Database, { type ProgressValues } from "$lib/server/database";
-
-// export const actions: Actions = {
-//   default: async (event) => {
-//     const { request } = event;
-
-//     const user = await requireAuth(event);
-//     const data = await request.formData();
-//     data.append("user_id", user.id.toString());
-//     // console.log(user);
-
-//     // const status = data.get("status") as string;
-//     // const enjoyment_rating = data.get("enjoyment_rating") as string;
-//     const params: ProgressValues = { status: "In Progress" };
-//     data.entries().forEach(([key, value]) => {
-//       if (value === "") return;
-//       if (key == "status") {
-//         params.status = value;
-//       } else if (key == "completion_pct") {
-//         params.completion_pct = parseInt(value);
-//         if (params.completion_pct >= 100) {
-//           params.completion_pct = 100;
-//         }
-//       } else if (key == "total_attempts") {
-//         params.total_attempts = parseInt(value);
-//       } else if (key == "enjoyment_rating") {
-//         params.enjoyment_rating = parseInt(value);
-//       } else if (key == "start_date") {
-//         params.start_date = value;
-//       } else if (key == "complete_date") {
-//         params.complete_date = value;
-//       } else if (key == "video_url") {
-//         params.video_url = value;
-//       } else if (key == "review") {
-//         params.review = value;
-//       } else if (key == "level_id") {
-//         params.level_id = parseInt(value);
-//       } else if (key == "user_id") {
-//         params.user_id = parseInt(value);
-//       }
-//     });
-
-//     const result = await Database.instance.updateUserProgress(params);
-//     if (result) {
-//       json({ success: true });
-//     } else {
-//       error(400, "Failed to update progress");
-//     }
-//   },
-// };
