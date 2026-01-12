@@ -89,9 +89,9 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
       | "extreme demon",
   ) {
     if (difficulty === "n/a") {
-      this.query.diff = -1;
-    } else if (difficulty === "auto") {
       this.query.diff = 0;
+    } else if (difficulty === "auto") {
+      this.query.diff = -3;
     } else if (difficulty === "easy") {
       this.query.diff = 1;
     } else if (difficulty === "normal") {

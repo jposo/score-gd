@@ -395,8 +395,7 @@ export default class Database {
         ),
         list: sql<List>`coalesce(json_agg(
                 json_build_object(
-                  'id', ${schema.progress.id},
-                  'levelId', ${schema.progress.levelId},
+                  'id', ${schema.progress.levelId},
                   'placement', ${schema.progress.listPlacement},
                   'rating', ${schema.progress.rating},
                   'attempts', ${schema.progress.attempts}
@@ -583,11 +582,20 @@ export default class Database {
     return progress[0] || null;
   }
 
-  async updateListPlacement(progressId: number, placement: number) {
+  async updateListPlacement(
+    levelId: number,
+    userId: number,
+    placement: number,
+  ) {
     const result = await this.db
       .update(schema.progress)
       .set({ listPlacement: placement })
-      .where(eq(schema.progress.id, progressId))
+      .where(
+        and(
+          eq(schema.progress.levelId, levelId),
+          eq(schema.progress.userId, userId),
+        ),
+      )
       .returning();
 
     return result[0] || null;

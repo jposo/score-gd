@@ -3,6 +3,7 @@ import { fail, error } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import Database from "$lib/server/db/index";
 import { get } from "$lib/server/gd/client";
+import { requireAuth } from "$lib/server/auth/middleware";
 
 const db = Database.instance;
 
@@ -11,10 +12,10 @@ export const load: PageServerLoad = async (event) => {
   const user = await db.findUserInfoByUsername(username);
 
   if (!user) {
-    error(404, "User not found");
+    error(404, "user not found");
   }
 
-  const listLevelIds = user.list.map((item) => item.levelId);
+  const listLevelIds = user.list.map((item) => item.id);
   const recentActivityLevelIds = user.recentActivity.map(
     (item) => item.levelId,
   );
@@ -36,18 +37,12 @@ export const load: PageServerLoad = async (event) => {
   );
   const enrichedList = user.list.map((item) => ({
     ...item,
-    details: levelMap.get(item.levelId) || null,
+    details: levelMap.get(item.id) || null,
   }));
   const enrichedActivity = user.recentActivity.map((item) => ({
     ...item,
     details: levelMap.get(item.levelId) || null,
   }));
-
-  const enrichedUser = {
-    ...user,
-    list: enrichedList,
-    recentActivity: enrichedActivity,
-  };
 
   const token = getTokenFromCookies(event.cookies);
   let isUser = false;
@@ -56,9 +51,23 @@ export const load: PageServerLoad = async (event) => {
     isUser = authToken?.username === user.username;
   }
 
-  return {
-    user: enrichedUser,
+  const enrichedUser = {
+    username: user.username,
+    bio: user.bio,
+    profilePicturePath: user.profilePicturePath,
+    registeredAt: user.createdAt,
+    stats: {
+      averageRating: user.averageRating,
+      levelsCompleted: user.levelsCompleted,
+      reviewsWritten: user.reviewsWritten,
+    },
+    list: enrichedList,
+    recentActivity: enrichedActivity,
     isUser,
+  };
+
+  return {
+    profile: enrichedUser,
   };
 };
 
@@ -66,26 +75,27 @@ export const actions: Actions = {
   default: async (event) => {
     const { request } = event;
 
+    const user = await requireAuth(event);
+
     try {
       const form = await request.formData();
       const formList = form.get("list");
       if (formList === null) {
-        return fail(400, { error: "Invalid list data" });
+        return fail(400, { message: "invalid list data" });
       }
       let list;
       try {
         list = JSON.parse(formList as string);
       } catch {
-        return fail(400, { error: "Invalid list format" });
+        return fail(400, { message: "invalid list format" });
       }
       for (let p = 0; p < list.length; p++) {
-        await Database.instance.updateListPlacement(list[p].id, p + 1);
+        await Database.instance.updateListPlacement(list[p], user.id, p + 1);
       }
-      console.log("List updated");
       return { success: true };
     } catch (err) {
-      console.error("Error updating list placement:", err);
-      return fail(500, { error: "Failed to update list placement" });
+      console.error("error updating list placement:", err);
+      return fail(500, { message: "failed to update list placement" });
     }
   },
 };

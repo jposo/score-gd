@@ -9,7 +9,7 @@
 </script>
 
 <div
-  class="toast toast-center toast-bottom"
+  class="toast toast-center toast-top toast-bottom z-50"
   transition:fade={{ duration: 300 }}
 >
   <div class="alert alert-{level}">

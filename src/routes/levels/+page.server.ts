@@ -2,27 +2,54 @@ import { error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import Database from "$lib/server/db/index";
 import { get } from "$lib/server/gd/client";
+import * as z from "zod";
+import { difficulties, ratings, lengths } from "$lib/shared/gd";
 
 const db = Database.instance;
 
+const Params = z.object({
+  page: z.coerce.number().min(1).optional().default(1),
+  difficulty: z.enum(difficulties).optional(),
+  rating: z.enum(ratings).optional(),
+  length: z.enum(lengths).optional(),
+});
+
 export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
   try {
-    const pageParam = url.searchParams.get("page") || "1";
-    if (!pageParam.match(/^[1-9]\d*$/)) {
-      error(400, "Invalid page parameter");
+    const paramsResult = Params.safeParse({
+      page: url.searchParams.get("page") ?? undefined,
+      difficulty: url.searchParams.get("difficulty") ?? undefined,
+      rating: url.searchParams.get("rating") ?? undefined,
+      length: url.searchParams.get("length") ?? undefined,
+    });
+    if (!paramsResult.success) {
+      error(400, "invalid parameters");
     }
-    const page = parseInt(pageParam);
+    const params = paramsResult.data;
 
     // const levels = await db.findLevelsByPage(parseInt(page));
-    const result = await get("levels").type("most liked").page(page);
-    if (!result) {
-      error(404, "Levels not found");
+    let query = get("levels").type("most liked").page(params.page);
+    if (params.difficulty) {
+      query = query.difficulty(params.difficulty);
+    }
+    if (params.rating) {
+      query = query.rating(params.rating);
+    }
+    if (params.length) {
+      query = query.length(params.length);
+    }
+    const searchResult = await query;
+    if (!searchResult) {
+      return {
+        levels: [],
+        page: params.page,
+      };
     }
     const stats = await db.accrueProgressByLevelIds(
-      result.levels.map((level) => level.id),
+      searchResult.levels.map((level) => level.id),
     );
     const statsMap = new Map(stats.map((stat) => [stat.levelId, stat]));
-    const levels = result.levels.map((level) => ({
+    const levels = searchResult.levels.map((level) => ({
       id: level.id,
       name: level.name,
       publisher: level.creator?.username,
@@ -33,10 +60,10 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
     }));
     return {
       levels,
-      page,
+      page: params.page,
     };
   } catch (err) {
     console.error(err);
-    error(500, "Internal server error");
+    error(500, "internal server error");
   }
 };

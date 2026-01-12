@@ -10,15 +10,12 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import { page } from "$app/state";
+  import { enhance } from "$app/forms";
 
   let { data }: { data: PageData } = $props();
 
-  let success: string | undefined = $state();
-  let error: string | undefined = $state();
-  const alertDuration = 2000;
-
   let editMode = $state(false);
-  let lastState: number[] | undefined = undefined;
+  let lastState = $state<number[]>([]);
   let firstState: number[] | undefined = undefined;
 
   const tabs = {
@@ -51,8 +48,6 @@
       firstState = data.user.list!.map((item) => item.id);
     }
 
-    console.log("updatelistplacement");
-
     editMode = !editMode;
     if (!editMode) {
       if (lastState === undefined) return;
@@ -66,6 +61,8 @@
           method: "POST",
           body: form,
         });
+
+        const result = await response.json();
 
         if (response.ok) {
           toastManager.add("successfully updated list!", "success");
@@ -85,14 +82,7 @@
   <title>profile - {data.user?.username} - loggd</title>
 </svelte:head>
 
-{#if success}
-  <Alert message={success} type="success" duration={alertDuration} />
-{/if}
-{#if error}
-  <Alert message={error} type="error" duration={alertDuration} />
-{/if}
-
-{#if data.user}
+{#if data.profile}
   <div class="container mx-auto px-4 py-8">
     <div class="max-w-4xl mx-auto flex flex-col gap-4">
       <!-- Profile Header -->
@@ -102,19 +92,19 @@
         >
           <!-- Profile Picture -->
           <div
-            class={data.user.profilePicturePath
+            class={data.profile.profilePicturePath
               ? ""
               : "avatar avatar-placeholder"}
           >
             <div class="w-32 h-32 rounded-full text-neutral-content bg-neutral">
-              {#if data.user.profilePicturePath}
+              {#if data.profile.profilePicturePath}
                 <img
-                  src={data.user.profilePicturePath}
-                  alt={data.user.username}
+                  src={data.profile.profilePicturePath}
+                  alt={data.profile.username}
                   class="w-full h-full object-cover"
                 />
               {:else}
-                <span class="text-3xl">{data.user.username.charAt(0)}</span>
+                <span class="text-3xl">{data.profile.username.charAt(0)}</span>
               {/if}
             </div>
           </div>
@@ -122,23 +112,23 @@
           <!-- Profile Info -->
           <div class="flex-1 text-center md:text-left">
             <h1 class="text-3xl font-bold text-base-content mb-2">
-              {data.user.username}
+              {data.profile.username}
             </h1>
 
             <p class="text-base-content/70 mb-4">
               member since <b
-                >{formatDate(data.user.createdAt!).toLowerCase()}</b
+                >{formatDate(data.profile.registeredAt).toLowerCase()}</b
               >
             </p>
 
             <p class="text-base-content/80 mb-4">
-              {data.user.bio ? data.user.bio : "no bio added yet."}
+              {data.profile.bio ? data.profile.bio : "no bio added yet."}
             </p>
 
             {#if data.isUser}
               <div class="flex flex-wrap gap-2 justify-center md:justify-start">
                 <a
-                  href="/profile/{data.user.username}/edit"
+                  href="/profile/{data.profile.username}/edit"
                   class="btn btn-primary btn-sm"
                 >
                   edit profile
@@ -156,8 +146,8 @@
         <div class="stat">
           <div class="stat-title">average rating</div>
           <div class="stat-value text-secondary">
-            {data.user.averageRating
-              ? data.user.averageRating.toFixed(1)
+            {data.profile.stats.averageRating
+              ? data.profile.stats.averageRating.toFixed(1)
               : "N/A"}
           </div>
           <!-- <div class="stat-desc">No demons yet</div> -->
@@ -166,14 +156,16 @@
         <div class="stat">
           <div class="stat-title">levels completed</div>
           <div class="stat-value text-primary">
-            {data.user.levelsCompleted}
+            {data.profile.stats.levelsCompleted}
           </div>
           <!-- <div class="stat-desc">Pump those numbers up!</div> -->
         </div>
 
         <div class="stat">
           <div class="stat-title">reviews written</div>
-          <div class="stat-value text-accent">{data.user.reviewsWritten}</div>
+          <div class="stat-value text-accent">
+            {data.profile.stats.reviewsWritten}
+          </div>
           <!-- <div class="stat-desc">No reviews yet</div> -->
         </div>
       </div>
@@ -192,8 +184,8 @@
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
             <div class="text-center">
-              {#if !data.user.recentActivity || data.user.recentActivity.length === 0}
-                <div class="text-6xl mb-4">📊</div>
+              {#if !data.profile.recentActivity || data.profile.recentActivity.length === 0}
+                <!-- <div class="text-6xl mb-4">📊</div> -->
                 <h3 class="text-lg font-semibold text-base-content/70 mb-2">
                   no activity yet
                 </h3>
@@ -206,7 +198,7 @@
                   <a href="/levels" class="btn btn-primary"> browse levels </a>
                 {/if}
               {:else}
-                {#each data.user.recentActivity as a}
+                {#each data.profile.recentActivity as a}
                   <Activity
                     link={`/levels/${a.levelId}`}
                     title={a.details?.name ?? "unknown level"}
@@ -232,23 +224,54 @@
             list
           </label>
           <div class="tab-content bg-base-100 border-base-300 p-6">
-            {#if data.isUser && data.user.list && data.user.list.length > 0}
+            {#if data.profile.isUser && data.profile.list && data.profile.list.length > 0}
               <div class="flex justify-end">
-                <button
-                  class="btn btn-sm btn-square"
-                  onclick={updateListPlacement}
+                <form
+                  method="POST"
+                  use:enhance={() => {
+                    console.log(lastState);
+                    return async ({ result }) => {
+                      console.log(result);
+                      if (result.type === "success") {
+                        toastManager.add(
+                          "successfully updated list",
+                          "success",
+                        );
+                      } else if (result.type === "failure") {
+                        toastManager.add(
+                          (result.data?.message as string) ??
+                            "error updating list",
+                          "error",
+                        );
+                      } else {
+                        toastManager.add("unknown error", "error");
+                      }
+                    };
+                  }}
                 >
-                  {#if editMode}
-                    <Icon src={Check} class="size-[1.2em]" />
-                  {:else}
-                    <Icon src={Pencil} class="size-[1.2em]" />
-                  {/if}
-                </button>
+                  <input
+                    type="hidden"
+                    name="list"
+                    value={JSON.stringify(lastState)}
+                  />
+                  <!-- onclick={updateListPlacement} -->
+                  <button
+                    class="btn btn-sm btn-square"
+                    type={editMode ? "button" : "submit"}
+                    onclick={() => (editMode = !editMode)}
+                  >
+                    {#if editMode}
+                      <Icon src={Check} class="size-[1.2em]" />
+                    {:else}
+                      <Icon src={Pencil} class="size-[1.2em]" />
+                    {/if}
+                  </button>
+                </form>
               </div>
             {/if}
-            {#if data.user.list && data.user.list.length > 0}
+            {#if data.profile.list && data.profile.list.length > 0}
               <List
-                items={data.user.list.map((item) => ({
+                items={data.profile.list.map((item) => ({
                   id: item.id,
                   levelName: item.details?.name ?? "unknown level",
                   publisher: item.details?.publisher ?? "unknown publisher",
@@ -300,8 +323,8 @@
     <div class="hero min-h-full">
       <div class="hero-content text-center">
         <div class="max-w-md">
-          <h1 class="text-5xl font-bold">Hello there</h1>
-          <p class="py-6">User doesn't exist.</p>
+          <h1 class="text-5xl font-bold">hello there</h1>
+          <p class="py-6">user does not exist.</p>
         </div>
       </div>
     </div>

@@ -87,7 +87,7 @@
     input = input;
     const timeoutId = setTimeout(async () => {
       try {
-        if (input.length < 3) {
+        if (input.length < 2) {
           searchResults = [];
           return;
         }
