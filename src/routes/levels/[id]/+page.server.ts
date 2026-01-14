@@ -18,6 +18,11 @@ const ProgressForm = z.object({
   review: z.string().min(0).max(1024).nullable(),
 });
 
+const UpdateLevelForm = z.object({
+  releaseDate: z.coerce.date().nullable(),
+  videoUrl: z.url().nullable(),
+});
+
 const db = Database.instance;
 
 export const load: PageServerLoad = async ({
@@ -79,7 +84,7 @@ export const actions: Actions = {
     const levelId = parseInt(params.id!);
 
     if (Number.isNaN(levelId)) {
-      return fail(400, { error: `invalid level id: ${params.id}` });
+      return fail(400, { message: `invalid level id: ${params.id}` });
     }
     // check here if level id exists (maybe)
 
@@ -120,42 +125,39 @@ export const actions: Actions = {
       if (result) {
         return { success: true };
       } else {
-        return fail(422, { error: "failed to update progress" });
+        return fail(422, { message: "failed to update progress" });
       }
     } catch (err) {
       console.error(err);
       return fail(500, { message: "internal server error" });
     }
   },
-  updateLevel: async (event: RequestEvent) => {
-    const user = await requireAuthWithRoles(event, ["admin"]);
+  // updateLevel: async (event: RequestEvent) => {
+  //   const user = await requireAuthWithRoles(event, ["admin"]);
 
-    const data = await event.request.formData();
+  //   const levelId = parseInt(event.params.id!);
 
-    const parameters: Pick<
-      Level,
-      "release_date" | "difficulty" | "video_url" | "description"
-    > = {};
-    const releaseDate = new Date(data.get("release_date") as string);
-    if (!Number.isNaN(releaseDate.getTime())) {
-      parameters.release_date = releaseDate;
-    }
-    const difficulty = data.get("difficulty") as string;
-    parameters.difficulty = difficulty;
-    const videoUrl = data.get("video_url") as string;
-    if (isVideoUrl(videoUrl)) {
-      parameters.video_url = videoUrl;
-    }
-    const description = data.get("description") as string;
-    parameters.description = description;
+  //   if (Number.isNaN(levelId)) {
+  //     return fail(400, { error: `Invalid level ID: ${event.params.id}` });
+  //   }
 
-    const levelId = parseInt(event.params.id!);
+  //   const form = await event.request.formData();
 
-    if (Number.isNaN(levelId)) {
-      return fail(400, { error: `Invalid level ID: ${event.params.id}` });
-    }
+  //   const result = UpdateLevelForm.safeParse({
+  //     releaseDate: form.get("releaseDate") || null,
+  //     videoUrl: form.get("videoUrl") || null,
+  //   });
 
-    console.log(`User ${user.id} updated level ${levelId}`);
-    await Database.instance.updateLevel(levelId, parameters);
-  },
+  //   if (!result.success) {
+  //     return fail(400, {
+  //       message: "invalid form data",
+  //       error: result.error.message,
+  //     });
+  //   }
+
+  //   const data = result.data;
+
+  //   console.log(`User ${user.id} updated level ${levelId}`);
+  //   const id = await Database.instance.updateLevel(levelId, {data.releaseDate, data.videoUrl});
+  // },
 };

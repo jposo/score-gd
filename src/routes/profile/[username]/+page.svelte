@@ -45,7 +45,7 @@
 
   async function updateListPlacement() {
     if (!editMode) {
-      firstState = data.user.list!.map((item) => item.id);
+      firstState = data.profile.list!.map((item) => item.id);
     }
 
     editMode = !editMode;
@@ -117,7 +117,9 @@
 
             <p class="text-base-content/70 mb-4">
               member since <b
-                >{formatDate(data.profile.registeredAt).toLowerCase()}</b
+                >{formatDate(
+                  data.profile.registeredAt ?? new Date(),
+                ).toLowerCase()}</b
               >
             </p>
 
@@ -125,7 +127,7 @@
               {data.profile.bio ? data.profile.bio : "no bio added yet."}
             </p>
 
-            {#if data.isUser}
+            {#if data.profile.isUser}
               <div class="flex flex-wrap gap-2 justify-center md:justify-start">
                 <a
                   href="/profile/{data.profile.username}/edit"
@@ -189,7 +191,7 @@
                 <h3 class="text-lg font-semibold text-base-content/70 mb-2">
                   no activity yet
                 </h3>
-                {#if data.isUser}
+                {#if data.profile.isUser}
                   <p class="text-base-content/50 mb-4">
                     start tracking your <span class="font-bold"
                       >geometry dash</span

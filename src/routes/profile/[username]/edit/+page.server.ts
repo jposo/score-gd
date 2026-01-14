@@ -2,6 +2,20 @@ import type { PageServerLoad, Actions } from "./$types";
 import { requireAuth } from "$lib/server/auth/middleware";
 import Database from "$lib/server/db/index";
 import { fail } from "@sveltejs/kit";
+import * as z from "zod";
+
+const UpdateUser = z.object({
+  bio: z.string().max(500).nullable(),
+  profilePicture: z
+    .instanceof(File, { message: "please upload a valid image" })
+    .refine((file) => file.size <= 1024 * 200, {
+      message: "file size must be less than 200 KB",
+    })
+    .refine(
+      (file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type),
+      { message: "file type must be jpeg, png or webp" },
+    ),
+});
 
 export const load: PageServerLoad = async (event) => {
   const user = await requireAuth(event);
@@ -17,54 +31,37 @@ export const actions: Actions = {
     const user = await requireAuth(event);
 
     try {
-      const data = await request.formData();
-      const bio = data.get("bio") as string | null;
-      const profilePictureUrl = data.get("profile_picture_url") as
-        | string
-        | null;
+      const form = await request.formData();
 
-      // Basic validation
-      if (bio && bio.length > 500) {
+      const result = UpdateUser.safeParse({
+        bio: form.get("bio") ?? null,
+        profilePicture: form.get("profile_picture") ?? null,
+      });
+
+      if (!result.success) {
         return fail(400, {
-          error: "Bio must be 500 characters or less",
-          bio,
-          profilePictureUrl,
+          message: z.treeifyError(result.error) || "Invalid input",
         });
       }
 
-      // Update user in database
-      const updates: {
-        bio?: string | null;
-        profile_picture_url?: string | null;
-      } = {};
+      const data = result.data;
 
-      if (bio != null) {
-        updates.bio = bio.trim() || null;
-      }
-
-      if (profilePictureUrl !== null) {
-        updates.profile_picture_url = profilePictureUrl.trim() || null;
-      }
-
-      const updatedUser = await Database.instance.updateUser(user.id, updates);
+      const updatedUser = await Database.instance.updateUser(user.id, {
+        bio: data.bio,
+      });
 
       if (!updatedUser) {
-        return fail(500, {
-          error: "Failed to update profile",
-          bio,
-          profilePictureUrl,
-        });
+        return fail(500, { message: "failed to update profile" });
       }
 
       return {
         success: true,
-        message: "Profile updated successfully",
-        user: updatedUser,
+        message: "profile updated successfully",
       };
     } catch (error) {
-      console.error("Profile update error:", error);
+      console.error("profile update error:", error);
       return fail(500, {
-        error: "Internal server error",
+        error: "internal server error",
       });
     }
   },

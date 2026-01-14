@@ -62,7 +62,9 @@ export const actions: Actions = {
           rating: level.rating,
           twoPlayer: level.twoPlayer,
         }));
+
         const result = await Database.instance.insertLevels(values);
+
         if (result.length === 0) {
           console.log(`No levels inserted on page ${i}`);
         }
@@ -74,7 +76,7 @@ export const actions: Actions = {
       return { success: true };
     } catch (error) {
       console.log(error);
-      fail(500, { error: "failed to fetch levels" });
+      fail(500, { message: "failed to fetch levels" });
     }
   },
 };

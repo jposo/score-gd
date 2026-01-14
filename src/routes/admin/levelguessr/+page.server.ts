@@ -48,7 +48,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   enqueue: async (event) => {
-    await requireAuthWithRoles(event, ["admin", "owner"]);
+    await requireAuthWithRoles(event, ["admin"]);
 
     const { request } = event;
 
@@ -64,7 +64,8 @@ export const actions: Actions = {
 
     if (!result.success) {
       return fail(400, {
-        message: `invalid form data: ${result.error.message}`,
+        message: "invalid request",
+        error: result.error.message,
       });
     }
 
@@ -122,49 +123,4 @@ export const actions: Actions = {
       return fail(500, { message: "failed to upload files" });
     }
   },
-  // update: async () => {
-  //   let success = 0;
-  //   let fails = 0;
-
-  //   for (let page = 60; page < 70; page++) {
-  //     const result = await Levels.search(
-  //       {
-  //         type: "Most Downloaded",
-  //         rating: "Star",
-  //         page,
-  //       },
-  //       // true,
-  //     );
-
-  //     for (const level of result) {
-  //       // attempt to update level if it exists
-  //       try {
-  //         const result = await updateId(
-  //           level.name,
-  //           level.rating,
-  //           level.difficulty,
-  //           level.id,
-  //         );
-  //         if (result.length === 1) {
-  //           success++;
-  //         } else if (result.length > 1) {
-  //           console.error(
-  //             "Multiple levels with same name, rating, and difficulty",
-  //           );
-  //           fails++;
-  //         }
-  //       } catch (error) {
-  //         console.error(error);
-  //         fails++;
-  //       }
-  //     }
-  //   }
-
-  //   // await insertLevels(rowsToInsert);
-
-  //   return {
-  //     success: true,
-  //     message: `Updates successful (${success} successful, ${fails} failed)`,
-  //   };
-  // },
 };

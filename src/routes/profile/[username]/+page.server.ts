@@ -4,6 +4,11 @@ import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import Database from "$lib/server/db/index";
 import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
+import * as z from "zod";
+
+const UpdateList = z.object({
+  list: z.array(z.number().min(1)),
+});
 
 const db = Database.instance;
 
@@ -55,7 +60,7 @@ export const load: PageServerLoad = async (event) => {
     username: user.username,
     bio: user.bio,
     profilePicturePath: user.profilePicturePath,
-    registeredAt: user.createdAt,
+    registeredAt: user.createdAt!,
     stats: {
       averageRating: user.averageRating,
       levelsCompleted: user.levelsCompleted,
@@ -79,18 +84,20 @@ export const actions: Actions = {
 
     try {
       const form = await request.formData();
-      const formList = form.get("list");
-      if (formList === null) {
+      const result = UpdateList.safeParse({
+        list: form.get("list"),
+      });
+      if (!result.success) {
         return fail(400, { message: "invalid list data" });
       }
-      let list;
-      try {
-        list = JSON.parse(formList as string);
-      } catch {
-        return fail(400, { message: "invalid list format" });
-      }
-      for (let p = 0; p < list.length; p++) {
-        await Database.instance.updateListPlacement(list[p], user.id, p + 1);
+      const data = result.data;
+
+      for (let p = 0; p < data.list.length; p++) {
+        await Database.instance.updateListPlacement(
+          data.list[p],
+          user.id,
+          p + 1,
+        );
       }
       return { success: true };
     } catch (err) {

@@ -303,13 +303,7 @@ export default class Database {
     return result;
   }
 
-  async updateLevel(
-    id: number,
-    updates: Pick<
-      schema.SelectLevel,
-      "releaseDate" | "difficulty" | "videoUrl" | "description"
-    >,
-  ) {
+  async updateLevel(id: number, updates: schema.InsertLevel) {
     const result = await this.db
       .update(schema.levels)
       .set(updates)
@@ -433,7 +427,7 @@ export default class Database {
     return user[0];
   }
 
-  async updateUser(id: number, updates: schema.SelectUser) {
+  async updateUser(id: number, updates: Partial<schema.InsertUser>) {
     const user = await this.db
       .update(schema.users)
       .set({

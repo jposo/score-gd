@@ -14,14 +14,12 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
     const vault = (await db.findVault(getCurrentDay())).map((d) => d.day);
 
     if (!token) {
-      console.log("No token");
       return { vault, user: null };
     }
 
     // Verify token
     const authToken = verifyToken(token);
     if (!authToken) {
-      console.log("Invalid token");
       return { vault, user: null };
     }
 
@@ -31,13 +29,11 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
       return { vault, user };
     } catch (error) {
       // delete cookie
-      console.error(error);
-      console.log("deleting cookie");
       cookies.set(COOKIE_NAME, "", { path: "/" });
       return { vault, user: null };
     }
   } catch (err) {
     console.error(err);
-    error(500, "Internal Server Error");
+    error(500, "internal server error");
   }
 };

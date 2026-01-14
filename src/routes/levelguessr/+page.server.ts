@@ -120,6 +120,7 @@ export const actions = {
     }
 
     return {
+      success: true,
       correct,
       hints,
       answer: correct || lost ? answer : null,
