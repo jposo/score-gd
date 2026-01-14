@@ -1,10 +1,11 @@
 import type { PageServerLoad, Actions } from "./$types";
 import Database from "$lib/server/db";
 import { PUBLIC_SUPABASE_PROJECT_ID } from "$env/static/public";
-import { error, fail } from "@sveltejs/kit";
+import { error, fail, type Cookies } from "@sveltejs/kit";
 import * as z from "zod";
 import { getCurrentDay, getNextDayDateTime } from "$lib/server/index";
 import { get } from "$lib/server/gd/client";
+import type { Guess, Guesses, Hints } from "$lib/shared/types";
 
 const HINT_CONFIG = [
   { threshold: 0, when: 1, value: "rating" },
@@ -26,104 +27,195 @@ function giveHints(guessCount: number) {
   return hints;
 }
 
+function getHints(
+  answer: NonNullable<Awaited<ReturnType<typeof getAnswer>>>,
+  guessCount: number,
+  correct: boolean,
+) {
+  const hintsKeys = giveHints(correct ? 6 : guessCount);
+  const hints: Hints = {};
+
+  for (const [answerKey, answerValue] of Object.entries(answer ?? {})) {
+    for (const [hintIndex, hintKey] of Object.entries(hintsKeys)) {
+      if (hintKey === answerKey) {
+        hints[parseInt(hintIndex)] = {
+          hint: hintKey,
+          value: answerValue ?? null,
+        };
+      }
+    }
+  }
+  return hints;
+}
+
+function getImageUrls(imagePaths: string[], cutoff: number) {
+  return imagePaths
+    .slice(0, cutoff)
+    .map(
+      (image) =>
+        `https://${PUBLIC_SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/images/${image}`,
+    );
+}
+
+async function getAnswer(day: number) {
+  const answerDetails = await db.findDayFull(day);
+
+  const answerResult = (await get("levels").search(answerDetails.id))
+    ?.levels[0];
+
+  if (!answerResult) {
+    return null;
+  }
+
+  return {
+    id: answerResult.id,
+    imagePaths: answerDetails.imagePaths,
+    name: answerResult.name,
+    publisher: answerResult.creator?.username ?? "unknown publisher",
+    difficulty: answerResult.difficulty,
+    rating: answerResult.rating,
+    song: answerResult.song?.name ?? "unknown song",
+    releaseYear: 2000,
+  };
+}
+
+function getGuessHistory(cookies: Cookies) {
+  const historyKey = "guesses";
+  const historyCookie = cookies.get(historyKey);
+  const history: Guesses = JSON.parse(historyCookie ?? "{}");
+
+  return history;
+}
+
+function saveGuessHistory(cookies: Cookies, guesses: Guesses) {
+  const historyKey = "guesses";
+  cookies.set(historyKey, JSON.stringify(guesses), {
+    path: "/",
+    httpOnly: true,
+    maxAge: Number.MAX_SAFE_INTEGER, // we will die before this ends
+    sameSite: "strict",
+  });
+}
+
 const Guess = z.object({
   day: z.coerce.number().min(1).max(9999),
-  guessCount: z.coerce.number().max(6),
   guessId: z.coerce.number().min(1),
 });
 
 const db = Database.instance;
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, cookies }) => {
   const currentDay = getCurrentDay();
   const requestedDay = parseInt(url.searchParams.get("day") ?? "");
+  const day = !Number.isNaN(requestedDay) ? requestedDay : currentDay;
 
-  const dayNumber = !Number.isNaN(requestedDay) ? requestedDay : currentDay;
-
-  const day = await db.findDaySimple(dayNumber);
-  if (!day) {
-    error(404, "day not found");
+  const game = await db.findDaySimple(day);
+  if (!game) {
+    error(404, "game not found");
   }
 
+  const allGuessHistory = getGuessHistory(cookies);
+  const guessHistory = allGuessHistory[day] ?? [];
+  const guessCount = guessHistory.length;
+  const hasWon = guessHistory.some((guess) => guess.correct === true);
+  const hasLost = !hasWon && guessCount >= 6;
+  const finished = hasWon || hasLost;
+
+  const visibleImageCount = finished
+    ? game.imagePaths.length
+    : Math.min(guessCount + 1, game.imagePaths.length);
+
+  const answer = await getAnswer(day);
+  if (!answer) {
+    error(404, "could not find answer");
+  }
+
+  const hints = getHints(answer, guessCount, hasWon);
+  const updatesOn = getNextDayDateTime(currentDay).toISOString();
+  console.log(updatesOn);
+
   return {
-    updatesOn: getNextDayDateTime(dayNumber).toISOString(),
-    day: {
-      number: day.day,
-      images: day.imagePaths.map(
-        (image) =>
-          `https://${PUBLIC_SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/images/${image}`,
-      ),
+    updatesOn,
+    guessHistory,
+    game: {
+      day: game.day,
+      hints,
+      images: getImageUrls(game.imagePaths, visibleImageCount),
+      answer: finished ? answer : null,
     },
   };
 };
 
 export const actions = {
-  default: async ({ request }) => {
+  default: async ({ request, cookies }) => {
     const form = await request.formData();
 
     const result = Guess.safeParse({
       day: form.get("day"),
-      guessCount: form.get("guessCount"),
       guessId: form.get("guessId"),
     });
 
     if (!result.success) {
       return fail(400, {
         message: "invalid request",
-        error: result.error.message,
+        error: z.treeifyError(result.error),
       });
     }
 
     const data = result.data;
 
-    // if (!data.guessId) {
-    // const fallbackLevel = await db.findLevelByNameSimple(data.guess);
-    // if (!fallbackLevel) {
-    //   return fail(400, { message: "Invalid Level" });
-    // }
-    // data.guessId = fallbackLevel.id;
-    // }
+    const allGuessHistory = getGuessHistory(cookies);
+    const guessHistory = allGuessHistory[data.day] ?? [];
+    const guessCount = guessHistory.length;
+
+    const hasWon = guessHistory.some((guess) => guess.correct === true);
+
+    if (hasWon) {
+      return fail(400, { message: "already won" });
+    }
+
+    if (guessCount >= 6) {
+      return fail(400, { message: "maximum guesses reached" });
+    }
 
     const level = await get("levels").search(data.guessId);
-    // const levelGuess = await db.findLevelById(data.guessId);
     if (!level) {
-      return fail(404, { message: "guess not found" });
+      return fail(404, { message: "guess does not exist" });
     }
 
-    const answerId = await db.findDayFull(data.day);
-    const correct = answerId.id == data.guessId ? true : false;
-    const answerResult = (await get("levels").search(answerId.id))?.levels[0];
-    if (!answerResult) {
-      return fail(404, { message: "answer not found" });
+    const answer = await getAnswer(data.day);
+    if (!answer) {
+      return fail(404, { message: "could not find answer" });
     }
-    const answer = {
-      name: answerResult.name,
-      publisher: answerResult.creator?.username,
-      difficulty: answerResult.difficulty,
-      rating: answerResult.rating,
-      song: answerResult.song?.name,
-      releaseYear: 2000,
-    };
-    const lost = !correct && data.guessCount === 6;
 
-    const hintsKeys = giveHints(correct ? 6 : data.guessCount);
-    const hints: Record<number, Record<string, string | number | null>> = {};
-    for (const [answerKey, answerValue] of Object.entries(answer)) {
-      for (const [hintIndex, hintKey] of Object.entries(hintsKeys)) {
-        if (hintKey === answerKey) {
-          hints[parseInt(hintIndex)] = {
-            hint: hintKey,
-            value: answerValue ?? null,
-          };
-        }
-      }
-    }
+    const newGuessCount = guessCount + 1;
+    const correct = answer.id == data.guessId ? true : false;
+    const lost = !correct && newGuessCount === 6;
+    const finished = correct || lost;
+
+    guessHistory.push({
+      id: data.guessId,
+      name: level.levels[0]?.name ?? "unknown",
+      publisher: level.levels[0]?.creator?.username ?? "unknown publisher",
+      correct,
+    });
+
+    allGuessHistory[data.day] = guessHistory;
+    saveGuessHistory(cookies, allGuessHistory);
+
+    const hints = getHints(answer, newGuessCount, correct);
+    const images = getImageUrls(
+      answer.imagePaths,
+      finished ? 6 : newGuessCount + 1,
+    );
 
     return {
       success: true,
       correct,
+      images,
       hints,
-      answer: correct || lost ? answer : null,
+      answer: finished ? answer : null,
+      guesses: guessHistory,
     };
   },
 } satisfies Actions;

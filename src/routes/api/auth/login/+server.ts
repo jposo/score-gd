@@ -7,7 +7,7 @@ import {
   cookieOptions,
 } from "$lib/server/auth/utils";
 import Database from "$lib/server/db/index";
-import { COOKIE_NAME } from "$lib/constants";
+import { AUTH_COOKIE_NAME } from "$lib/constants";
 
 const db = Database.instance;
 
@@ -58,7 +58,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     });
 
     // Set cookie
-    cookies.set(COOKIE_NAME, token, cookieOptions);
+    cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
 
     // Return success (don't include password hash)
     return json({

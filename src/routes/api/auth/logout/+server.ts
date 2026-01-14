@@ -1,11 +1,11 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { COOKIE_NAME } from "$lib/constants";
+import { AUTH_COOKIE_NAME } from "$lib/constants";
 
 export const POST: RequestHandler = ({ cookies }) => {
   try {
     // Clear the auth token cookie
-    cookies.set(COOKIE_NAME, "", {
+    cookies.set(AUTH_COOKIE_NAME, "", {
       httpOnly: true,
       secure: true,
       sameSite: "strict",

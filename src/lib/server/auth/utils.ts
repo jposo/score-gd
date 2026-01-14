@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { dev } from "$app/environment";
 import type { Cookies } from "@sveltejs/kit";
-import { COOKIE_NAME } from "../../constants";
+import { AUTH_COOKIE_NAME } from "../../constants";
 import type { SelectUser } from "$lib/server/db/schema";
 
 // Use environment variable or fallback to dev key
@@ -56,7 +56,7 @@ export function verifyToken(token: string): AuthToken | null {
 
 // Extract token from request cookies
 export function getTokenFromCookies(cookies: Cookies): string | null {
-  return cookies.get(COOKIE_NAME) || null;
+  return cookies.get(AUTH_COOKIE_NAME) || null;
 }
 
 // Validate email format

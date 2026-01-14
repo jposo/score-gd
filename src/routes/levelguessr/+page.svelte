@@ -1,7 +1,7 @@
 <script lang="ts">
   import Carousel from "$lib/components/Carousel.svelte";
   import { onMount } from "svelte";
-  import type { PageProps } from "./$types";
+  import type { PageProps, SubmitFunction } from "./$types";
   import { enhance } from "$app/forms";
   import { guessesState } from "$lib/state/guesses.svelte";
   import { toastManager } from "$lib/state/toasts.svelte";
@@ -24,62 +24,61 @@
   );
   let diffSeconds = $derived(Math.floor((diff % (1000 * 60)) / 1000));
 
-  // let images = $derived(data.day.images.sort((a, b) => a.index - b.index));
-
+  let isSubmitting = $state(false);
   let viewImage = $state(0);
   let input = $state("");
   let guessId = $state<number>();
   let searchResults = $state<SearchResult[]>([]);
-  let guesses = $derived(guessesState.value);
-  let currentGuess = $derived(
-    data.day.number in guesses ? guesses[data.day.number].length + 1 : 1,
-  );
+
+  let guesses = $state(data.guessHistory);
+  let hints = $state(data.game.hints);
+  let answer = $derived(data.game.answer);
+  let imageUrls = $state(data.game.images);
+
+  $effect(() => {
+    guesses = data.guessHistory;
+    hints = data.game.hints;
+    answer = data.game.answer;
+    imageUrls = data.game.images;
+  });
+
+  let currentGuess = $derived(guesses.length + 1);
   let status = $derived(
-    guesses[data.day.number]?.some((guess) => guess.correct)
+    guesses.some((guess) => guess.correct)
       ? "correct"
-      : guesses[data.day.number]?.length >= 6
+      : guesses.length >= 6
         ? "incorrect"
         : "ongoing",
   );
-  let hints = $state<
-    Record<
-      number,
-      Record<number, { hint: string; value: string | number | null }>
-    >
-  >({});
-
-  let answer = $derived(
-    guesses[data.day.number]?.filter((guess) => guess.answer)?.[0]?.answer,
+  let imageGallery = $derived(
+    imageUrls
+      .map((image, index) => ({
+        src: image,
+        caption:
+          hints && hints[index]
+            ? `${hints[index].hint ?? ""}: ${hints[index]?.value ?? ""}`.toLowerCase()
+            : "",
+      }))
+      .slice(0, status === "correct" ? imageUrls.length : currentGuess),
   );
-  let showAlert = $state(false);
-  let alertMessage = $state("");
 
   onMount(() => {
     const interval = setInterval(() => {
       now = Date.now();
     }, 1000);
 
-    const storedHints = localStorage.getItem("hints");
-    if (storedHints) {
-      hints = JSON.parse(storedHints);
-    }
-
+    // const storedHints = localStorage.getItem("hints");
+    // if (storedHints) {
+    //   hints = JSON.parse(storedHints);
+    // }
     return () => clearInterval(interval);
   });
 
-  let images = $derived(
-    data.day.images
-      .map((image, index) => ({
-        src: image,
-        caption: hints[data.day.number]?.[index]
-          ? `${hints[data.day.number]?.[index]?.hint ?? ""}: ${hints[data.day.number]?.[index]?.value ?? ""}`.toLowerCase()
-          : "",
-      }))
-      .slice(0, status === "correct" ? data.day.images.length : currentGuess),
-  );
-
   $effect(() => {
-    viewImage = Math.max(0, Math.min(currentGuess - 1, images.length - 1));
+    viewImage = Math.max(
+      0,
+      Math.min(currentGuess - 1, imageGallery.length - 1),
+    );
   });
 
   $effect(() => {
@@ -87,7 +86,7 @@
     input = input;
     const timeoutId = setTimeout(async () => {
       try {
-        if (input.length < 2) {
+        if (input.length < 1 || input.length > 20) {
           searchResults = [];
           return;
         }
@@ -112,69 +111,34 @@
     guessId = result.id;
     searchResults = [];
   }
-
-  // function displayError(message: string) {
-  //   console.error(message);
-  //   showAlert = true;
-  //   alertMessage = message;
-  //   setTimeout(() => {
-  //     showAlert = false;
-  //   }, 3000);
-  // }
 </script>
 
-<!-- {#if showAlert}
-  <div
-    role="alert"
-    class="alert alert-error fixed top-4 left-1/2 -translate-x-1/2 w-96 transition-all"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="h-6 w-6 shrink-0 stroke-current"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-    <span>{alertMessage}</span>
-  </div>
-{/if} -->
-
-<Carousel {images} select={viewImage} />
+<Carousel images={imageGallery} select={viewImage} />
 
 {#if status === "ongoing"}
   <div class="flex w-full justify-center">
     <div class="dropdown **dropdown-open**">
       <form
         method="POST"
-        use:enhance={() => {
+        use:enhance={(() => {
+          isSubmitting = true;
           return async ({ result }) => {
             console.log(result);
             if (result.type === "success") {
-              guessesState.addGuess(data.day.number, {
-                guess: input,
-                correct: (result.data?.correct as boolean) ?? false,
-                answer: result.data?.answer ?? null,
-              });
-              const day = data.day.number;
-
-              if (!hints[day]) {
-                hints[day] = {};
+              if (result.data?.guesses) {
+                guessesState.setGuesses(data.game.day, result.data.guesses);
+                guesses = result.data.guesses;
               }
 
-              const newHints = result.data?.hints ?? {};
-
-              hints[day] = {
-                ...hints[day],
-                ...newHints,
-              };
-
-              localStorage.setItem("hints", JSON.stringify(hints));
+              if (result.data?.hints) {
+                hints = result.data.hints;
+              }
+              if (result.data?.images) {
+                imageUrls = result.data.images;
+              }
+              if (result.data?.answer) {
+                answer = result.data.answer;
+              }
 
               input = "";
               guessId = undefined;
@@ -187,17 +151,13 @@
               toastManager.add("unknown error", "error");
               console.log(result);
             }
+            isSubmitting = false;
           };
-        }}
+        }) satisfies SubmitFunction}
       >
-        <input name="day" type="hidden" value={data.day.number} />
+        <input name="day" type="hidden" value={data.game.day} />
         <input name="guess" type="hidden" value={input} />
         <input name="guessId" type="hidden" value={guessId} />
-        <input
-          name="guessCount"
-          type="hidden"
-          value={(guesses[data.day.number]?.length ?? 0) + 1}
-        />
         <div class="join">
           <label class="input w-full join-item">
             <svg
@@ -222,9 +182,20 @@
               placeholder="search"
               bind:value={input}
               class="text-2xl"
+              disabled={isSubmitting}
             />
           </label>
-          <button type="submit" class="btn btn-2xl join-item">guess</button>
+          <button
+            type="submit"
+            class="btn btn-2xl join-item w-18"
+            disabled={isSubmitting}
+          >
+            {#if isSubmitting}
+              <span class="loading loading-dots loading-xs"></span>
+            {:else}
+              guess
+            {/if}
+          </button>
         </div>
       </form>
       {#if searchResults.length > 0}
@@ -265,9 +236,11 @@
       {/if}
     </h1>
     <p class="text-xl pt-2">
-      the answer was <span class="font-bold">{answer?.name ?? "level"}</span>
+      the answer was <span class="font-bold"
+        >{answer?.name ?? "unknown level"}</span
+      >
       by
-      <span class="font-bold">{answer?.publisher ?? "publisher"}</span>
+      <span class="font-bold">{answer?.publisher ?? "unknown publisher"}</span>
     </p>
     <p class="text-md pt-2 opacity-60">
       come back in <span class="countdown font-mono">
@@ -295,13 +268,13 @@
 {/if}
 
 <div class="flex w-full flex-col my-4 items-center">
-  {#each guesses[data.day.number]?.toReversed() ?? [] as guess}
+  {#each guesses.toReversed() ?? [] as guess}
     <div
       class="card card-border max-w-xl {guess.correct
         ? 'border-success shadow-lg shadow-success/30'
         : 'border-error shadow-lg shadow-error/30'} my-1 w-1/2 bg-base-300 rounded-box grid h-10 place-items-center"
     >
-      {guess.guess}
+      {guess.name}
       <!-- <span class="font-bold">{guess.publisher}</span> -->
     </div>
   {/each}
