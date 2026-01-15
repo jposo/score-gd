@@ -6,7 +6,7 @@ import {
   generateToken,
   cookieOptions,
 } from "$lib/server/auth/utils";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
 
 const db = Database.instance;

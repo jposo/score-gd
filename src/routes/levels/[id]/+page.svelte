@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import {
-    convertDate,
-    dateToString,
+    dateToISOString,
+    dateToLocaleString,
     calculateNewAverage,
     getYouTubeEmbedUrl,
   } from "$lib/tools/utils";
@@ -17,7 +17,9 @@
 
   // level Data
   let average = $state(data.level.averageRating ?? undefined);
-  let releaseDate = $state(convertDate(data.level.releaseDate ?? undefined));
+  let releaseDate = $state(
+    dateToISOString(data.level.releaseDate ?? undefined),
+  );
   let difficulty = $state(data.level.difficulty ?? undefined);
   let videoUrl = $state(data.level.videoUrl ?? undefined);
   let description = $state(data.level.description ?? undefined);
@@ -32,17 +34,17 @@
   );
   let attempts = $state(data.progress?.attempts ?? undefined);
   let startDate = $state(
-    convertDate(new Date(data.progress?.startedAt!) ?? undefined),
+    dateToISOString(new Date(data.progress?.startedAt!) ?? undefined),
   );
   let completionDate: string | undefined = $state(
-    convertDate(new Date(data.progress?.completedAt!)) ?? undefined,
+    dateToISOString(new Date(data.progress?.completedAt!)) ?? undefined,
   );
   let review = $state(data.progress?.review ?? undefined);
 
   $effect(() => {
     // level data
     average = data.level.averageRating ?? undefined;
-    releaseDate = convertDate(data.level.releaseDate ?? undefined);
+    releaseDate = dateToISOString(data.level.releaseDate ?? undefined);
     difficulty = data.level.difficulty ?? undefined;
     videoUrl = data.level.videoUrl ?? undefined;
     description = data.level.description ?? undefined;
@@ -54,9 +56,10 @@
     status = data.progress?.status ?? undefined;
     completionPercentage = data.progress?.completionPercentage ?? undefined;
     attempts = data.progress?.attempts ?? undefined;
-    startDate = convertDate(new Date(data.progress?.startedAt!)) ?? undefined;
+    startDate =
+      dateToISOString(new Date(data.progress?.startedAt!)) ?? undefined;
     completionDate =
-      convertDate(new Date(data.progress?.completedAt!)) ?? undefined;
+      dateToISOString(new Date(data.progress?.completedAt!)) ?? undefined;
     review = data.progress?.review ?? undefined;
   });
 
@@ -249,7 +252,7 @@
             <h2 class="text-2xl">
               {#if data.level.releaseDate}
                 released on <span class="font-semibold"
-                  >{dateToString(data.level.releaseDate)}</span
+                  >{dateToLocaleString(data.level.releaseDate)}</span
                 >
               {/if}
               by

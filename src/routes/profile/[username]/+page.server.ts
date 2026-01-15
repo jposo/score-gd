@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { fail, error } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
 import * as z from "zod";

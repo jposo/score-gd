@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dateToString } from "$lib/tools/utils";
+  import { dateToLocaleString } from "$lib/tools/utils";
 
   let props: {
     link: string | null;
@@ -22,7 +22,7 @@
         ><a href={props.link}>{props.title}</a></span
       >
       <span class="opacity-50"
-        >{dateToString(props.createdAt).toLocaleLowerCase()}</span
+        >{dateToLocaleString(props.createdAt).toLocaleLowerCase()}</span
       >
     </div>
     <div class="font-semibold">{subtitle}</div>

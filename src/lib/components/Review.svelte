@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dateToString, abbreviateNumber } from "$lib/tools/utils";
+  import { dateToLocaleString, abbreviateNumber } from "$lib/tools/utils";
 
   let props: {
     username: string;
@@ -34,7 +34,7 @@
         <span class="font-bold text-primary hover:underline"
           ><a href="/profile/{props.username}">{props.username}</a></span
         >
-        <span class="opacity-50">{dateToString(props.date)}</span>
+        <span class="opacity-50">{dateToLocaleString(props.date)}</span>
       </div>
       <div class="font-semibold">{subtitle}</div>
     </div>

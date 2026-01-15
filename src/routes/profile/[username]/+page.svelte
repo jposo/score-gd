@@ -42,40 +42,6 @@
     // }
     lastState = newItems.map((item) => item.id);
   }
-
-  async function updateListPlacement() {
-    if (!editMode) {
-      firstState = data.profile.list!.map((item) => item.id);
-    }
-
-    editMode = !editMode;
-    if (!editMode) {
-      if (lastState === undefined) return;
-      // if (equalArrayOfObjectsWithIds(firstState || [], lastState)) return;
-      // console.log("not same array of objects");
-      const form = new FormData();
-      form.append("list", JSON.stringify(lastState));
-
-      try {
-        const response = await fetch(`/profile/${data.user!.id}`, {
-          method: "POST",
-          body: form,
-        });
-
-        const result = await response.json();
-
-        if (response.ok) {
-          toastManager.add("successfully updated list!", "success");
-          // success = "List updated successfully";
-        } else {
-          toastManager.add("failed to update list!", "error");
-          // error = "Failed to update list";
-        }
-      } catch (error) {
-        toastManager.add("an unexpected error occurred!", "error");
-      }
-    }
-  }
 </script>
 
 <svelte:head>

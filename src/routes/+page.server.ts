@@ -1,6 +1,6 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 
 export const load: PageServerLoad = async () => {
@@ -21,9 +21,9 @@ export const load: PageServerLoad = async () => {
         id: level.id,
         name: levelMap.get(level.id)?.name ?? "unknown",
         publisher: levelMap.get(level.id)?.creator?.username ?? "unknown",
-        difficulty: levelMap.get(level.id)?.difficulty,
+        difficulty: levelMap.get(level.id)?.difficulty!,
         // rating: level.rating,
-        length: levelMap.get(level.id)?.length,
+        length: levelMap.get(level.id)?.length!,
         averageRating: level.averageRating,
       })),
     };

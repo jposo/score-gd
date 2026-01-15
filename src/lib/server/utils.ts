@@ -1,15 +1,26 @@
-export const splitPairings = (
-  pairings: string,
-  sep: string,
-): Record<string, string> => {
-  const result: Record<string, string> = {};
-  const unpaired = pairings.split(sep);
+import { STARTING_DATE } from "$env/static/private";
 
-  for (let i = 0; i < unpaired.length; i += 2) {
-    const key = unpaired[i].trim();
-    const value = unpaired[i + 1].trim();
-    result[key] = value;
-  }
+export function getCurrentDay() {
+  const startingDate = new Date(STARTING_DATE);
+  const currentDate = new Date();
+  const currentDay = Math.ceil(
+    (currentDate.getTime() - startingDate.getTime()) / (1000 * 60 * 60 * 24),
+  );
+  return currentDay;
+}
 
-  return result;
-};
+export function getNextDayDateTime(day: number) {
+  const startingDate = new Date(STARTING_DATE);
+  const nextDayDateTime = new Date(
+    startingDate.getTime() + day * 24 * 60 * 60 * 1000,
+  );
+  return nextDayDateTime;
+}
+
+export function getProjectedDate(day: number) {
+  const startingDate = new Date(STARTING_DATE);
+  const projectedDate = new Date(
+    startingDate.getTime() + day * 24 * 60 * 60 * 1000,
+  );
+  return projectedDate;
+}

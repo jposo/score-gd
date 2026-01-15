@@ -1,7 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import favicon from "$lib/assets/favicon.svg";
-  import { theme, themes, setTheme } from "$lib/tools/theme";
+  import { themeManager } from "$lib/state/theme.svelte";
   import { onMount } from "svelte";
   import type { PageData } from "./$types";
   import { goto } from "$app/navigation";
@@ -28,8 +28,9 @@
   // Initialize theme on mount
   onMount(() => {
     const savedTheme = localStorage.getItem("theme") || "light";
-    document.documentElement.setAttribute("data-theme", savedTheme);
-    theme.set(savedTheme);
+    if (!themeManager.themes.includes(savedTheme)) {
+      themeManager.setTheme(savedTheme);
+    }
   });
 
   // Logout function
@@ -186,8 +187,8 @@
           tabindex="-1"
           class="dropdown-content z-10 p-2 mt-2 shadow bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
         >
-          {#each themes as themeOption}
-            {@const isCurrentTheme = $theme === themeOption}
+          {#each themeManager.themes as themeOption}
+            {@const isCurrentTheme = themeManager.currentTheme === themeOption}
             <li>
               <input
                 type="radio"
@@ -198,7 +199,7 @@
                 aria-label={themeOption}
                 value={themeOption}
                 checked={isCurrentTheme}
-                onchange={() => setTheme(themeOption)}
+                onchange={() => themeManager.setTheme(themeOption)}
               />
             </li>
           {/each}

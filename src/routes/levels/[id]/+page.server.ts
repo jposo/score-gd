@@ -1,9 +1,8 @@
 import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad, Actions, RequestEvent } from "./$types";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { isVideoUrl } from "$lib/tools/utils";
-import type { Level } from "$lib/db-types";
 import * as z from "zod";
 import { get } from "$lib/server/gd/client";
 

@@ -1,8 +1,8 @@
 import type { LayoutServerLoad } from "./$types";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import { error } from "@sveltejs/kit";
-import Database from "$lib/server/db/index";
-import { getCurrentDay } from "$lib/server/index";
+import Database from "$lib/server/db/instance";
+import { getCurrentDay } from "$lib/server/utils";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
 
 const db = Database.instance;

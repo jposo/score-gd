@@ -616,7 +616,7 @@
             {#if extractedFrames.length > 0}
               <div class="mt-4">
                 <div class="flex justify-between text-xs mb-1">
-                  <span>Processing...</span>
+                  <span>processing...</span>
                   <span>{extractedFrames.length} / {frameCount}</span>
                 </div>
                 <progress
@@ -646,7 +646,7 @@
             <img
               src={frame.data}
               class="object-cover w-full h-full"
-              alt={`Frame at ${frame.time}s`}
+              alt={`frame at ${frame.time}s`}
             />
             {#if frame.saved}
               <div class="absolute top-2 right-2 badge badge-success shadow-sm">

@@ -1,6 +1,6 @@
 import { error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import * as z from "zod";
 import { difficulties, ratings, lengths } from "$lib/shared/gd";

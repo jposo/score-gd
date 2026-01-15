@@ -1,4 +1,4 @@
-export function convertDate(date: Date | undefined | null) {
+export function dateToISOString(date: Date | undefined | null) {
   if (!date) return undefined;
   const year = date.getFullYear();
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -6,12 +6,12 @@ export function convertDate(date: Date | undefined | null) {
   return `${year}-${month}-${day}`;
 }
 
-export function dateToString(date: Date): string {
+export function dateToLocaleString(date: Date): string {
   // return in format Month Day, Year
   const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
     month: "long",
     day: "numeric",
-    year: "numeric",
     timeZone: "UTC",
   };
   return date.toLocaleDateString(undefined, options);
@@ -57,7 +57,7 @@ export function isVideoUrl(url: string): boolean {
   return regex.test(url);
 }
 
-export function getYouTubeEmbedUrl(url) {
+export function getYouTubeEmbedUrl(url: string) {
   let videoId = "";
   // Use a regular expression to find the video ID in various URL formats
   const regex =
@@ -73,7 +73,10 @@ export function getYouTubeEmbedUrl(url) {
   return `https://www.youtube.com/embed/${videoId}`;
 }
 
-export function equalArrayOfObjectsWithIds(arr1: object[], arr2: object[]) {
+export function equalArrayOfObjectsWithIds(
+  arr1: { id: string }[],
+  arr2: { id: string }[],
+) {
   if (arr1.length !== arr2.length) {
     return false;
   }

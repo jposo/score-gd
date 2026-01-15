@@ -1,6 +1,6 @@
 import { redirect } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "./utils";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 import type { RequestEvent } from "@sveltejs/kit";
 import { AUTH_COOKIE_NAME } from "../../constants";
 

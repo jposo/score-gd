@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { dateToString } from "$lib/tools/utils";
+  import { dateToLocaleString } from "$lib/tools/utils";
 
   let { levelId, name, placement, ...restProps } = $props<{
     levelId: number;

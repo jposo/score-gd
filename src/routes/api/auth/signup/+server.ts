@@ -8,7 +8,7 @@ import {
   cookieOptions,
 } from "$lib/server/auth/utils";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 
 const db = Database.instance;
 

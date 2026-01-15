@@ -1,6 +1,6 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import Database from "$lib/server/db/index";
+import Database from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 
 const db = Database.instance;
