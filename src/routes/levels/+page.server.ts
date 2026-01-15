@@ -56,7 +56,7 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
       difficulty: level.difficulty,
       releaseDate: null,
       length: level.length,
-      averageRating: statsMap.get(level.id)?.averageRating || 0,
+      averageScore: statsMap.get(level.id)?.averageScore || 0,
     }));
     return {
       levels,

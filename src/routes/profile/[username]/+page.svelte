@@ -112,10 +112,10 @@
       <!-- <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-"> -->
       <div class="stats shadow bg-base-200 w-full rounded-lg">
         <div class="stat">
-          <div class="stat-title">average rating</div>
+          <div class="stat-title">average score</div>
           <div class="stat-value text-secondary">
-            {data.profile.stats.averageRating
-              ? data.profile.stats.averageRating.toFixed(1)
+            {data.profile.stats.averageScore
+              ? data.profile.stats.averageScore.toFixed(1)
               : "N/A"}
           </div>
           <!-- <div class="stat-desc">No demons yet</div> -->
@@ -170,7 +170,7 @@
                   <Activity
                     link={`/levels/${a.levelId}`}
                     title={a.details?.name ?? "unknown level"}
-                    rating={a.rating}
+                    rating={a.score}
                     status={a.status}
                     createdAt={new Date(a.createdAt)}
                     review={a.review}
@@ -244,7 +244,7 @@
                   levelName: item.details?.name ?? "unknown level",
                   publisher: item.details?.publisher ?? "unknown publisher",
                   attempts: item.attempts,
-                  rating: item.rating,
+                  rating: item.score,
                 }))!}
                 {editMode}
                 onDrop={handleDrop}

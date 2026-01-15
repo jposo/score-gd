@@ -16,7 +16,7 @@
   let progressDetails: HTMLDialogElement | undefined = $state();
 
   // level Data
-  let average = $state(data.level.averageRating ?? undefined);
+  let average = $state(data.level.averageScore ?? undefined);
   let releaseDate = $state(
     dateToISOString(data.level.releaseDate ?? undefined),
   );
@@ -26,8 +26,8 @@
   // let skillsets = $state(data.level.skillsets ?? []);
 
   // rogress Data
-  let oldRating = $state(data.progress?.rating ?? undefined);
-  let rating = $state(data.progress?.rating ?? undefined);
+  let oldScore = $state(data.progress?.score ?? undefined);
+  let score = $state(data.progress?.score ?? undefined);
   let status = $state(data.progress?.status ?? undefined);
   let completionPercentage = $state(
     data.progress?.completionPercentage ?? undefined,
@@ -43,7 +43,7 @@
 
   $effect(() => {
     // level data
-    average = data.level.averageRating ?? undefined;
+    average = data.level.averageScore ?? undefined;
     releaseDate = dateToISOString(data.level.releaseDate ?? undefined);
     difficulty = data.level.difficulty ?? undefined;
     videoUrl = data.level.videoUrl ?? undefined;
@@ -51,8 +51,8 @@
     // skillsets = data.level.skillsets ?? [];
 
     // progress data
-    oldRating = data.progress?.rating ?? undefined;
-    rating = data.progress?.rating ?? undefined;
+    oldScore = data.progress?.score ?? undefined;
+    score = data.progress?.score ?? undefined;
     status = data.progress?.status ?? undefined;
     completionPercentage = data.progress?.completionPercentage ?? undefined;
     attempts = data.progress?.attempts ?? undefined;
@@ -63,7 +63,7 @@
     review = data.progress?.review ?? undefined;
   });
 
-  const ratingOptions = [
+  const scoreOptions = [
     { value: 1, label: "terrible" },
     { value: 2, label: "horrible" },
     { value: 3, label: "very Bad" },
@@ -119,19 +119,19 @@
     const form = additionalData || new FormData();
     form.append("status", status);
 
-    // add rating if valid
-    if (rating && !isNaN(rating)) {
-      form.append("rating", rating.toString());
+    // add score if valid
+    if (score && !isNaN(score)) {
+      form.append("score", score.toString());
 
-      if (average && oldRating) {
+      if (average && oldScore) {
         average = calculateNewAverage(
           data.level.progressCount,
           average,
-          oldRating,
-          rating,
+          oldScore,
+          score,
         );
       }
-      oldRating = rating;
+      oldScore = score;
     }
 
     if (status === "completed" && !completionPercentage) {
@@ -195,9 +195,9 @@
 
           <div class="card bg-base-200 w-full">
             <div class="card-body">
-              <select class="select" bind:value={rating} onchange={quickUpdate}>
-                <option disabled selected value={undefined}>rating</option>
-                {#each ratingOptions as option}
+              <select class="select" bind:value={score} onchange={quickUpdate}>
+                <option disabled selected value={undefined}>score</option>
+                {#each scoreOptions as option}
                   <option value={option.value}
                     >{option.value} - {option.label}</option
                   >
@@ -220,7 +220,7 @@
         <!-- Stats -->
         <div class="stats stats-vertical shadow bg-base-200 w-full">
           <div class="stat">
-            <div class="stat-title">enjoyment</div>
+            <div class="stat-title">score</div>
             <div class="stat-value">
               {average ? average.toFixed(1) : "N/A"}
             </div>
@@ -309,7 +309,7 @@
               <Review
                 username={r.username}
                 profilePictureUrl={r.profilePicturePath}
-                rating={r.rating}
+                rating={r.score}
                 attempts={r.attempts}
                 status={r.status}
                 date={new Date(r.updatedAt)}

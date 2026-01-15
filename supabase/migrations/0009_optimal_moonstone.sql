@@ -1,0 +1,2 @@
+ALTER TABLE "progress" ADD CONSTRAINT "score_check" CHECK ("progress"."score" >= 1 AND "progress"."score" <= 10);--> statement-breakpoint
+ALTER TABLE "progress" ADD CONSTRAINT "percentage_check" CHECK ("progress"."completion_percentage" >= 0 AND "progress"."completion_percentage" <= 100);

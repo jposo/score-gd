@@ -57,6 +57,20 @@
       "when": 1767914069981,
       "tag": "0007_aspiring_callisto",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1768449028357,
+      "tag": "0008_red_mikhail_rasputin",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1768449192538,
+      "tag": "0009_optimal_moonstone",
+      "breakpoints": true
     }
   ]
 }

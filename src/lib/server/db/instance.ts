@@ -22,7 +22,7 @@ type Review = {
   username: string;
   status: string;
   review: string | null;
-  rating: number;
+  score: number;
   profilePicturePath: string;
   attempts: number;
   updatedAt: Date;
@@ -31,7 +31,7 @@ type Review = {
 type Activity = {
   levelId: number;
   status: string;
-  rating: number;
+  score: number;
   // levelName: string;
   review: string | null;
   createdAt: Date;
@@ -43,7 +43,7 @@ type List = {
   // levelName: string;
   // publisher: string;
   placement: number;
-  rating: number;
+  score: number;
   attempts: number;
 }[];
 
@@ -101,7 +101,7 @@ export default class Database {
         // difficulty: schema.levels.difficulty,
         // releaseDate: schema.levels.releaseDate,
         // length: schema.levels.length,
-        averageRating: avg(schema.progress.rating).mapWith(Number),
+        averageScore: avg(schema.progress.score).mapWith(Number),
       })
       .from(schema.progress)
       // .from(schema.levels)
@@ -110,7 +110,7 @@ export default class Database {
       //   eq(schema.levels.publisherId, schema.gdUsers.id),
       // )
       // .leftJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
-      .where(isNotNull(schema.progress.rating))
+      .where(isNotNull(schema.progress.score))
       .groupBy(
         schema.progress.levelId,
         // schema.levels.id,
@@ -120,7 +120,7 @@ export default class Database {
         // schema.levels.releaseDate,
         // schema.levels.length,
       )
-      .orderBy(desc(avg(schema.progress.rating)))
+      .orderBy(desc(avg(schema.progress.score)))
       .limit(LIMIT);
 
     return result;
@@ -139,7 +139,7 @@ export default class Database {
         difficulty: schema.levels.difficulty,
         releaseDate: schema.levels.releaseDate,
         length: schema.levels.length,
-        averageRating: avg(schema.progress.rating),
+        averageScore: avg(schema.progress.score),
       })
       .from(schema.levels)
       .leftJoin(
@@ -155,7 +155,7 @@ export default class Database {
         schema.levels.releaseDate,
         schema.levels.length,
       )
-      .orderBy(desc(avg(schema.progress.rating)))
+      .orderBy(desc(avg(schema.progress.score)))
       .limit(LIMIT)
       .offset(offset);
 
@@ -232,8 +232,8 @@ export default class Database {
         songId: schema.songs.id,
         songTitle: schema.songs.title,
         songArtist: schema.songs.artist,
-        progressCount: count(schema.progress.rating),
-        averageRating: avg(schema.progress.rating).mapWith(Number),
+        progressCount: count(schema.progress.score),
+        averageScore: avg(schema.progress.score).mapWith(Number),
         completionCount: count(
           sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`,
         ),
@@ -244,7 +244,7 @@ export default class Database {
               json_build_object(
                 'username', ${schema.users.username},
                 'status', ${schema.progress.status},
-                'rating', ${schema.progress.rating},
+                'score', ${schema.progress.score},
                 'review', ${schema.progress.review},
                 'profilePicturePath', ${schema.users.profilePicturePath},
                 'attempts', ${schema.progress.attempts},
@@ -383,7 +383,7 @@ export default class Database {
         levelsCompleted: count(
           sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`,
         ),
-        averageRating: avg(schema.progress.rating).mapWith(Number),
+        averageScore: avg(schema.progress.score).mapWith(Number),
         reviewsWritten: count(
           sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`,
         ),
@@ -391,7 +391,7 @@ export default class Database {
                 json_build_object(
                   'id', ${schema.progress.levelId},
                   'placement', ${schema.progress.listPlacement},
-                  'rating', ${schema.progress.rating},
+                  'score', ${schema.progress.score},
                   'attempts', ${schema.progress.attempts}
                 )
                 ORDER BY ${schema.progress.listPlacement} ASC
@@ -400,7 +400,7 @@ export default class Database {
                 json_build_object(
                   'levelId', ${schema.progress.levelId},
                   'status', ${schema.progress.status},
-                  'rating', ${schema.progress.rating},
+                  'score', ${schema.progress.score},
                   'review', ${schema.progress.review},
                   'createdAt', ${schema.progress.createdAt}
                 )
@@ -464,8 +464,8 @@ export default class Database {
   async accrueProgressByLevelId(levelId: number) {
     const result = await this.db
       .select({
-        progressCount: count(schema.progress.rating),
-        averageRating: avg(schema.progress.rating).mapWith(Number),
+        progressCount: count(schema.progress.score),
+        averageScore: avg(schema.progress.score).mapWith(Number),
         completionCount: count(
           sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`,
         ),
@@ -476,7 +476,7 @@ export default class Database {
           json_build_object(
             'username', ${schema.users.username},
             'status', ${schema.progress.status},
-            'rating', ${schema.progress.rating},
+            'score', ${schema.progress.score},
             'review', ${schema.progress.review},
             'profilePicturePath', ${schema.users.profilePicturePath},
             'attempts', ${schema.progress.attempts},
@@ -499,8 +499,8 @@ export default class Database {
     const result = await this.db
       .select({
         levelId: schema.progress.levelId,
-        progressCount: count(schema.progress.rating),
-        averageRating: avg(schema.progress.rating).mapWith(Number),
+        progressCount: count(schema.progress.score),
+        averageScore: avg(schema.progress.score).mapWith(Number),
         completionCount: count(
           sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`,
         ),
@@ -511,7 +511,7 @@ export default class Database {
           json_build_object(
             'username', ${schema.users.username},
             'status', ${schema.progress.status},
-            'rating', ${schema.progress.rating},
+            'score', ${schema.progress.score},
             'review', ${schema.progress.review},
             'profilePicturePath', ${schema.users.profilePicturePath},
             'attempts', ${schema.progress.attempts},
@@ -608,13 +608,13 @@ export default class Database {
   async findAllDays() {
     const result = await this.db
       .select({
-        id: schema.days.levelId,
+        id: schema.dailyLevel.levelId,
         // id: schema.levels.id,
         // name: schema.levels.name,
         // publisher: schema.users.username,
-        day: schema.days.day,
+        day: schema.dailyLevel.day,
       })
-      .from(schema.days);
+      .from(schema.dailyLevel);
     // .innerJoin(
     //   schema.gdUsers,
     //   eq(schema.levels.publisherId, schema.gdUsers.id),
@@ -627,20 +627,20 @@ export default class Database {
   async findLatestDay() {
     const result = await this.db
       .select({
-        maxDay: max(schema.days.day),
+        maxDay: max(schema.dailyLevel.day),
       })
-      .from(schema.days);
+      .from(schema.dailyLevel);
     return result[0]?.maxDay;
   }
 
   async findDaySimple(day: number) {
     const result = await this.db
       .select({
-        day: schema.days.day,
-        imagePaths: schema.days.imagePaths,
+        day: schema.dailyLevel.day,
+        imagePaths: schema.dailyLevel.imagePaths,
       })
-      .from(schema.days)
-      .where(eq(schema.days.day, day))
+      .from(schema.dailyLevel)
+      .where(eq(schema.dailyLevel.day, day))
       .limit(1);
 
     return result[0] || null;
@@ -649,22 +649,25 @@ export default class Database {
   async findDayFull(day: number) {
     const result = await this.db
       .select({
-        id: schema.days.levelId,
-        day: schema.days.day,
-        imagePaths: schema.days.imagePaths,
+        id: schema.dailyLevel.levelId,
+        day: schema.dailyLevel.day,
+        imagePaths: schema.dailyLevel.imagePaths,
       })
-      .from(schema.days)
+      .from(schema.dailyLevel)
       // .innerJoin(schema.levels, eq(schema.days.levelId, schema.levels.id))
       // .innerJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
       // .innerJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
-      .where(eq(schema.days.day, day))
+      .where(eq(schema.dailyLevel.day, day))
       .limit(1);
 
     return result[0] || null;
   }
 
   async insertDay(values: schema.InsertDay) {
-    const result = await this.db.insert(schema.days).values(values).returning();
+    const result = await this.db
+      .insert(schema.dailyLevel)
+      .values(values)
+      .returning();
 
     return result[0] || null;
   }
@@ -672,11 +675,11 @@ export default class Database {
   async findVault(currentDay: number) {
     const result = await this.db
       .select({
-        day: schema.days.day,
+        day: schema.dailyLevel.day,
       })
-      .from(schema.days)
-      .where(lte(schema.days.day, currentDay))
-      .orderBy(asc(schema.days.day));
+      .from(schema.dailyLevel)
+      .where(lte(schema.dailyLevel.day, currentDay))
+      .orderBy(asc(schema.dailyLevel.day));
 
     return result || null;
   }

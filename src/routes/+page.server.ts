@@ -24,7 +24,7 @@ export const load: PageServerLoad = async () => {
         difficulty: levelMap.get(level.id)?.difficulty!,
         // rating: level.rating,
         length: levelMap.get(level.id)?.length!,
-        averageRating: level.averageRating,
+        averageScore: level.averageScore,
       })),
     };
   } catch (err) {

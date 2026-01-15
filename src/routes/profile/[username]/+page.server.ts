@@ -62,7 +62,7 @@ export const load: PageServerLoad = async (event) => {
     profilePicturePath: user.profilePicturePath,
     registeredAt: user.createdAt!,
     stats: {
-      averageRating: user.averageRating,
+      averageScore: user.averageScore,
       levelsCompleted: user.levelsCompleted,
       reviewsWritten: user.reviewsWritten,
     },
