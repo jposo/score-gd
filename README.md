@@ -2,7 +2,7 @@
 
 A web application for the Geometry Dash community.
 
-## ✨ Features
+## Features
 
 *   **User Authentication:** Secure signup and login functionality.
 *   **Level Browser:** Search and view details for Geometry Dash levels.
