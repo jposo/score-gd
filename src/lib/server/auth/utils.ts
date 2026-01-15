@@ -1,10 +1,9 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { dev } from "$app/environment";
 import type { Cookies } from "@sveltejs/kit";
 import { AUTH_COOKIE_NAME } from "../../constants";
 import type { SelectUser } from "$lib/server/db/schema";
-import { JWT_SECRET } from "$env/static/private";
+import env from "$lib/server/env";
 
 // // Use environment variable or fallback to dev key
 // const JWT_SECRET = import.meta.env.VITE_JWT_SECRET;
@@ -41,7 +40,7 @@ export function generateToken(user: {
     extraRoles: user.extraRoles,
   };
 
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload, env.server.JWT_SECRET, {
     expiresIn: "7d", // Token expires in 7 days
   });
 }
@@ -49,7 +48,7 @@ export function generateToken(user: {
 // Verify JWT token
 export function verifyToken(token: string): AuthToken | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as AuthToken;
+    return jwt.verify(token, env.server.JWT_SECRET) as AuthToken;
   } catch (_) {
     return null;
   }
@@ -105,7 +104,7 @@ export function isValidPassword(password: string): {
 // Cookie options
 export const cookieOptions = {
   httpOnly: true,
-  secure: !dev, // Use secure cookies in production
+  secure: true,
   sameSite: "strict" as const,
   maxAge: 60 * 60 * 24 * 7, // 7 days
   path: "/",

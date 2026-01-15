@@ -1,8 +1,8 @@
 import type { Handle } from "@sveltejs/kit";
+import env from "$lib/server/env";
 
 export const handle: Handle = async ({event, resolve}) => {
     const response = await resolve(event);
-    const supabaseStorageUrl = "";
 
     // security headers
     response.headers.set("X-Content-Type-Options", "nosniff");
@@ -17,9 +17,9 @@ export const handle: Handle = async ({event, resolve}) => {
         "default-src 'self'; " + 
         "script-src 'self' 'unsafe-inline'; " + 
         "style-src 'self' 'unsafe-inline'; " +
-        `img-src 'self' ${supabaseStorageUrl}; ` + 
+        `img-src 'self' ${env.server.SUPABASE_PROJECT_URL}; ` + 
         "font-src 'self'; " +
-        `connect-src 'self' ${supabaseStorageUrl}; ` +
+        `connect-src 'self' ${env.server.SUPABASE_PROJECT_URL}; ` +
         ""
     );
 

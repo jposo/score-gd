@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from "./$types";
 import Database from "$lib/server/db/instance";
-import { PUBLIC_SUPABASE_PROJECT_ID } from "$env/static/public";
+import env from "$lib/server/env";
 import { error, fail, type Cookies } from "@sveltejs/kit";
 import * as z from "zod";
 import { getCurrentDay, getNextDayDateTime } from "$lib/server/utils";
@@ -37,7 +37,7 @@ function getHints(
 
   for (const [answerKey, answerValue] of Object.entries(answer ?? {})) {
     for (const [hintIndex, hintKey] of Object.entries(hintsKeys)) {
-      if (hintKey === answerKey) {
+      if (hintKey === answerKey && !Array.isArray(answerValue)) {
         hints[parseInt(hintIndex)] = {
           hint: hintKey,
           value: answerValue ?? null,
@@ -53,7 +53,7 @@ function getImageUrls(imagePaths: string[], cutoff: number) {
     .slice(0, cutoff)
     .map(
       (image) =>
-        `https://${PUBLIC_SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/images/${image}`,
+        `https://${env.public.PUBLIC_SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/images/${image}`,
     );
 }
 

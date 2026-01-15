@@ -1,16 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
-import { SUPABASE_API_KEY, SUPABASE_PROJECT_URL } from "$env/static/private";
+import env from "$lib/server/env";
 
-if (!SUPABASE_PROJECT_URL) {
-  throw new Error("SUPABASE_PROJECT_URL is not defined");
-}
-
-if (!SUPABASE_API_KEY) {
-  throw new Error("SUPABASE_API_KEY is not defined");
-}
-
-const supabase = createClient(SUPABASE_PROJECT_URL, SUPABASE_API_KEY);
-
+const supabase = createClient(env.server.SUPABASE_PROJECT_URL, env.server.SUPABASE_API_KEY);
 export async function uploadImage(file: Buffer, filepath: string) {
   const { data, error } = await supabase.storage
     .from("images")

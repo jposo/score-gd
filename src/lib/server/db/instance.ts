@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
-import { env } from "$env/dynamic/private";
+import env from "$lib/server/env";
 import {
   sql,
   eq,
@@ -52,7 +52,7 @@ export default class Database {
   private db: ReturnType<typeof drizzle>;
 
   private constructor() {
-    const client = postgres(env.DATABASE_URL);
+    const client = postgres(env.server.DATABASE_URL);
     this.db = drizzle(client, { schema });
   }
 
