@@ -1,6 +1,5 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import getDifficultyColor from "$lib/tools/getDifficultyColor";
   import type { PageData } from "./$types";
   import { page } from "$app/state";
   import Card from "$lib/components/LevelCard.svelte";

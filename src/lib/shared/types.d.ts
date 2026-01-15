@@ -24,3 +24,9 @@ export type Hint = {
 export type Hints = {
   [index: number]: Hint;
 };
+
+export type SearchResult = {
+  id: number;
+  name: string | null;
+  publisher: string | null;
+};

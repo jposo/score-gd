@@ -2,6 +2,7 @@
   import type { PageProps, SubmitFunction } from "./$types";
   import { enhance } from "$app/forms";
   import { toastManager } from "$lib/state/toasts.svelte";
+  import type { SearchResult } from "$lib/shared/types";
 
   let { data }: PageProps = $props();
 
@@ -21,13 +22,11 @@
     endY: number;
   };
 
-  type SearchResult = {
-    id: number;
-    name: string | null;
-  };
-
   let cropModal: HTMLDialogElement;
   let cropCanvas: HTMLCanvasElement;
+
+  let isExtracting = $state(false);
+  let isSubmitting = $state(false);
   let input = $state("");
   let levelId = $state<number>();
   let searchResults = $state<SearchResult[]>([]);
@@ -79,6 +78,7 @@
   }
 
   async function extractFrames() {
+    isExtracting = true;
     if (!files) {
       console.log("No video file selected");
       return;
@@ -104,6 +104,7 @@
         originalData: frameData,
       });
     }
+    isExtracting = false;
   }
 
   function seekToTime(time: number) {
@@ -362,20 +363,13 @@
     <div>
       <h1 class="text-4xl font-extrabold text-primary">frame processor</h1>
       <p class="text-base-content/60">
-        queue levels and extractr frames for day #{nextDay}
+        queue levels and extract frames for day #{nextDay}
       </p>
     </div>
-
-    <!-- No longer needed -->
-    <!-- <form method="POST" action="?/update" use:enhance={formHandler}>
-            <button type="submit" class="btn btn-lg btn-primary"
-                >Update Ids</button
-            >
-        </form> -->
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="card bg-base-200 shadow-xl h-fit">
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div class="card bg-base-200 shadow-xl h-fit col-span-1 lg:col-span-3">
       <div class="card-body gap-4">
         <h2 class="text-3xl font-bold">job details</h2>
 
@@ -429,6 +423,7 @@
           method="POST"
           action="?/enqueue"
           use:enhance={() => {
+            isSubmitting = true;
             return async ({ result }) => {
               if (result.type === "success") {
                 toastManager.add(
@@ -446,6 +441,7 @@
                 toastManager.add("an unexpected error occurred", "error");
                 console.error(result);
               }
+              isSubmitting = false;
             };
           }}
           class="space-y-4"
@@ -482,7 +478,7 @@
               <input
                 type="search"
                 required
-                placeholder="Search level..."
+                placeholder="search level..."
                 bind:value={input}
                 class="grow"
               />
@@ -491,7 +487,7 @@
             {#if searchResults.length > 0}
               <ul
                 tabindex="-1"
-                class="dropdown-content z-1 menu p-2 shadow bg-base-300 rounded-box w-full text-2xl **mt-2**"
+                class="dropdown-content z-1 menu p-2 shadow bg-base-300 rounded-box w-full text-xl **mt-2**"
               >
                 {#each searchResults as result}
                   {@const played = data.storedDays.find(
@@ -502,12 +498,17 @@
                       class="flex justify-between"
                       onclick={() => selectResult(result)}
                     >
-                      <span>{result.name}</span>
-                      {#if played}
-                        <span class="badge badge-sm badge-neutral"
-                          >day #{played.day}</span
-                        >
-                      {/if}
+                      <span>
+                        {result.name}
+                        {#if played}
+                          <span class="badge badge-sm badge-neutral"
+                            >day #{played.day}</span
+                          >
+                        {/if}
+                      </span>
+                      <span class="text-base text-right opacity-60"
+                        >{result.publisher}</span
+                      >
                     </button>
                   </li>
                 {/each}
@@ -528,14 +529,20 @@
 
           <button
             type="submit"
-            class="btn btn-primary w-full shadow-lg shadow-primary/30"
-            >submit job</button
+            class="btn btn-primary btn-lg w-full shadow-lg shadow-primary/30"
+            disabled={isSubmitting}
           >
+            {#if isSubmitting}
+              <span class="loading loading-dots loading-lg"></span>
+            {:else}
+              submit job
+            {/if}
+          </button>
         </form>
       </div>
     </div>
 
-    <div class="col-span-1 lg:col-span-2 space-y-6">
+    <div class="col-span-2 space-y-6">
       <div class="card bg-base-200 border-base-200 shadow-xl">
         <div class="card-body items-center text-center py-8">
           <h2 class="card-title">upload video</h2>
@@ -553,8 +560,16 @@
           <div class="card-body">
             <div class="flex flex-wrap gap-4 items-center justify-between">
               <div>
-                <button class="btn btn-primary btn-lg" onclick={extractFrames}
-                  >extract frames (1/sec)</button
+                <button
+                  class="btn btn-primary btn-lg w-3xs"
+                  onclick={extractFrames}
+                  disabled={isExtracting}
+                >
+                  {#if isExtracting}
+                    <span class="loading loading-dots loading-lg"></span>
+                  {:else}
+                    extract frames (1/sec)
+                  {/if}</button
                 >
                 <!-- <button type="submit" class="btn btn-lg btn-accent"
                   >queue</button

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import getDifficultyColor from "$lib/tools/getDifficultyColor";
+  import { getDifficultyColor } from "$lib/tools/utils";
   import { goto } from "$app/navigation";
 
   let props: {

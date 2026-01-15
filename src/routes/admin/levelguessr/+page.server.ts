@@ -27,7 +27,7 @@ const QueueForm = z.object({
 });
 
 export const load: PageServerLoad = async (event) => {
-  const user = await requireAuthWithRoles(event, ["admin", "owner"]);
+  const user = await requireAuthWithRoles(event, ["owner"]);
 
   const storedDays = await db.findAllDays();
   const latestDay = await db.findLatestDay();
@@ -47,7 +47,7 @@ export const load: PageServerLoad = async (event) => {
 
 export const actions: Actions = {
   enqueue: async (event) => {
-    await requireAuthWithRoles(event, ["admin"]);
+    await requireAuthWithRoles(event, ["owner"]);
 
     const { request } = event;
 

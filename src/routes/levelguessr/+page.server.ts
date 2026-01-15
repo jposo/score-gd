@@ -132,7 +132,6 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
   const hints = getHints(answer, guessCount, hasWon);
   const updatesOn = getNextDayDateTime(currentDay).toISOString();
-  console.log(updatesOn);
 
   return {
     updatesOn,

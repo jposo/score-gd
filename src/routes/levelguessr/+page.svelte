@@ -5,14 +5,9 @@
   import { enhance } from "$app/forms";
   import { guessesState } from "$lib/state/guesses.svelte";
   import { toastManager } from "$lib/state/toasts.svelte";
+  import type { SearchResult } from "$lib/shared/types";
 
   let { data }: PageProps = $props();
-
-  type SearchResult = {
-    id: number;
-    name: string | null;
-    publisher: string | null;
-  };
 
   let now = $state(Date.now());
   let target = new Date(data.updatesOn).getTime();

@@ -1,10 +1,14 @@
 import { redirect } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "./utils";
 import Database from "$lib/server/db/instance";
+import { rolesEnum } from "$lib/server/db/schema";
 import type { RequestEvent } from "@sveltejs/kit";
 import { AUTH_COOKIE_NAME } from "../../constants";
 
 const db = Database.instance;
+
+const roles = rolesEnum.enumValues;
+type Role = (typeof roles)[number];
 
 /**
  * Middleware function to protect routes that require authentication
@@ -73,11 +77,11 @@ export async function requireAuth(event: RequestEvent, redirectTo?: string) {
  */
 export async function requireAuthWithRoles(
   event: RequestEvent,
-  roles: string[],
+  roles: Role[],
   redirectTo?: string,
 ) {
   const user = await requireAuth(event, redirectTo);
-  if (!(user.roles as string[]).some((role) => roles.includes(role))) {
+  if (!(user.roles as Role[]).some((role) => roles.includes(role))) {
     throw redirect(302, redirectTo || "/");
   }
   return user;
