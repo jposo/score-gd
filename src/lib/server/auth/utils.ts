@@ -4,9 +4,10 @@ import { dev } from "$app/environment";
 import type { Cookies } from "@sveltejs/kit";
 import { AUTH_COOKIE_NAME } from "../../constants";
 import type { SelectUser } from "$lib/server/db/schema";
+import { JWT_SECRET } from "$env/static/private";
 
-// Use environment variable or fallback to dev key
-const JWT_SECRET = import.meta.env.VITE_JWT_SECRET;
+// // Use environment variable or fallback to dev key
+// const JWT_SECRET = import.meta.env.VITE_JWT_SECRET;
 
 export interface AuthToken {
   userId: number;
