@@ -11,7 +11,7 @@ export const load: PageServerLoad = async () => {
     const ids = levelIds.map((level) => level.id);
     const result = await get("levels").ids(ids);
 
-    const levelMap = new Map(result?.levels.map((level) => [level.id, level]));
+    const levelMap = new Map(result?.result.map((level) => [level.id, level]));
 
     if (!result) {
       return { levels: [] };

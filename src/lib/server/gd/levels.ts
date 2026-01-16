@@ -1,5 +1,7 @@
-import { Parser, type LevelSearchResponse } from "./parser";
+import { Parser } from "./parser";
+import type { Level, LevelSearchResponse } from "./types";
 import { BaseQuery } from "./query";
+import { levels } from "./official";
 
 export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
   type(
@@ -57,6 +59,9 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
   search(query: string | number, setType: boolean = true) {
     if (setType) {
       this.query.type = 0;
+    }
+    if (typeof query === "number" && query < 50) {
+      this.query.officialLevelId = query;
     }
     this.query.str = query.toString();
     return this;
@@ -159,6 +164,23 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
   }
 
   protected async execute(): Promise<LevelSearchResponse | null> {
+    const parser = new Parser();
+    const searchTerm = this.query.str?.toString().toLowerCase();
+    let officialResults: Level[] = [];
+
+    if (this.query.type === 0 && searchTerm) {
+      officialResults = Object.values(levels).filter(
+        (l) =>
+          l.name.toLowerCase().includes(searchTerm) ||
+          l.id.toString() === searchTerm,
+      );
+    }
+
+    if (this.query.officialLevelId) {
+      return parser.parseOfficialLevelSearch(
+        this.query.officialLevelId as number,
+      );
+    }
     const response = await fetch(
       this.BOOMLINGS_BASE_API + "/getGJLevels21.php",
       {
@@ -174,8 +196,11 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
     );
 
     const text = await response.text();
-
-    const parser = new Parser();
+    const onlineResults = parser.parseLevelSearch(text);
+    return {
+      ...onlineResults,
+      result: [...officialResults, ...(onlineResults?.result || [])],
+    };
     return parser.parseLevelSearch(text);
   }
 }

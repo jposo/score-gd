@@ -46,10 +46,10 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
       };
     }
     const stats = await db.accrueProgressByLevelIds(
-      searchResult.levels.map((level) => level.id),
+      searchResult.result.map((level) => level.id),
     );
     const statsMap = new Map(stats.map((stat) => [stat.levelId, stat]));
-    const levels = searchResult.levels.map((level) => ({
+    const levels = searchResult.result.map((level) => ({
       id: level.id,
       name: level.name,
       publisher: level.creator?.username,

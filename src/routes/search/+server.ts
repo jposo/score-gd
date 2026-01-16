@@ -17,7 +17,7 @@ export const GET: RequestHandler = async ({ url }) => {
     // const levels = await db.search(searchTerm);
     const result = await get("levels").search(searchTerm).rating("star");
     return json(
-      result?.levels.map((level) => ({
+      result?.result.map((level) => ({
         id: level.id,
         name: level.name,
         publisher: level.creator?.username ?? "unknown",
@@ -27,7 +27,7 @@ export const GET: RequestHandler = async ({ url }) => {
   // const levels = await db.search(searchTerm);
   const result = await get("levels").search(searchTerm);
   return json(
-    result?.levels.map((level) => ({
+    result?.result.map((level) => ({
       id: level.id,
       name: level.name,
       publisher: level.creator?.username ?? "unknown",

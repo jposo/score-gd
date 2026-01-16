@@ -39,7 +39,7 @@ export const load: PageServerLoad = async ({
     if (!result) {
       error(404, "level not found");
     }
-    const gdl = result.levels[0];
+    const gdl = result.result[0];
     const progress = (await db.accrueProgressByLevelId(gdl.id))[0];
     const level = {
       id: gdl.id,

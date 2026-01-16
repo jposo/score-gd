@@ -1,7 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import env from "$lib/server/env";
 
-const supabase = createClient(env.server.SUPABASE_PROJECT_URL, env.server.SUPABASE_API_KEY);
+const supabase = createClient(
+  env.public.PUBLIC_SUPABASE_PROJECT_URL,
+  env.server.SUPABASE_API_KEY,
+);
 export async function uploadImage(file: Buffer, filepath: string) {
   const { data, error } = await supabase.storage
     .from("images")

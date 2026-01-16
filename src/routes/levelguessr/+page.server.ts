@@ -53,7 +53,7 @@ function getImageUrls(imagePaths: string[], cutoff: number) {
     .slice(0, cutoff)
     .map(
       (image) =>
-        `https://${env.public.PUBLIC_SUPABASE_PROJECT_ID}.supabase.co/storage/v1/object/public/images/${image}`,
+        `${env.public.PUBLIC_SUPABASE_PROJECT_URL}/storage/v1/object/public/images/${image}`,
     );
 }
 
@@ -61,7 +61,7 @@ async function getAnswer(day: number) {
   const answerDetails = await db.findDayFull(day);
 
   const answerResult = (await get("levels").search(answerDetails.id))
-    ?.levels[0];
+    ?.result[0];
 
   if (!answerResult) {
     return null;
@@ -186,6 +186,7 @@ export const actions = {
     if (!answer) {
       return fail(404, { message: "could not find answer" });
     }
+    console.log(answer);
 
     const newGuessCount = guessCount + 1;
     const correct = answer.id == data.guessId ? true : false;
@@ -194,8 +195,8 @@ export const actions = {
 
     guessHistory.push({
       id: data.guessId,
-      name: level.levels[0]?.name ?? "unknown",
-      publisher: level.levels[0]?.creator?.username ?? "unknown publisher",
+      name: level.result[0]?.name ?? "unknown",
+      publisher: level.result[0]?.creator?.username ?? "unknown publisher",
       correct,
     });
 
