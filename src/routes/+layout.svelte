@@ -431,7 +431,11 @@
       </p>
     </aside>
     <nav class="grid-flow-col gap-4 md:place-self-center md:justify-self-end">
-      <a>
+      <a
+        aria-label="youtube channel url"
+        href="https://www.youtube.com/@devpixel7"
+        target="_blank"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="24"

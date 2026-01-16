@@ -71,6 +71,27 @@
       "when": 1768449192538,
       "tag": "0009_optimal_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1768544011287,
+      "tag": "0010_past_mach_iv",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1768544652848,
+      "tag": "0011_perfect_scrambler",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1768545204029,
+      "tag": "0012_lame_kulan_gath",
+      "breakpoints": true
     }
   ]
 }

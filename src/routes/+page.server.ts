@@ -22,7 +22,6 @@ export const load: PageServerLoad = async () => {
         name: levelMap.get(level.id)?.name ?? "unknown",
         publisher: levelMap.get(level.id)?.creator?.username ?? "unknown",
         difficulty: levelMap.get(level.id)?.difficulty!,
-        // rating: level.rating,
         length: levelMap.get(level.id)?.length!,
         averageScore: level.averageScore,
       })),

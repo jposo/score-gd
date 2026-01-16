@@ -25,17 +25,10 @@
   let guessId = $state<number>();
   let searchResults = $state<SearchResult[]>([]);
 
-  let guesses = $state(data.guessHistory);
-  let hints = $state(data.game.hints);
+  let guesses = $derived(data.guessHistory);
+  let hints = $derived(data.game.hints);
   let answer = $derived(data.game.answer);
-  let imageUrls = $state(data.game.images);
-
-  $effect(() => {
-    guesses = data.guessHistory;
-    hints = data.game.hints;
-    answer = data.game.answer;
-    imageUrls = data.game.images;
-  });
+  let imageUrls = $derived(data.game.images);
 
   let currentGuess = $derived(guesses.length + 1);
   let status = $derived(
@@ -62,10 +55,6 @@
       now = Date.now();
     }, 1000);
 
-    // const storedHints = localStorage.getItem("hints");
-    // if (storedHints) {
-    //   hints = JSON.parse(storedHints);
-    // }
     return () => clearInterval(interval);
   });
 

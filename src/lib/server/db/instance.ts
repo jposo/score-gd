@@ -69,21 +69,9 @@ export default class Database {
     const result = await this.db
       .select({
         id: schema.levels.id,
-        name: schema.levels.name,
-        publisher: schema.gdUsers.username,
       })
       .from(schema.levels)
-      .leftJoin(
-        schema.gdUsers,
-        eq(schema.levels.publisherId, schema.gdUsers.id),
-      )
-      .where(
-        or(
-          ilike(schema.levels.name, `%${query}%`),
-          ilike(schema.gdUsers.username, `%${query}%`),
-          eq(schema.levels.id, queryId),
-        ),
-      )
+      .where(or(eq(schema.levels.id, queryId)))
       .limit(10);
 
     return result;
@@ -95,121 +83,26 @@ export default class Database {
     const result = await this.db
       .select({
         id: schema.progress.levelId,
-        // id: schema.levels.id,
-        // name: schema.levels.name,
-        // publisher: schema.gdUsers.username,
-        // difficulty: schema.levels.difficulty,
-        // releaseDate: schema.levels.releaseDate,
-        // length: schema.levels.length,
         averageScore: avg(schema.progress.score).mapWith(Number),
       })
       .from(schema.progress)
-      // .from(schema.levels)
-      // .leftJoin(
-      //   schema.gdUsers,
-      //   eq(schema.levels.publisherId, schema.gdUsers.id),
-      // )
-      // .leftJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
       .where(isNotNull(schema.progress.score))
-      .groupBy(
-        schema.progress.levelId,
-        // schema.levels.id,
-        // schema.levels.name,
-        // schema.gdUsers.username,
-        // schema.levels.difficulty,
-        // schema.levels.releaseDate,
-        // schema.levels.length,
-      )
+      .groupBy(schema.progress.levelId)
       .orderBy(desc(avg(schema.progress.score)))
       .limit(LIMIT);
 
     return result;
   }
 
-  async findLevelsByPage(page: number = 0) {
-    const LIMIT = 18;
-
-    const offset = page * LIMIT;
-
-    const levels = await this.db
-      .select({
-        id: schema.levels.id,
-        name: schema.levels.name,
-        publisher: schema.gdUsers.username,
-        difficulty: schema.levels.difficulty,
-        releaseDate: schema.levels.releaseDate,
-        length: schema.levels.length,
-        averageScore: avg(schema.progress.score),
-      })
-      .from(schema.levels)
-      .leftJoin(
-        schema.gdUsers,
-        eq(schema.levels.publisherId, schema.gdUsers.id),
-      )
-      .leftJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
-      .groupBy(
-        schema.levels.id,
-        schema.levels.name,
-        schema.gdUsers.username,
-        schema.levels.difficulty,
-        schema.levels.releaseDate,
-        schema.levels.length,
-      )
-      .orderBy(desc(avg(schema.progress.score)))
-      .limit(LIMIT)
-      .offset(offset);
-
-    const [totalCount] = await this.db
-      .select({ count: count(schema.levels.id) })
-      .from(schema.levels);
-
-    const pageCount = levels.length;
-    const isLastPage = offset + pageCount >= totalCount.count;
-
-    return {
-      levels,
-      page,
-      last: isLastPage,
-    };
-  }
-
   async findLevelByIdSimple(id: number) {
     const result = await this.db
       .select({
         id: schema.levels.id,
-        name: schema.levels.name,
-        rating: schema.levels.rating,
-        difficulty: schema.levels.difficulty,
-        songTitle: schema.songs.title,
-        songArtist: schema.songs.artist,
-        releaseYear: schema.levels.releaseDate,
-        publisher: schema.users.username,
+        releaseDate: schema.levels.releaseDate,
+        videoUrl: schema.levels.videoUrl,
       })
       .from(schema.levels)
-      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
-      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(eq(schema.levels.id, id))
-      .limit(1);
-
-    return result[0] || null;
-  }
-
-  async findLevelByNameSimple(name: string) {
-    const result = await this.db
-      .select({
-        id: schema.levels.id,
-        name: schema.levels.name,
-        rating: schema.levels.rating,
-        difficulty: schema.levels.difficulty,
-        songTitle: schema.songs.title,
-        songArtist: schema.songs.artist,
-        releaseYear: schema.levels.releaseDate,
-        publisher: schema.users.username,
-      })
-      .from(schema.levels)
-      .leftJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
-      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
-      .where(eq(schema.levels.name, name))
       .limit(1);
 
     return result[0] || null;
@@ -219,19 +112,8 @@ export default class Database {
     const result = await this.db
       .select({
         id: schema.levels.id,
-        name: schema.levels.name,
-        publisher: schema.gdUsers.username,
-        description: schema.levels.description,
-        difficulty: schema.levels.difficulty,
-        coins: schema.levels.coins,
-        twoPlayer: schema.levels.twoPlayer,
-        rating: schema.levels.rating,
-        length: schema.levels.length,
         releaseDate: schema.levels.releaseDate,
         videoUrl: schema.levels.videoUrl,
-        songId: schema.songs.id,
-        songTitle: schema.songs.title,
-        songArtist: schema.songs.artist,
         progressCount: count(schema.progress.score),
         averageScore: avg(schema.progress.score).mapWith(Number),
         completionCount: count(
@@ -255,21 +137,10 @@ export default class Database {
               AND ${schema.progress.status} NOT IN ('in progress', 'to try'))`,
       })
       .from(schema.levels)
-      .innerJoin(
-        schema.gdUsers,
-        eq(schema.gdUsers.id, schema.levels.publisherId),
-      )
-      .leftJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .leftJoin(schema.progress, eq(schema.levels.id, schema.progress.levelId))
       .leftJoin(schema.users, eq(schema.progress.userId, schema.users.id))
       .where(eq(schema.levels.id, id))
-      .groupBy(
-        schema.levels.id,
-        schema.gdUsers.id,
-        schema.songs.id,
-        schema.songs.title,
-        schema.songs.artist,
-      )
+      .groupBy(schema.levels.id)
       .limit(1);
 
     if (result[0]) {
@@ -303,34 +174,12 @@ export default class Database {
     return result;
   }
 
-  async updateLevel(id: number, updates: schema.InsertLevel) {
+  async updateLevel(updates: schema.InsertLevel) {
     const result = await this.db
       .update(schema.levels)
       .set(updates)
-      .where(eq(schema.levels.id, id))
+      .where(eq(schema.levels.id, updates.id))
       .returning({ id: schema.levels.id });
-
-    return result[0] || null;
-  }
-
-  async findSongById(id: number) {
-    const result = await this.db
-      .select()
-      .from(schema.songs)
-      .where(eq(schema.songs.id, id))
-      .limit(1);
-
-    return result[0] || null;
-  }
-
-  async insertSong(values: schema.InsertSong) {
-    console.log("Inserting song with values:", values);
-
-    const result = await this.db
-      .insert(schema.songs)
-      .values(values)
-      .onConflictDoNothing()
-      .returning({ id: schema.songs.id });
 
     return result[0] || null;
   }
@@ -595,31 +444,13 @@ export default class Database {
     return result[0] || null;
   }
 
-  async insertGDUser(values: schema.InsertGDUser) {
-    const user = await this.db
-      .insert(schema.gdUsers)
-      .values(values)
-      .onConflictDoNothing()
-      .returning({ id: schema.gdUsers.id });
-
-    return user[0] || null;
-  }
-
   async findAllDays() {
     const result = await this.db
       .select({
         id: schema.dailyLevel.levelId,
-        // id: schema.levels.id,
-        // name: schema.levels.name,
-        // publisher: schema.users.username,
         day: schema.dailyLevel.day,
       })
       .from(schema.dailyLevel);
-    // .innerJoin(
-    //   schema.gdUsers,
-    //   eq(schema.levels.publisherId, schema.gdUsers.id),
-    // )
-    // .leftJoin(schema.days, eq(schema.levels.id, schema.days.levelId));
 
     return result;
   }
@@ -633,20 +464,7 @@ export default class Database {
     return result[0]?.maxDay;
   }
 
-  async findDaySimple(day: number) {
-    const result = await this.db
-      .select({
-        day: schema.dailyLevel.day,
-        imagePaths: schema.dailyLevel.imagePaths,
-      })
-      .from(schema.dailyLevel)
-      .where(eq(schema.dailyLevel.day, day))
-      .limit(1);
-
-    return result[0] || null;
-  }
-
-  async findDayFull(day: number) {
+  async findDaily(day: number) {
     const result = await this.db
       .select({
         id: schema.dailyLevel.levelId,
@@ -654,16 +472,13 @@ export default class Database {
         imagePaths: schema.dailyLevel.imagePaths,
       })
       .from(schema.dailyLevel)
-      // .innerJoin(schema.levels, eq(schema.days.levelId, schema.levels.id))
-      // .innerJoin(schema.users, eq(schema.levels.publisherId, schema.users.id))
-      // .innerJoin(schema.songs, eq(schema.levels.songId, schema.songs.id))
       .where(eq(schema.dailyLevel.day, day))
       .limit(1);
 
     return result[0] || null;
   }
 
-  async insertDay(values: schema.InsertDay) {
+  async insertDaily(values: schema.InsertDay) {
     const result = await this.db
       .insert(schema.dailyLevel)
       .values(values)

@@ -58,7 +58,7 @@ function getImageUrls(imagePaths: string[], cutoff: number) {
 }
 
 async function getAnswer(day: number) {
-  const answerDetails = await db.findDayFull(day);
+  const answerDetails = await db.findDaily(day);
 
   const answerResult = (await get("levels").search(answerDetails.id))
     ?.result[0];
@@ -109,7 +109,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
   const requestedDay = parseInt(url.searchParams.get("day") ?? "");
   const day = !Number.isNaN(requestedDay) ? requestedDay : currentDay;
 
-  const game = await db.findDaySimple(day);
+  const game = await db.findDaily(day);
   if (!game) {
     error(404, "game not found");
   }
@@ -148,11 +148,9 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 export const actions = {
   default: async ({ request, cookies }) => {
     const form = await request.formData();
+    const entries = Object.fromEntries(form);
 
-    const result = Guess.safeParse({
-      day: form.get("day"),
-      guessId: form.get("guessId"),
-    });
+    const result = Guess.safeParse(entries);
 
     if (!result.success) {
       return fail(400, {

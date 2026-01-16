@@ -66,7 +66,7 @@ export const sources = pgTable("sources", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   deletedAt: timestamp("deleted_at"),
-});
+}).enableRLS();
 
 export const dailyLevel = pgTable(
   "days",
@@ -89,47 +89,17 @@ export const dailyLevel = pgTable(
     deletedBy: integer("deleted_by").references(() => users.id),
   },
   (table) => [uniqueIndex("unique_day_index").on(table.day)],
-);
-
-export const gdUsers = pgTable("gd_users", {
-  id: integer("id").primaryKey(),
-  accountId: integer("account_id"),
-  username: text("username").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  lastSyncedAt: timestamp("last_synced_at").defaultNow(),
-});
-
-export const songs = pgTable("songs", {
-  id: integer("id").primaryKey(),
-  title: text("title").notNull(),
-  artist: text("artist").notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
+).enableRLS();
 
 export const levels = pgTable("levels", {
   id: integer("id").primaryKey(),
-  name: text("name").notNull(),
-  publisherId: integer("publisher_id")
-    .notNull()
-    .references(() => gdUsers.id),
-  description: text("description"),
-  difficulty: difficultyEnum("difficulty").notNull(),
-  length: lengthEnum("length").notNull(),
-  songId: integer("song_id")
-    .notNull()
-    .references(() => songs.id),
   releaseDate: date("release_date"),
-  gameVersion: integer("game_version").notNull(),
   videoUrl: text("video_url"),
-  coins: smallint("coins").notNull(),
-  twoPlayer: boolean("is_two_player").notNull(),
-  rating: ratingEnum("rating").notNull(),
   hidden: boolean("hidden").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  lastSyncedAt: timestamp("last_synced_at").defaultNow(),
-});
+  updatedBy: integer("updated_by").references(() => users.id),
+}).enableRLS();
 
 export const levelCreators = pgTable(
   "level_creators",
@@ -140,7 +110,7 @@ export const levelCreators = pgTable(
     creatorId: integer("creator_id").notNull(),
   },
   (table) => [primaryKey({ columns: [table.levelId, table.creatorId] })],
-);
+).enableRLS();
 
 export const progress = pgTable(
   "progress",
@@ -180,7 +150,7 @@ export const progress = pgTable(
     index("score_index").on(table.score),
     index("completed_at_index").on(table.completedAt),
   ],
-);
+).enableRLS();
 
 export const reviewVotes = pgTable(
   "review_votes",
@@ -196,7 +166,7 @@ export const reviewVotes = pgTable(
     updatedAt: timestamp("updated_at").defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.progressId] })],
-);
+).enableRLS();
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -215,7 +185,7 @@ export const users = pgTable("users", {
   lastLoginIp: text("last_login_ip"),
   registrationIp: text("registration_ip"),
   deletedAt: timestamp("deleted_at"),
-});
+}).enableRLS();
 
 export const loginAttempts = pgTable("login_attempts", {
   id: serial("id").primaryKey(),
@@ -223,7 +193,7 @@ export const loginAttempts = pgTable("login_attempts", {
   ipAddress: text("ip_address").notNull(),
   successful: boolean("successful").notNull(),
   attemptedAt: timestamp("attempted_at").defaultNow(),
-});
+}).enableRLS();
 
 export type InsertUser = typeof users.$inferInsert;
 export type SelectUser = typeof users.$inferSelect;
@@ -236,12 +206,6 @@ export type SelectLevel = typeof levels.$inferSelect;
 
 export type InsertLevelCreator = typeof levelCreators.$inferInsert;
 export type SelectLevelCreator = typeof levelCreators.$inferSelect;
-
-export type InsertSong = typeof songs.$inferInsert;
-export type SelectSong = typeof songs.$inferSelect;
-
-export type InsertGDUser = typeof gdUsers.$inferInsert;
-export type SelectGDUser = typeof gdUsers.$inferSelect;
 
 export type InsertDay = typeof dailyLevel.$inferInsert;
 export type SelectDay = typeof dailyLevel.$inferSelect;

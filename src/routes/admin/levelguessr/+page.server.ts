@@ -52,14 +52,9 @@ export const actions: Actions = {
     const { request } = event;
 
     const form = await request.formData();
+    const entries = Object.fromEntries(form);
 
-    console.log(form);
-
-    const result = QueueForm.safeParse({
-      levelId: form.get("levelId"),
-      sourceId: form.get("sourceId"),
-      frames: form.get("frames"),
-    });
+    const result = QueueForm.safeParse(entries);
 
     if (!result.success) {
       return fail(400, {
@@ -69,15 +64,16 @@ export const actions: Actions = {
     }
 
     const data = result.data;
+    const latestDay = await db.findLatestDay();
 
-    const day = (await db.findLatestDay())! + 1;
+    const nextDay = latestDay! + 1;
 
     // data.frames.sort((a, b) => a.index - b.index);
 
     const files: { file: Buffer; filepath: string }[] = [];
     for (const frame of data.frames) {
       const filename = randomUUID();
-      const filepath = `${day}/${filename}`;
+      const filepath = `${nextDay}/${filename}`;
 
       const buffer = Buffer.from(frame.split(",")[1], "base64");
 
@@ -106,8 +102,8 @@ export const actions: Actions = {
       const images = uploadedFiles.map((file) => file.path);
 
       // insert into database
-      await db.insertDay({
-        day,
+      await db.insertDaily({
+        day: nextDay,
         levelId: data.levelId,
         imagePaths: images,
         sourceId: data.sourceId,

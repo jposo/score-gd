@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PageData } from "./$types";
+  import type { PageData, SubmitFunction } from "./$types";
   import {
     dateToISOString,
     dateToLocaleString,
@@ -8,60 +8,27 @@
   } from "$lib/tools/utils";
   import Review from "$lib/components/Review.svelte";
   import { toastManager } from "$lib/state/toasts.svelte";
-  import { onMount } from "svelte";
+  import { enhance } from "$app/forms";
 
   let { data }: { data: PageData } = $props();
 
+  let quickUpdateForm: HTMLFormElement | undefined = $state();
   let levelDetails: HTMLDialogElement | undefined = $state();
   let progressDetails: HTMLDialogElement | undefined = $state();
 
   // level Data
-  let average = $state(data.level.averageScore ?? undefined);
-  let releaseDate = $state(
-    dateToISOString(data.level.releaseDate ?? undefined),
-  );
-  let difficulty = $state(data.level.difficulty ?? undefined);
-  let videoUrl = $state(data.level.videoUrl ?? undefined);
-  let description = $state(data.level.description ?? undefined);
-  // let skillsets = $state(data.level.skillsets ?? []);
+  let average = $derived(data.level.averageScore);
+  let releaseDate = $derived(data.level.releaseDate);
+  let videoUrl = $derived(data.level.videoUrl);
 
-  // rogress Data
-  let oldScore = $state(data.progress?.score ?? undefined);
-  let score = $state(data.progress?.score ?? undefined);
-  let status = $state(data.progress?.status ?? undefined);
-  let completionPercentage = $state(
-    data.progress?.completionPercentage ?? undefined,
-  );
-  let attempts = $state(data.progress?.attempts ?? undefined);
-  let startDate = $state(
-    dateToISOString(new Date(data.progress?.startedAt!) ?? undefined),
-  );
-  let completionDate: string | undefined = $state(
-    dateToISOString(new Date(data.progress?.completedAt!)) ?? undefined,
-  );
-  let review = $state(data.progress?.review ?? undefined);
-
-  $effect(() => {
-    // level data
-    average = data.level.averageScore ?? undefined;
-    releaseDate = dateToISOString(data.level.releaseDate ?? undefined);
-    difficulty = data.level.difficulty ?? undefined;
-    videoUrl = data.level.videoUrl ?? undefined;
-    description = data.level.description ?? undefined;
-    // skillsets = data.level.skillsets ?? [];
-
-    // progress data
-    oldScore = data.progress?.score ?? undefined;
-    score = data.progress?.score ?? undefined;
-    status = data.progress?.status ?? undefined;
-    completionPercentage = data.progress?.completionPercentage ?? undefined;
-    attempts = data.progress?.attempts ?? undefined;
-    startDate =
-      dateToISOString(new Date(data.progress?.startedAt!)) ?? undefined;
-    completionDate =
-      dateToISOString(new Date(data.progress?.completedAt!)) ?? undefined;
-    review = data.progress?.review ?? undefined;
-  });
+  // progress data (undefined means no user is logged in)
+  let score = $derived(data.progress?.score);
+  let status = $derived(data.progress?.status);
+  let completionPercentage = $derived(data.progress?.completionPercentage);
+  let attempts = $derived(data.progress?.attempts);
+  let startDate = $derived(data.progress?.startedAt);
+  let completionDate = $derived(data.progress?.completedAt);
+  let review = $derived(data.progress?.review);
 
   const scoreOptions = [
     { value: 1, label: "terrible" },
@@ -83,91 +50,11 @@
     { value: "to try", label: "to try" },
   ];
 
-  async function actionRequest(
-    url: string,
-    formData: FormData,
-    successMessage: string,
-    errorMessage: string,
-    unexpectedMessage: string,
-  ) {
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-
-      if (data.status.toString().startsWith("2")) {
-        console.log(data);
-        toastManager.add(successMessage, "success");
-      } else {
-        console.error(data);
-        toastManager.add(errorMessage, "error");
-      }
-    } catch (error) {
-      console.error(error);
-      toastManager.add(unexpectedMessage, "error");
-    }
-  }
-
-  async function updateProgress(additionalData?: FormData) {
-    // ensure status has a valid value
-    if (!status || !statusOptions.some((o) => o.value === status)) {
-      status = "in progress";
-    }
-
-    const form = additionalData || new FormData();
-    form.append("status", status);
-
-    // add score if valid
-    if (score && !isNaN(score)) {
-      form.append("score", score.toString());
-
-      if (average && oldScore) {
-        average = calculateNewAverage(
-          data.level.progressCount,
-          average,
-          oldScore,
-          score,
-        );
-      }
-      oldScore = score;
-    }
-
-    if (status === "completed" && !completionPercentage) {
-      completionPercentage = 100;
-    }
-
-    await actionRequest(
-      `/levels/${data.level.id}?/updateProgress`,
-      form,
-      "successfully updated progress!",
-      "failed to update progress!",
-      "an unexpected error occurred!",
-    );
-  }
-
   async function quickUpdate(event: Event) {
     event.preventDefault();
-    await updateProgress();
-  }
-
-  async function detailedUpdate(event: Event) {
-    event.preventDefault();
-    const form = new FormData(event.target as HTMLFormElement);
-    await updateProgress(form);
-  }
-
-  async function handleSubmitLevelDetails(event: Event) {
-    event.preventDefault();
-    const form = new FormData(event.target as HTMLFormElement);
-    await actionRequest(
-      `/levels/${data.level.id}?/updateLevel`,
-      form,
-      "successfully updated level details!",
-      "failed to update level details!",
-      "an unexpected error occurred!",
-    );
+    if (quickUpdateForm) {
+      quickUpdateForm.requestSubmit();
+    }
   }
 </script>
 
@@ -179,7 +66,6 @@
   {#if data.level}
     <div class="flex flex-row gap-8">
       <div class="flex flex-col gap-4 w-1/5">
-        <!-- Form -->
         {#if data.user}
           {#if data.user.roles?.includes("admin")}
             <div class="card bg-base-200 w-full">
@@ -195,20 +81,54 @@
 
           <div class="card bg-base-200 w-full">
             <div class="card-body">
-              <select class="select" bind:value={score} onchange={quickUpdate}>
-                <option disabled selected value={undefined}>score</option>
-                {#each scoreOptions as option}
-                  <option value={option.value}
-                    >{option.value} - {option.label}</option
-                  >
-                {/each}
-              </select>
-              <select class="select" bind:value={status} onchange={quickUpdate}>
-                <option disabled selected value={undefined}>status</option>
-                {#each statusOptions as option}
-                  <option value={option.value}>{option.label}</option>
-                {/each}
-              </select>
+              <form
+                class="space-y-2"
+                method="POST"
+                bind:this={quickUpdateForm}
+                action="?/updateProgress"
+                use:enhance={(() => {
+                  return async ({ result }) => {
+                    if (result.type === "success") {
+                      toastManager.add(
+                        result.data?.message ?? "successfully updated progress",
+                        "success",
+                      );
+                    } else if (result.type === "failure") {
+                      toastManager.add(
+                        result.data?.message ?? "failed to update progress",
+                        "error",
+                      );
+                    } else {
+                      toastManager.add("unknown error occurred", "error");
+                    }
+                  };
+                }) satisfies SubmitFunction}
+              >
+                <select
+                  class="select"
+                  name="score"
+                  onchange={quickUpdate}
+                  bind:value={score}
+                >
+                  <option disabled selected value={undefined}>score</option>
+                  {#each scoreOptions as option}
+                    <option value={option.value}
+                      >{option.value} - {option.label}</option
+                    >
+                  {/each}
+                </select>
+                <select
+                  class="select"
+                  name="status"
+                  onchange={quickUpdate}
+                  bind:value={status}
+                >
+                  <option disabled selected value={undefined}>status</option>
+                  {#each statusOptions as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+              </form>
               <button
                 class="btn btn-secondary btn-block"
                 onclick={() => progressDetails?.showModal()}
@@ -252,7 +172,7 @@
             <h2 class="text-2xl">
               {#if data.level.releaseDate}
                 released on <span class="font-semibold"
-                  >{dateToLocaleString(data.level.releaseDate)}</span
+                  >{dateToLocaleString(new Date(data.level.releaseDate))}</span
                 >
               {/if}
               by
@@ -331,22 +251,33 @@
     <h3 class="text-lg font-bold">
       {data.level.name} details
     </h3>
-    <form onsubmit={async (event) => await handleSubmitLevelDetails(event)}>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">release Date</legend>
-          <label class="input w-full">
-            <input name="releaseDate" type="date" bind:value={releaseDate} />
-          </label>
-        </fieldset>
-
-        <fieldset class="fieldset">
-          <legend class="fieldset-legend">difficulty</legend>
-          <select class="select" name="difficulty" bind:value={difficulty}>
-            <option selected>Extreme Demon</option>
-          </select>
-        </fieldset>
-      </div>
+    <form
+      method="POST"
+      action="?/updateLevel"
+      use:enhance={(() => {
+        return async ({ result }) => {
+          if (result.type === "success") {
+            toastManager.add(
+              result.data?.message ?? "successfully updated level",
+              "success",
+            );
+          } else if (result.type === "failure") {
+            toastManager.add(
+              result.data?.message ?? "failed to update level",
+              "error",
+            );
+          } else {
+            toastManager.add("unknown error occurred", "error");
+          }
+        };
+      }) satisfies SubmitFunction}
+    >
+      <fieldset class="fieldset">
+        <legend class="fieldset-legend">release date</legend>
+        <label class="input w-full">
+          <input name="releaseDate" type="date" bind:value={releaseDate} />
+        </label>
+      </fieldset>
 
       <fieldset class="fieldset w-full">
         <legend class="fieldset-legend">video url</legend>
@@ -383,30 +314,6 @@
         <p class="validator-hint hidden">must be valid url</p>
       </fieldset>
 
-      <fieldset class="fieldset w-full">
-        <legend class="fieldset-legend">description</legend>
-        <textarea
-          name="description"
-          class="textarea w-full"
-          placeholder="What is this level about?"
-          bind:value={description}
-        ></textarea>
-      </fieldset>
-
-      <!-- <div>
-        {#each data.skillsets as skillset}
-          <input
-            class="btn"
-            type="checkbox"
-            name="skillsets"
-            value={skillset.id}
-            aria-label={skillset.name}
-            checked={skillsets.includes(skillset.id)}
-          />
-        {/each}
-        <input class="btn btn-square" type="reset" value="×" />
-      </div> -->
-
       <div class="modal-action flex justify-end gap-2">
         <button type="button" class="btn" onclick={() => levelDetails!.close()}>
           close
@@ -426,7 +333,27 @@
     <h3 class="text-lg font-bold">
       {data.level.name} progress
     </h3>
-    <form onsubmit={async (event) => await detailedUpdate(event)}>
+    <form
+      method="POST"
+      action="?/updateProgress"
+      use:enhance={(() => {
+        return async ({ result }) => {
+          if (result.type === "success") {
+            toastManager.add(
+              result.data?.message ?? "successfully updated progress",
+              "success",
+            );
+          } else if (result.type === "failure") {
+            toastManager.add(
+              result.data?.message ?? "failed to update progress",
+              "error",
+            );
+          } else {
+            toastManager.add("unknown error occurred", "error");
+          }
+        };
+      }) satisfies SubmitFunction}
+    >
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <fieldset class="fieldset">
           {#if data.level.length !== "platformer"}
