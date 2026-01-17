@@ -1,15 +1,13 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toastManager } from "$lib/state/toasts.svelte";
+  import { enhance } from "$app/forms";
+  import type { SubmitFunction } from "./$types";
 
-  let username = "";
-  let email = "";
-  let password = "";
-  let confirmPassword = "";
-  let loading = false;
-  let error = "";
+  let creating = $state(false);
+  const redirectTo = page.url.searchParams.get("redirectTo") ?? "/";
 
   // Redirect if already logged in
   onMount(() => {
@@ -17,72 +15,20 @@
       goto("/");
     }
   });
-
-  async function handleSubmit(event: Event) {
-    event.preventDefault();
-    // Basic validation
-    if (!username || !email || !password || !confirmPassword) {
-      toastManager.add("please fill in all fields", "error");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toastManager.add("passwords do not match", "error");
-      return;
-    }
-
-    loading = true;
-    error = "";
-
-    try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: username.trim(),
-          email: email.trim(),
-          password,
-        }),
-      });
-
-      const data = await response.json();
-      console.log(data);
-
-      if (data.status?.toString().startsWith("2")) {
-        // Redirect to home page
-        toastManager.add(data.error, "success");
-        window.location.href = "/";
-      } else {
-        toastManager.add(data.error, "error");
-      }
-    } catch (_) {
-      toastManager.add("sign up failed", "error");
-    } finally {
-      loading = false;
-    }
-  }
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "Enter") {
-      handleSubmit(event);
-    }
-  }
 </script>
 
 <svelte:head>
-  <title>Sign Up - Loggd</title>
+  <title>sign up - loggd</title>
 </svelte:head>
 
 <div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
   <div class="max-w-md w-full space-y-8">
     <div>
       <h2 class="mt-6 text-center text-3xl font-extrabold text-base-content">
-        Create your account
+        create your account
       </h2>
       <p class="mt-2 text-center text-sm text-base-content/70">
-        Or
+        or
         <a
           href="/login"
           class="font-medium text-primary hover:text-primary-focus"
@@ -92,10 +38,31 @@
       </p>
     </div>
 
-    <form class="mt-8 space-y-6" onsubmit={handleSubmit}>
+    <form
+      class="mt-8 space-y-6"
+      method="POST"
+      use:enhance={(() => {
+        creating = true;
+        return async ({ result }) => {
+          if (result.type === "success" || result.type === "redirect") {
+            toastManager.add("successfully created account", "success");
+            await invalidateAll();
+            goto(redirectTo);
+          } else if (result.type === "failure") {
+            toastManager.add(
+              result.data?.message ?? "failed to create account",
+              "error",
+            );
+          } else {
+            toastManager.add("unknown error occurred", "error");
+          }
+          creating = false;
+        };
+      }) satisfies SubmitFunction}
+    >
       <div class="space-y-2">
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Username</legend>
+          <legend class="fieldset-legend">username</legend>
           <label class="input w-full">
             <svg
               class="h-[1em] opacity-50"
@@ -118,19 +85,17 @@
               type="text"
               autocomplete="username"
               required
-              placeholder="Choose a username"
-              bind:value={username}
-              onkeydown={handleKeydown}
-              disabled={loading}
+              placeholder="choose a username"
+              disabled={creating}
             />
           </label>
           <p class="label">
-            3-30 characters, letters, numbers, hyphens, and underscores only
+            3-20 characters, letters, numbers, hyphens, and underscores only
           </p>
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Email Address</legend>
+          <legend class="fieldset-legend">email address</legend>
           <label class="input w-full">
             <svg
               class="h-[1em] opacity-50"
@@ -153,16 +118,14 @@
               type="email"
               autocomplete="email"
               required
-              placeholder="Enter your email address"
-              bind:value={email}
-              onkeydown={handleKeydown}
-              disabled={loading}
+              placeholder="enter your email address"
+              disabled={creating}
             />
           </label>
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Password</legend>
+          <legend class="fieldset-legend">password</legend>
           <label class="input w-full">
             <svg
               class="h-[1em] opacity-50"
@@ -187,19 +150,17 @@
               type="password"
               autocomplete="new-password"
               required
-              placeholder="Create a password"
-              bind:value={password}
-              onkeydown={handleKeydown}
-              disabled={loading}
+              placeholder="create a password"
+              disabled={creating}
             />
           </label>
           <p class="label">
-            At least 8 characters with uppercase, lowercase, and number
+            at least 8 characters with uppercase, lowercase, and number
           </p>
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Confirm Password</legend>
+          <legend class="fieldset-legend">confirm password</legend>
           <label class="input w-full">
             <svg
               class="h-[1em] opacity-50"
@@ -224,58 +185,24 @@
               type="password"
               autocomplete="new-password"
               required
-              placeholder="Confirm your password"
-              bind:value={confirmPassword}
-              onkeydown={handleKeydown}
-              disabled={loading}
+              placeholder="confirm your password"
+              disabled={creating}
             />
           </label>
         </fieldset>
-
-        {#if error}
-          <div class="alert alert-error">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{error}</span>
-          </div>
-        {/if}
 
         <div>
           <button
             type="submit"
             class="btn btn-primary w-full"
-            class:loading
-            disabled={loading}
+            disabled={creating}
           >
-            {#if loading}
-              Creating account...
+            {#if creating}
+              <span class="loading loading-dots loading-xs"></span>
             {:else}
-              Create account
+              create account
             {/if}
           </button>
-        </div>
-
-        <div class="text-center">
-          <p class="text-sm text-base-content/70">
-            Already have an account?
-            <a
-              href="/login"
-              class="font-medium text-primary hover:text-primary-focus"
-            >
-              Sign in here
-            </a>
-          </p>
         </div>
       </div>
     </form>

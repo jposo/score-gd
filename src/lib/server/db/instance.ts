@@ -185,7 +185,7 @@ export default class Database {
   }
 
   async findUserByEmail(email: string) {
-    const user = await this.db
+    const result = await this.db
       .select({
         id: schema.users.id,
         username: schema.users.username,
@@ -199,11 +199,11 @@ export default class Database {
       .where(eq(schema.users.email, email))
       .limit(1);
 
-    return user[0] || null;
+    return result.length === 1 ? result[0] : null;
   }
 
   async findUserByUsername(username: string) {
-    const user = await this.db
+    const result = await this.db
       .select({
         id: schema.users.id,
         username: schema.users.username,
@@ -217,7 +217,7 @@ export default class Database {
       .where(eq(schema.users.username, username))
       .limit(1);
 
-    return user[0] || null;
+    return result.length === 1 ? result[0] : null;
   }
 
   async findUserInfoByUsername(username: string) {
@@ -245,7 +245,7 @@ export default class Database {
                 )
                 ORDER BY ${schema.progress.listPlacement} ASC
               ) FILTER (WHERE ${schema.progress.status} = 'completed'), '[]')`,
-        recentActivity: sql<Activity[]>`json_agg(
+        recentActivity: sql<Activity[]>`coalesce(json_agg(
                 json_build_object(
                   'levelId', ${schema.progress.levelId},
                   'status', ${schema.progress.status},
@@ -254,14 +254,14 @@ export default class Database {
                   'createdAt', ${schema.progress.createdAt}
                 )
                 ORDER BY ${schema.progress.updatedAt} DESC
-              ) FILTER (WHERE ${schema.progress.levelId} IS NOT NULL)`,
+              ) FILTER (WHERE ${schema.progress.levelId} IS NOT NULL), '[]')`,
       })
       .from(schema.users)
       .leftJoin(schema.progress, eq(schema.users.id, schema.progress.userId))
       .where(eq(schema.users.username, username))
       .groupBy(schema.users.id);
 
-    return user[0] || null;
+    return user.length ? user[0] : null;
   }
 
   async insertUser(values: schema.InsertUser) {
@@ -273,7 +273,7 @@ export default class Database {
       createdAt: schema.users.createdAt,
     });
 
-    return user[0];
+    return user.length ? user[0] : null;
   }
 
   async updateUser(id: number, updates: Partial<schema.InsertUser>) {

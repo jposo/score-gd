@@ -8,19 +8,22 @@ import { get } from "$lib/server/gd/client";
 import type { Guess, Guesses, Hints } from "$lib/shared/types";
 
 const HINT_CONFIG = [
-  { threshold: 0, when: 1, value: "rating" },
-  { threshold: 1, when: 2, value: "difficulty" },
-  { threshold: 2, when: 3, value: "releaseYear" },
-  { threshold: 3, when: 4, value: "song" },
-  { threshold: 4, when: 5, value: "publisher" },
+  { threshold: 0, when: 1, key: "rating", name: "rating" },
+  { threshold: 1, when: 2, key: "difficulty", name: "difficulty" },
+  { threshold: 2, when: 3, key: "releaseYear", name: "release year" },
+  { threshold: 3, when: 4, key: "song", name: "song" },
+  { threshold: 4, when: 5, key: "publisher", name: "publisher" },
 ];
 
-function giveHints(guessCount: number) {
-  const hints: Record<number, string> = {};
+function getHintKeys(guessCount: number) {
+  const hints: Record<number, { key: string; name: string }> = {};
 
   for (const config of HINT_CONFIG) {
     if (guessCount >= config.threshold) {
-      hints[config.when] = config.value;
+      hints[config.when] = {
+        key: config.key,
+        name: config.name,
+      };
     }
   }
 
@@ -32,14 +35,14 @@ function getHints(
   guessCount: number,
   correct: boolean,
 ) {
-  const hintsKeys = giveHints(correct ? 6 : guessCount);
+  const hintsKeys = getHintKeys(correct ? 6 : guessCount);
   const hints: Hints = {};
 
   for (const [answerKey, answerValue] of Object.entries(answer ?? {})) {
-    for (const [hintIndex, hintKey] of Object.entries(hintsKeys)) {
-      if (hintKey === answerKey && !Array.isArray(answerValue)) {
+    for (const [hintIndex, hint] of Object.entries(hintsKeys)) {
+      if (hint.key === answerKey && !Array.isArray(answerValue)) {
         hints[parseInt(hintIndex)] = {
-          hint: hintKey,
+          hint: hint.name,
           value: answerValue ?? null,
         };
       }

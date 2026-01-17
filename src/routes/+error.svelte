@@ -2,7 +2,8 @@
   import { page } from "$app/state";
 </script>
 
-<div class="hero min-h-">
+<!-- <div class="absolute inset-0 flex justify-center items-center h-full"> -->
+<div class="hero justify-center py-12">
   <div class="hero-content text-center">
     <div class="max-w-md flex flex-row justify-center items-center gap-4">
       <div>

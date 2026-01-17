@@ -1,79 +1,59 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { page } from "$app/state";
   import { onMount } from "svelte";
   import { toastManager } from "$lib/state/toasts.svelte";
+  import { enhance } from "$app/forms";
+  import type { SubmitFunction } from "./$types";
 
-  let login = "";
-  let password = "";
-  let loading = false;
+  let loggingIn = $state(false);
+  const redirectTo = page.url.searchParams.get("redirectTo") ?? "/";
 
   // Redirect if already logged in
   onMount(() => {
     if (page.data.user) {
-      goto("/");
+      goto(redirectTo);
     }
   });
-
-  async function handleSubmit() {
-    if (!login || !password) {
-      toastManager.add("please fill in all fields", "error");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          login: login.trim(),
-          password,
-        }),
-      });
-
-      const data = await response.json();
-      console.log(data);
-      if (data.success) {
-        // Redirect to home page or the page they came from
-        toastManager.add("successfully logged in", "success");
-        const redirectTo =
-          new URL(window.location.href).searchParams.get("redirectTo") || "/";
-        window.location.href = redirectTo;
-      } else {
-        toastManager.add("login failed", "error");
-        console.error(data.error);
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      toastManager.add("login failed", "error");
-    }
-  }
-
-  function handleKeydown(event: KeyboardEvent) {
-    if (event.key === "Enter") {
-      handleSubmit();
-    }
-  }
 </script>
 
 <svelte:head>
-  <title>Login - Loggd</title>
+  <title>login - loggd</title>
 </svelte:head>
 
 <div class="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
   <div class="max-w-md w-full space-y-8">
     <div>
       <h2 class="mt-6 text-center text-3xl font-extrabold text-base-content">
-        Sign in to your account
+        sign in to your account
       </h2>
     </div>
 
-    <form class="mt-8 space-y-6" on:submit|preventDefault={handleSubmit}>
+    <form
+      class="mt-8 space-y-6"
+      method="POST"
+      use:enhance={(() => {
+        loggingIn = true;
+        return async ({ result }) => {
+          if (result.type === "success" || result.type === "redirect") {
+            toastManager.add("successfully logged in", "success");
+            await invalidateAll();
+            goto(redirectTo);
+          } else if (result.type === "failure") {
+            toastManager.add(
+              result.data?.message ?? "failed to log in",
+              "error",
+            );
+          } else {
+            toastManager.add("unknown error occurred", "error");
+          }
+          loggingIn = false;
+        };
+      }) satisfies SubmitFunction}
+    >
       <div class="space-y-2">
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Username</legend>
+          <legend class="fieldset-legend">username</legend>
           <label class="input w-full">
             <svg
               class="h-[1em] opacity-50"
@@ -96,16 +76,14 @@
               type="text"
               autocomplete="username"
               required
-              placeholder="Enter your email or username"
-              bind:value={login}
-              on:keydown={handleKeydown}
-              disabled={loading}
+              placeholder="enter your email or username"
+              disabled={loggingIn}
             />
           </label>
         </fieldset>
 
         <fieldset class="fieldset">
-          <legend class="fieldset-legend">Password</legend>
+          <legend class="fieldset-legend">password</legend>
           <label class="input w-full">
             <svg
               class="h-[1em] opacity-50"
@@ -131,9 +109,7 @@
               autocomplete="current-password"
               required
               placeholder="Enter your password"
-              bind:value={password}
-              on:keydown={handleKeydown}
-              disabled={loading}
+              disabled={loggingIn}
             />
           </label>
         </fieldset>
@@ -142,25 +118,24 @@
           <button
             type="submit"
             class="btn btn-primary w-full"
-            class:loading
-            disabled={loading}
+            disabled={loggingIn}
           >
-            {#if loading}
-              Signing in...
+            {#if loggingIn}
+              <span class="loading loading-dots loading-xs"></span>
             {:else}
-              Sign in
+              sign in
             {/if}
           </button>
         </div>
 
         <div class="text-center">
           <p class="text-sm text-base-content/70">
-            Don't have an account?
+            don't have an account?
             <a
               href="/signup"
               class="font-medium text-primary hover:text-primary-focus"
             >
-              Sign up here
+              sign up here
             </a>
           </p>
         </div>

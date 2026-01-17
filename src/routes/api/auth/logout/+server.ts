@@ -15,10 +15,10 @@ export const POST: RequestHandler = ({ cookies }) => {
 
     return json({
       success: true,
-      message: "Logout successful",
+      message: "logout successful",
     });
   } catch (err) {
     console.error("Logout error:", err);
-    return error(500, "Internal server error");
+    return error(500, "internal server error");
   }
 };

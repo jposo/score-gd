@@ -171,7 +171,7 @@
           </label>
           <button
             type="submit"
-            class="btn btn-2xl join-item w-18"
+            class="btn btn-primary btn-2xl join-item w-18"
             disabled={isSubmitting}
           >
             {#if isSubmitting}
@@ -254,12 +254,12 @@
 <div class="flex w-full flex-col my-4 items-center">
   {#each guesses.toReversed() ?? [] as guess}
     <div
-      class="card card-border max-w-xl {guess.correct
-        ? 'border-success shadow-lg shadow-success/30'
-        : 'border-error shadow-lg shadow-error/30'} my-1 w-1/2 bg-base-300 rounded-box grid h-10 place-items-center"
+      class="card card-border max-w-xl flex flex-row {guess.correct
+        ? 'bg-success text-success-content'
+        : 'bg-error text-error-content'} my-1 w-1/2 bg-base-300 rounded-box h-10 items-center justify-center gap-1"
     >
-      {guess.name}
-      <!-- <span class="font-bold">{guess.publisher}</span> -->
+      <span class="font-bold">{guess.name}</span>
+      <span>{guess.publisher}</span>
     </div>
   {/each}
 </div>

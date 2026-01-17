@@ -4,10 +4,12 @@
   import { themeManager } from "$lib/state/theme.svelte";
   import { onMount } from "svelte";
   import type { PageData } from "./$types";
-  import { goto } from "$app/navigation";
+  import { goto, invalidateAll } from "$app/navigation";
   import { guessesState } from "$lib/state/guesses.svelte";
   import Toast from "$lib/components/Toast.svelte";
   import { toastManager } from "$lib/state/toasts.svelte";
+  import { navigating } from "$app/state";
+  import type { SearchResult } from "$lib/shared/types";
 
   let { children, data }: { children: any; data: PageData } = $props();
 
@@ -15,9 +17,7 @@
   let searchModal: HTMLDialogElement;
   let guesses = $derived(guessesState.value);
 
-  let searchResults:
-    | { id: number; name: string; publisher: string }[]
-    | undefined = $state();
+  let searchResults: SearchResult[] = $state([]);
   let isSearchOpen = $state(false);
   let searchInput: string | undefined = $state();
   let search: HTMLInputElement;
@@ -45,7 +45,8 @@
 
       if (response.ok) {
         // Reload the page to clear all client-side state
-        window.location.href = "/";
+        await invalidateAll();
+        // window.location.href = "/";
       } else {
         console.error("Logout failed");
       }
@@ -114,7 +115,7 @@
         search...
       </button>
       <div class="dropdown dropdown-end">
-        {#if searchResults && searchResults.length > 0}
+        {#if searchResults.length > 0}
           <ul
             tabindex="-1"
             class="dropdown-content z-10 p-2 mt-2 shadow bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
@@ -298,7 +299,7 @@
         </div>
       {:else}
         <!-- Unauthenticated user options -->
-        <a href="/signup" class="btn btn-ghost w-24">sign Up</a>
+        <a href="/signup" class="btn btn-ghost w-24">sign up</a>
         <a href="/login" class="btn btn-primary w-24">login</a>
       {/if}
     </div>
@@ -405,7 +406,13 @@
   </dialog>
 
   <main class="flex-grow">
-    {@render children?.()}
+    {#if navigating.complete}
+      <div class="absolute inset-0 flex justify-center items-center h-full">
+        <span class="loading loading-dots loading-xl"></span>
+      </div>
+    {:else}
+      {@render children?.()}
+    {/if}
   </main>
 
   <footer

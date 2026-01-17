@@ -22,13 +22,15 @@
   let videoUrl = $derived(data.level.videoUrl);
 
   // progress data (undefined means no user is logged in)
-  let score = $derived(data.progress?.score);
-  let status = $derived(data.progress?.status);
-  let completionPercentage = $derived(data.progress?.completionPercentage);
-  let attempts = $derived(data.progress?.attempts);
-  let startDate = $derived(data.progress?.startedAt);
-  let completionDate = $derived(data.progress?.completedAt);
-  let review = $derived(data.progress?.review);
+  let score = $derived(data.progress?.score ?? undefined);
+  let status = $derived(data.progress?.status ?? undefined);
+  let completionPercentage = $derived(
+    data.progress?.completionPercentage ?? undefined,
+  );
+  let attempts = $derived(data.progress?.attempts ?? undefined);
+  let startDate = $derived(data.progress?.startedAt ?? undefined);
+  let completionDate = $derived(data.progress?.completedAt ?? undefined);
+  let review = $derived(data.progress?.review ?? undefined);
 
   const scoreOptions = [
     { value: 1, label: "terrible" },
@@ -106,6 +108,17 @@
               >
                 <select
                   class="select"
+                  name="status"
+                  onchange={quickUpdate}
+                  bind:value={status}
+                >
+                  <option disabled selected value={undefined}>status</option>
+                  {#each statusOptions as option}
+                    <option value={option.value}>{option.label}</option>
+                  {/each}
+                </select>
+                <select
+                  class="select"
                   name="score"
                   onchange={quickUpdate}
                   bind:value={score}
@@ -115,17 +128,6 @@
                     <option value={option.value}
                       >{option.value} - {option.label}</option
                     >
-                  {/each}
-                </select>
-                <select
-                  class="select"
-                  name="status"
-                  onchange={quickUpdate}
-                  bind:value={status}
-                >
-                  <option disabled selected value={undefined}>status</option>
-                  {#each statusOptions as option}
-                    <option value={option.value}>{option.label}</option>
                   {/each}
                 </select>
               </form>

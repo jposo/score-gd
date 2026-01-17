@@ -110,7 +110,7 @@ export const load: PageServerLoad = async ({
 };
 
 export const actions: Actions = {
-  updateProgress: async (event: RequestEvent) => {
+  updateProgress: async (event) => {
     const { request, params } = event;
 
     const user = await requireAuth(event);
@@ -155,7 +155,7 @@ export const actions: Actions = {
       return fail(500, { message: "internal server error" });
     }
   },
-  updateLevel: async (event: RequestEvent) => {
+  updateLevel: async (event) => {
     const user = await requireAuthWithRoles(event, ["admin"]);
 
     const levelId = parseInt(event.params.id!);

@@ -31,8 +31,9 @@ export const load: PageServerLoad = async (event) => {
   if (!allLevels) {
     error(500, "failed to fetch levels");
   }
+
   const levelMap = new Map(
-    allLevels.levels.map((level) => [
+    allLevels.result.map((level) => [
       level.id,
       {
         name: level.name,
