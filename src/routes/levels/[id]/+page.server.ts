@@ -57,6 +57,10 @@ const UpdateLevelForm = z.object({
   videoUrl: z.preprocess(process, z.url().nullable().optional()),
 });
 
+const HideReviewForm = z.object({
+  reviewId: z.coerce.number(),
+});
+
 const db = Database.instance;
 
 export const load: PageServerLoad = async ({
@@ -193,6 +197,35 @@ export const actions: Actions = {
         return { success: true, message: "sucessfully updated level" };
       } else {
         return fail(422, { message: "failed to update level" });
+      }
+    } catch (err) {
+      console.error(err);
+      return fail(500, { message: "internal server error" });
+    }
+  },
+  hideReview: async (event) => {
+    const user = await requireAuthWithRoles(event, ["admin"]);
+
+    const form = await event.request.formData();
+    const entries = Object.fromEntries(form);
+
+    const result = HideReviewForm.safeParse(entries);
+
+    if (!result.success) {
+      return fail(400, {
+        message: "invalid input",
+        error: result.error.message,
+      });
+    }
+
+    const data = result.data;
+
+    try {
+      const result = await db.hideReview(data.reviewId);
+      if (result) {
+        return { success: true, message: "sucessfully hidden review" };
+      } else {
+        return fail(422, { message: "failed to hide review" });
       }
     } catch (err) {
       console.error(err);

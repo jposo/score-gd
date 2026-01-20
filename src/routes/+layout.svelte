@@ -10,6 +10,7 @@
   import { toastManager } from "$lib/state/toasts.svelte";
   import { navigating } from "$app/state";
   import type { SearchResult } from "$lib/shared/types";
+  import Avatar from "$lib/components/Avatar.svelte";
 
   let { children, data }: { children: any; data: PageData } = $props();
 
@@ -53,10 +54,6 @@
     } catch (error) {
       console.error("Logout error:", error);
     }
-  }
-
-  function navigateToLevel(gdId: number) {
-    goto(`/levels/${gdId}`);
   }
 
   function openSearch() {
@@ -260,24 +257,7 @@
       {#if data.user}
         <!-- Authenticated user menu -->
         <div class="dropdown dropdown-end">
-          <div
-            tabindex="0"
-            role="button"
-            class="btn btn-ghost btn-circle avatar {data.user.profilePicturePath
-              ? ''
-              : 'avatar-placeholder'} "
-          >
-            <div class="w-10 rounded-full text-neutral-content bg-neutral">
-              {#if data.user.profilePicturePath}
-                <img
-                  alt={data.user.username}
-                  src={data.user.profilePicturePath}
-                />
-              {:else}
-                <span class="text-sm">{data.user.username.charAt(0)}</span>
-              {/if}
-            </div>
-          </div>
+          <Avatar username={data.user.username} />
           <ul
             tabindex="-1"
             class="menu menu-sm dropdown-content bg-base-300 rounded-box z-1 mt-2 w-52 p-2 shadow"

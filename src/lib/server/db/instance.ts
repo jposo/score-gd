@@ -19,6 +19,7 @@ import {
 } from "drizzle-orm";
 
 type Review = {
+  id: number;
   username: string;
   status: string;
   review: string | null;
@@ -323,6 +324,7 @@ export default class Database {
         ),
         reviews: sql<Review[]>`json_agg(
           json_build_object(
+            'id', ${schema.progress.id},
             'username', ${schema.users.username},
             'status', ${schema.progress.status},
             'score', ${schema.progress.score},
@@ -509,5 +511,15 @@ export default class Database {
       .from(schema.sources);
 
     return result;
+  }
+
+  async hideReview(reviewId: number) {
+    const result = await this.db
+      .update(schema.progress)
+      .set({ hideReview: true })
+      .where(eq(schema.progress.id, reviewId))
+      .returning();
+
+    return result.length ? result[0] : null;
   }
 }

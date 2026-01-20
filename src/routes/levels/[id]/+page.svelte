@@ -65,187 +65,187 @@
 </svelte:head>
 
 <div class="container mx-auto p-4">
-  {#if data.level}
-    <div class="flex flex-row gap-8">
-      <div class="flex flex-col gap-4 w-1/5">
-        {#if data.user}
-          {#if data.user.roles?.includes("admin")}
-            <div class="card bg-base-200 w-full">
-              <div class="card-body">
-                <button
-                  class="btn btn-accent btn-block"
-                  onclick={() => levelDetails?.showModal()}
-                  >edit level details</button
-                >
-              </div>
-            </div>
-          {/if}
-
+  <div class="flex flex-row gap-8">
+    <div class="flex flex-col gap-4 w-1/5">
+      {#if data.user}
+        {#if data.user.roles?.includes("admin")}
           <div class="card bg-base-200 w-full">
             <div class="card-body">
-              <form
-                class="space-y-2"
-                method="POST"
-                bind:this={quickUpdateForm}
-                action="?/updateProgress"
-                use:enhance={(() => {
-                  return async ({ result }) => {
-                    if (result.type === "success") {
-                      toastManager.add(
-                        result.data?.message ?? "successfully updated progress",
-                        "success",
-                      );
-                    } else if (result.type === "failure") {
-                      toastManager.add(
-                        result.data?.message ?? "failed to update progress",
-                        "error",
-                      );
-                    } else {
-                      toastManager.add("unknown error occurred", "error");
-                    }
-                  };
-                }) satisfies SubmitFunction}
-              >
-                <select
-                  class="select"
-                  name="status"
-                  onchange={quickUpdate}
-                  bind:value={status}
-                >
-                  <option disabled selected value={undefined}>status</option>
-                  {#each statusOptions as option}
-                    <option value={option.value}>{option.label}</option>
-                  {/each}
-                </select>
-                <select
-                  class="select"
-                  name="score"
-                  onchange={quickUpdate}
-                  bind:value={score}
-                >
-                  <option disabled selected value={undefined}>score</option>
-                  {#each scoreOptions as option}
-                    <option value={option.value}
-                      >{option.value} - {option.label}</option
-                    >
-                  {/each}
-                </select>
-              </form>
               <button
-                class="btn btn-secondary btn-block"
-                onclick={() => progressDetails?.showModal()}
-                >more details</button
+                class="btn btn-accent btn-block"
+                onclick={() => levelDetails?.showModal()}
+                >edit level details</button
               >
             </div>
           </div>
         {/if}
-        <!-- Stats -->
-        <div class="stats stats-vertical shadow bg-base-200 w-full">
-          <div class="stat">
-            <div class="stat-title">score</div>
-            <div class="stat-value">
-              {average ? average.toFixed(1) : "N/A"}
-            </div>
-          </div>
 
-          <div class="stat">
-            <div class="stat-title">completions</div>
-            <div class="stat-value">
-              {data.level.completionCount}
-            </div>
-          </div>
-
-          <div class="stat">
-            <div class="stat-title">reviews</div>
-            <div class="stat-value">
-              {data.level.reviewCount}
-            </div>
+        <div class="card bg-base-200 w-full">
+          <div class="card-body">
+            <form
+              class="space-y-2"
+              method="POST"
+              bind:this={quickUpdateForm}
+              action="?/updateProgress"
+              use:enhance={(() => {
+                return async ({ result }) => {
+                  if (result.type === "success") {
+                    toastManager.add(
+                      result.data?.message ?? "successfully updated progress",
+                      "success",
+                    );
+                  } else if (result.type === "failure") {
+                    toastManager.add(
+                      result.data?.message ?? "failed to update progress",
+                      "error",
+                    );
+                  } else {
+                    toastManager.add("unknown error occurred", "error");
+                  }
+                };
+              }) satisfies SubmitFunction}
+            >
+              <select
+                class="select"
+                name="status"
+                onchange={quickUpdate}
+                bind:value={status}
+              >
+                <option disabled selected value={undefined}>status</option>
+                {#each statusOptions as option}
+                  <option value={option.value}>{option.label}</option>
+                {/each}
+              </select>
+              <select
+                class="select"
+                name="score"
+                onchange={quickUpdate}
+                bind:value={score}
+              >
+                <option disabled selected value={undefined}>score</option>
+                {#each scoreOptions as option}
+                  <option value={option.value}
+                    >{option.value} - {option.label}</option
+                  >
+                {/each}
+              </select>
+            </form>
+            <button
+              class="btn btn-secondary btn-block"
+              onclick={() => progressDetails?.showModal()}>more details</button
+            >
           </div>
         </div>
-      </div>
-      <!-- Level info -->
-      <div class="flex flex-col gap-8 w-4/5">
-        <div class="flex flex-row items-end w-full">
-          <div class="space-y-2 w-3/5">
-            <h1 class="text-4xl">
-              <span class="font-bold">{data.level.name}</span>
-              <span class="text-sm">id: {data.level.id}</span>
-            </h1>
-            <h2 class="text-2xl">
-              {#if data.level.releaseDate}
-                released on <span class="font-semibold"
-                  >{dateToLocaleString(new Date(data.level.releaseDate))}</span
-                >
-              {/if}
-              by
-              <span class="font-semibold">{data.level.publisher}</span>
-            </h2>
-            <p class="italic">{data.level.description}</p>
-            <span>
-              <div class="badge badge-neutral">
-                <span class="font-semibold">{data.level.songTitle}</span>
-                by
-                <span class="font-semibold">{data.level.songArtist}</span>
-              </div>
-              <div class="badge badge-neutral">
-                {data.level.length.toLowerCase()}
-              </div>
-              {#if data.level.twoPlayer}
-                <div class="badge badge-neutral">two-player</div>
-              {/if}
-              {#if data.level.coins && data.level.coins >= 1}
-                <div class="badge badge-neutral">
-                  {data.level.coins} coins
-                </div>
-              {/if}
-              <div class="badge badge-warning">
-                {data.level.rating.toLowerCase()}
-              </div>
-              <div class="badge badge-error">
-                {data.level.difficulty.toLowerCase()}
-              </div>
-            </span>
-          </div>
-          <div class="w-2/5 flex justify-end">
-            {#if data.level.videoUrl}
-              <iframe
-                width="388"
-                height="218"
-                src={getYouTubeEmbedUrl(data.level.videoUrl)}
-                title="YouTube video player"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin"
-                allowfullscreen
-              ></iframe>
-            {/if}
+      {/if}
+      <!-- Stats -->
+      <div class="stats stats-vertical shadow bg-base-200 w-full">
+        <div class="stat">
+          <div class="stat-title">score</div>
+          <div class="stat-value">
+            {average ? average.toFixed(1) : "N/A"}
           </div>
         </div>
-        <!-- Reviews -->
-        <div class="flex flex-col gap-4">
-          <h3 class="text-xl">reviews</h3>
-          {#if !data.level.reviews || data.level.reviews.length == 0}
-            <div class="opacity-50">no reviews yet.</div>
-          {:else}
-            {#each data.level.reviews as r}
-              <Review
-                username={r.username}
-                profilePictureUrl={r.profilePicturePath}
-                rating={r.score}
-                attempts={r.attempts}
-                status={r.status}
-                date={new Date(r.updatedAt)}
-                review={r.review!}
-              />
-              <div class="divider"></div>
-            {/each}
-          {/if}
+
+        <div class="stat">
+          <div class="stat-title">completions</div>
+          <div class="stat-value">
+            {data.level.completionCount}
+          </div>
+        </div>
+
+        <div class="stat">
+          <div class="stat-title">reviews</div>
+          <div class="stat-value">
+            {data.level.reviewCount}
+          </div>
         </div>
       </div>
     </div>
-  {:else}
-    <p>No level found</p>
-  {/if}
+    <!-- Level info -->
+    <div class="flex flex-col gap-8 w-4/5">
+      <div class="flex flex-row items-end w-full">
+        <div class="space-y-2 w-3/5">
+          <h1 class="text-4xl">
+            <span class="font-bold">{data.level.name}</span>
+            <span class="text-sm">id: {data.level.id}</span>
+          </h1>
+          <h2 class="text-2xl">
+            {#if data.level.releaseDate}
+              released on <span class="font-semibold"
+                >{dateToLocaleString(
+                  new Date(data.level.releaseDate),
+                ).toLowerCase()}</span
+              >
+            {/if}
+            by
+            <span class="font-semibold">{data.level.publisher}</span>
+          </h2>
+          <p class="italic">{data.level.description}</p>
+          <span>
+            <div class="badge badge-neutral">
+              <span class="font-semibold">{data.level.songTitle}</span>
+              by
+              <span class="font-semibold">{data.level.songArtist}</span>
+            </div>
+            <div class="badge badge-neutral">
+              {data.level.length.toLowerCase()}
+            </div>
+            {#if data.level.twoPlayer}
+              <div class="badge badge-neutral">two-player</div>
+            {/if}
+            {#if data.level.coins && data.level.coins >= 1}
+              <div class="badge badge-neutral">
+                {data.level.coins} coins
+              </div>
+            {/if}
+            <div class="badge badge-warning">
+              {data.level.rating.toLowerCase()}
+            </div>
+            <div class="badge badge-error">
+              {data.level.difficulty.toLowerCase()}
+            </div>
+          </span>
+        </div>
+        <div class="w-2/5 flex justify-end">
+          {#if data.level.videoUrl}
+            <iframe
+              width="388"
+              height="218"
+              src={getYouTubeEmbedUrl(data.level.videoUrl)}
+              title="YouTube video player"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen
+            ></iframe>
+          {/if}
+        </div>
+      </div>
+      <!-- Reviews -->
+      <div class="flex flex-col gap-4">
+        <h3 class="text-xl font-bold">reviews</h3>
+        {#if !data.level.reviews || data.level.reviews.length == 0}
+          <div class="opacity-50">no reviews yet.</div>
+        {:else}
+          {#each data.level.reviews as r}
+            <Review
+              id={r.id}
+              username={r.username}
+              profilePictureUrl={r.profilePicturePath}
+              rating={r.score}
+              attempts={r.attempts}
+              status={r.status}
+              date={new Date(r.updatedAt)}
+              review={r.review!}
+              showModeratorOptions={data.user?.roles?.includes("admin") ??
+                false}
+            />
+            <div class="divider"></div>
+          {/each}
+        {/if}
+      </div>
+    </div>
+  </div>
 </div>
 
 <dialog bind:this={levelDetails} class="modal backdrop-blur-sm">

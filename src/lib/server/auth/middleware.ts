@@ -81,7 +81,7 @@ export async function requireAuthWithRoles(
   redirectTo?: string,
 ) {
   const user = await requireAuth(event, redirectTo);
-  if (!(user.roles as Role[]).some((role) => roles.includes(role))) {
+  if (!(user.roles as Role[] | null)?.some((role) => roles.includes(role))) {
     throw redirect(302, redirectTo || "/");
   }
   return user;
