@@ -35,8 +35,6 @@ export class Parser {
     const creators = this.parseCreators(creatorsStr);
     const songs = this.parseSongs(songsStr);
 
-    // console.log(rawLevels, songs);
-
     const levels = rawLevels.map((level) => {
       const creator: Creator = creators.find(
         (c) => c.userId === level.playerId,
@@ -46,8 +44,6 @@ export class Parser {
       const song = level.customSongId
         ? this.parseCustomSong(level, songs)
         : this.parseOfficialSong(level);
-
-      let description: string | null = null;
 
       return {
         id: level.id!,

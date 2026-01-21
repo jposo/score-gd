@@ -1,4 +1,4 @@
-import * as z from "zod";
+import { z } from "zod";
 import * as env from "$env/static/private";
 import * as envPublic from "$env/static/public";
 

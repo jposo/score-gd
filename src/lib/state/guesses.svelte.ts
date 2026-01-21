@@ -1,7 +1,7 @@
 import { browser } from "$app/environment";
 import type { Guesses, Guess } from "$lib/shared/types";
 
-export let guesses = $state<
+export const guesses = $state<
   Record<
     number,
     {

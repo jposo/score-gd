@@ -8,7 +8,6 @@ import {
   desc,
   and,
   or,
-  ilike,
   asc,
   lte,
   avg,

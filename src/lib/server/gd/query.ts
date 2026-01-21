@@ -16,6 +16,7 @@ export abstract class BaseQuery<T> implements PromiseLike<T> {
     // Updated signature to match TypeScript's expectations
     then<TResult1 = T, TResult2 = never>(
         onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+        // deno-lint-ignore no-explicit-any
         onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null,
     ): Promise<TResult1 | TResult2> {
         // We wrap the internal logic in a real Promise

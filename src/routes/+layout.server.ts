@@ -27,7 +27,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
     try {
       const user = await db.findUserInfoByUsername(authToken.username);
       return { vault, user };
-    } catch (error) {
+    } catch {
       // delete cookie
       cookies.set(AUTH_COOKIE_NAME, "", { path: "/" });
       return { vault, user: null };

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import env from "$lib/server/env";
+import { Buffer } from "node:buffer";
 
 const supabase = createClient(
   env.public.PUBLIC_SUPABASE_PROJECT_URL,

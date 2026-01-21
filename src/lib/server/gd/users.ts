@@ -1,13 +1,15 @@
 import { BaseQuery } from "./query";
 import { Parser } from "./parser";
 
-export class UserQuery extends BaseQuery<any> {
+type UserSearchResponse = ReturnType<typeof Parser.prototype.parseUserSearch>;
+
+export class UserQuery extends BaseQuery<UserSearchResponse> {
   search(query: string) {
     this.query.str = query;
     return this;
   }
 
-  protected async execute(): Promise<any> {
+  protected async execute(): Promise<UserSearchResponse> {
     const response = await fetch(
       this.BOOMLINGS_BASE_API + "/getGJUsers20.php",
       {

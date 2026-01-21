@@ -1,12 +1,12 @@
-import type { Actions, PageServerLoad, RequestEvent } from "./$types";
+import type { Actions, PageServerLoad } from "./$types";
 import Database from "$lib/server/db/instance";
-import { getCurrentDay, getProjectedDate } from "$lib/server/utils";
+import { getProjectedDate } from "$lib/server/utils";
 import { error, fail } from "@sveltejs/kit";
 import { uploadImages } from "$lib/server/db/supabase";
 import { requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { randomUUID } from "crypto";
 import { Jimp } from "jimp";
-import * as z from "zod";
+import { z } from "zod";
 import { Buffer } from "node:buffer";
 
 const MAX_FILE_SIZE = 1024 * 100; //100 kb

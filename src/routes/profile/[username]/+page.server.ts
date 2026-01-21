@@ -4,7 +4,7 @@ import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import Database from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
-import * as z from "zod";
+import { z } from "zod";
 
 const UpdateList = z.object({
   list: z.array(z.number().min(1)),

@@ -1,18 +1,18 @@
 import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
-import type { PageServerLoad, Actions, RequestEvent } from "./$types";
+import type { PageServerLoad, Actions } from "./$types";
 import Database from "$lib/server/db/instance";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
-import { isVideoUrl } from "$lib/tools/utils";
-import * as z from "zod";
+import { z } from "zod";
 import { get } from "$lib/server/gd/client";
-import type { InsertLevel } from "$lib/server/db/schema";
+import { statusEnum, type InsertLevel } from "$lib/server/db/schema";
 
+// deno-lint-ignore no-explicit-any
 const process = (val: any) => (val === "" ? null : val);
 
 const ProgressForm = z.object({
   userId: z.number().min(1),
   levelId: z.number().min(1),
-  status: z.enum(["to try", "in progress", "completed", "dropped"]).optional(),
+  status: z.enum(statusEnum.enumValues).optional(),
   score: z.coerce.number().min(1).max(10).nullable().optional(),
   completionPercentage: z.preprocess(
     process,
@@ -223,6 +223,7 @@ export const actions: Actions = {
     try {
       const result = await db.hideReview(data.reviewId);
       if (result) {
+        console.log(`user ${user.username} (id:${user.id}) hid review ${data.reviewId}`);
         return { success: true, message: "sucessfully hidden review" };
       } else {
         return fail(422, { message: "failed to hide review" });

@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from "./$types";
 import { requireAuth } from "$lib/server/auth/middleware";
 import Database from "$lib/server/db/instance";
 import { fail } from "@sveltejs/kit";
-import * as z from "zod";
+import { z } from "zod";
 
 const UpdateUser = z.object({
   bio: z.string().max(500).nullable(),

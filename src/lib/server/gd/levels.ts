@@ -201,6 +201,5 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
       ...onlineResults,
       result: [...officialResults, ...(onlineResults?.result || [])],
     };
-    return parser.parseLevelSearch(text);
   }
 }

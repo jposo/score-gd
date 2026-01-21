@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { redirectIfAuthenticated } from "$lib/server/auth/middleware";
-import * as z from "zod";
-import { fail, isRedirect, redirect } from "@sveltejs/kit";
+import { z } from "zod";
+import { fail } from "@sveltejs/kit";
 import Database from "$lib/server/db/instance";
 import {
   cookieOptions,

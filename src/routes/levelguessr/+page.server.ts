@@ -2,7 +2,7 @@ import type { PageServerLoad, Actions } from "./$types";
 import Database from "$lib/server/db/instance";
 import env from "$lib/server/env";
 import { error, fail, type Cookies } from "@sveltejs/kit";
-import * as z from "zod";
+import { z } from "zod";
 import { getCurrentDay, getNextDayDateTime } from "$lib/server/utils";
 import { get } from "$lib/server/gd/client";
 import type { Guess, Guesses, Hints } from "$lib/shared/types";
