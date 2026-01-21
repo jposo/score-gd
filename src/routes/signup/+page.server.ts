@@ -23,18 +23,15 @@ const Register = z.object({
   password: z.string().min(8),
 });
 
-export const load: PageServerLoad = async (event) => {
-  // Redirect authenticated users away from signup page
-  await redirectIfAuthenticated(event);
+export const load: PageServerLoad = async ({cookies, url}) => {
+  await redirectIfAuthenticated(cookies);
 
   return {};
 };
 
 export const actions: Actions = {
-  default: async (event) => {
+  default: async ({ request, cookies }) => {
     try {
-      const { request, cookies } = event;
-
       const form = await request.formData();
       const entries = Object.fromEntries(form);
 

@@ -78,10 +78,8 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
-  default: async (event) => {
-    const { request } = event;
-
-    const user = await requireAuth(event);
+  default: async ({ request, cookies, url }) => {
+    const user = await requireAuth(cookies, url);
 
     try {
       const form = await request.formData();

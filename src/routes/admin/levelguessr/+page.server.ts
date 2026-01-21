@@ -26,8 +26,8 @@ const QueueForm = z.object({
   }, z.array(z.string()).length(6)),
 });
 
-export const load: PageServerLoad = async (event) => {
-  const user = await requireAuthWithRoles(event, ["owner"]);
+export const load: PageServerLoad = async ({cookies, url}) => {
+  const user = await requireAuthWithRoles(cookies, url, ["owner"]);
 
   const storedDays = await db.findAllDays();
   const latestDay = await db.findLatestDay();
@@ -41,15 +41,13 @@ export const load: PageServerLoad = async (event) => {
     storedDays: storedDays,
     sources,
     latestDay,
-    projectedDate: getProjectedDate(latestDay!),
+    projectedDate: getProjectedDate(latestDay),
   };
 };
 
 export const actions: Actions = {
-  enqueue: async (event) => {
-    await requireAuthWithRoles(event, ["owner"]);
-
-    const { request } = event;
+  enqueue: async ({ cookies, url, request }) => {
+    await requireAuthWithRoles(cookies, url, ["owner"]);
 
     const form = await request.formData();
     const entries = Object.fromEntries(form);
@@ -65,10 +63,11 @@ export const actions: Actions = {
 
     const data = result.data;
     const latestDay = await db.findLatestDay();
+    if (latestDay === null) {
+      return fail(404, { message: "no latest day found" });
+    }
 
-    const nextDay = latestDay! + 1;
-
-    // data.frames.sort((a, b) => a.index - b.index);
+    const nextDay = latestDay + 1;
 
     const files: { file: Buffer; filepath: string }[] = [];
     for (const frame of data.frames) {

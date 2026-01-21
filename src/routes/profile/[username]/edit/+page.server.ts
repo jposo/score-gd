@@ -17,19 +17,15 @@ const UpdateUser = z.object({
     ),
 });
 
-export const load: PageServerLoad = async (event) => {
-  const user = await requireAuth(event);
+export const load: PageServerLoad = async ({cookies, url}) => {
+  const user = await requireAuth(cookies, url);
 
   return { user };
 };
 
 export const actions: Actions = {
-  default: async (event) => {
-    const { request } = event;
-
-    // Ensure user is authenticated
-    const user = await requireAuth(event);
-
+  default: async ({ request, cookies, url }) => {
+    const user = await requireAuth(cookies, url);
     try {
       const form = await request.formData();
 

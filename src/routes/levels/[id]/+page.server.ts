@@ -114,10 +114,9 @@ export const load: PageServerLoad = async ({
 };
 
 export const actions: Actions = {
-  updateProgress: async (event) => {
-    const { request, params } = event;
+  updateProgress: async ({ cookies, url, request, params }) => {
 
-    const user = await requireAuth(event);
+    const user = await requireAuth(cookies, url);
 
     const levelId = parseInt(params.id!);
 
@@ -159,16 +158,16 @@ export const actions: Actions = {
       return fail(500, { message: "internal server error" });
     }
   },
-  updateLevel: async (event) => {
-    const user = await requireAuthWithRoles(event, ["admin"]);
+  updateLevel: async ({ cookies, url, request, params }) => {
+    const user = await requireAuthWithRoles(cookies, url, ["admin"]);
 
-    const levelId = parseInt(event.params.id!);
+    const levelId = parseInt(params.id!);
 
     if (Number.isNaN(levelId)) {
       return fail(400, { message: "invalid level id" });
     }
 
-    const form = await event.request.formData();
+    const form = await request.formData();
 
     const entries = Object.fromEntries(form);
 
@@ -203,10 +202,10 @@ export const actions: Actions = {
       return fail(500, { message: "internal server error" });
     }
   },
-  hideReview: async (event) => {
-    const user = await requireAuthWithRoles(event, ["admin"]);
+  hideReview: async ({ cookies, url, request }) => {
+    const user = await requireAuthWithRoles(cookies, url, ["admin"]);
 
-    const form = await event.request.formData();
+    const form = await request.formData();
     const entries = Object.fromEntries(form);
 
     const result = HideReviewForm.safeParse(entries);
