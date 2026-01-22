@@ -1,5 +1,5 @@
 import type { PageServerLoad, Actions } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import env from "$lib/server/env";
 import { error, fail, type Cookies } from "@sveltejs/kit";
 import { z } from "zod";
@@ -104,8 +104,6 @@ const Guess = z.object({
   day: z.coerce.number().min(1).max(9999),
   guessId: z.coerce.number().min(1),
 });
-
-const db = Database.instance;
 
 export const load: PageServerLoad = async ({ url, cookies }) => {
   const currentDay = getCurrentDay();

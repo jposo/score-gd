@@ -1,5 +1,5 @@
 import type { Actions, PageServerLoad } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { getProjectedDate } from "$lib/server/utils";
 import { error, fail } from "@sveltejs/kit";
 import { uploadImages } from "$lib/server/db/supabase";
@@ -10,8 +10,6 @@ import { z } from "zod";
 import { Buffer } from "node:buffer";
 
 const MAX_FILE_SIZE = 1024 * 100; //100 kb
-
-const db = Database.instance;
 
 const QueueForm = z.object({
   levelId: z.coerce.number().min(1),
@@ -26,7 +24,7 @@ const QueueForm = z.object({
   }, z.array(z.string()).length(6)),
 });
 
-export const load: PageServerLoad = async ({cookies, url}) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
   const user = await requireAuthWithRoles(cookies, url, ["owner"]);
 
   const storedDays = await db.findAllDays();

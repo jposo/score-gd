@@ -47,7 +47,7 @@ type List = {
   attempts: number;
 }[];
 
-export default class Database {
+class Database {
   static #instance: Database;
   private db: ReturnType<typeof drizzle>;
 
@@ -522,3 +522,5 @@ export default class Database {
     return result.length ? result[0] : null;
   }
 }
+const db = Database.instance;
+export default db;

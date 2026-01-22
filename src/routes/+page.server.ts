@@ -1,12 +1,10 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 
 export const load: PageServerLoad = async () => {
   try {
-    const db = Database.instance;
-
     const levelIds = await db.findTopRatedLevels();
     const ids = levelIds.map((level) => level.id);
     const result = await get("levels").ids(ids);

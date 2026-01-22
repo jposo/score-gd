@@ -2,15 +2,13 @@ import type { PageServerLoad, Actions } from "./$types";
 import { redirectIfAuthenticated } from "$lib/server/auth/middleware";
 import { z } from "zod";
 import { fail } from "@sveltejs/kit";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import {
   cookieOptions,
   generateToken,
   verifyPassword,
 } from "$lib/server/auth/utils";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
-
-const db = Database.instance;
 
 const Login = z.object({
   login: z.union([

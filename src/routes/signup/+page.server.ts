@@ -8,10 +8,8 @@ import {
   hashPassword,
   isValidPassword,
 } from "$lib/server/auth/utils";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
-
-const db = Database.instance;
 
 const Register = z.object({
   username: z
@@ -23,7 +21,7 @@ const Register = z.object({
   password: z.string().min(8),
 });
 
-export const load: PageServerLoad = async ({cookies, url}) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
   await redirectIfAuthenticated(cookies);
 
   return {};

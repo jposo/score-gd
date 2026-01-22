@@ -1,6 +1,6 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { requireAuth } from "$lib/server/auth/middleware";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
 
@@ -17,7 +17,7 @@ const UpdateUser = z.object({
     ),
 });
 
-export const load: PageServerLoad = async ({cookies, url}) => {
+export const load: PageServerLoad = async ({ cookies, url }) => {
   const user = await requireAuth(cookies, url);
 
   return { user };
@@ -42,7 +42,7 @@ export const actions: Actions = {
 
       const data = result.data;
 
-      const updatedUser = await Database.instance.updateUser(user.id, {
+      const updatedUser = await db.updateUser(user.id, {
         bio: data.bio,
       });
 

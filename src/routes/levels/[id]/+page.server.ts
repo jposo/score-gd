@@ -1,6 +1,6 @@
 import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { z } from "zod";
 import { get } from "$lib/server/gd/client";
@@ -61,8 +61,6 @@ const HideReviewForm = z.object({
   reviewId: z.coerce.number(),
 });
 
-const db = Database.instance;
-
 export const load: PageServerLoad = async ({
   params,
   parent,
@@ -115,7 +113,6 @@ export const load: PageServerLoad = async ({
 
 export const actions: Actions = {
   updateProgress: async ({ cookies, url, request, params }) => {
-
     const user = await requireAuth(cookies, url);
 
     const levelId = parseInt(params.id!);
@@ -222,7 +219,9 @@ export const actions: Actions = {
     try {
       const result = await db.hideReview(data.reviewId);
       if (result) {
-        console.log(`user ${user.username} (id:${user.id}) hid review ${data.reviewId}`);
+        console.log(
+          `user ${user.username} (id:${user.id}) hid review ${data.reviewId}`,
+        );
         return { success: true, message: "sucessfully hidden review" };
       } else {
         return fail(422, { message: "failed to hide review" });

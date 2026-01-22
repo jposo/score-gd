@@ -1,11 +1,9 @@
 import { error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { z } from "zod";
 import { difficulties, ratings, lengths } from "$lib/shared/gd";
-
-const db = Database.instance;
 
 const Params = z.object({
   page: z.coerce.number().min(1).optional().default(1),

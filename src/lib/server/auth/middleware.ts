@@ -1,11 +1,9 @@
 import { redirect } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "./utils";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { rolesEnum } from "$lib/server/db/schema";
 import type { Cookies } from "@sveltejs/kit";
 import { AUTH_COOKIE_NAME } from "../../constants";
-
-const db = Database.instance;
 
 const roles = rolesEnum.enumValues;
 type Role = (typeof roles)[number];
@@ -18,7 +16,10 @@ const invalidCookieOptions = {
   path: "/",
 } as const;
 
-function getLoginRedirectUrl(redirectTo: string | undefined, currentPath: string) {
+function getLoginRedirectUrl(
+  redirectTo: string | undefined,
+  currentPath: string,
+) {
   return redirectTo
     ? `/login?redirectTo=${encodeURIComponent(redirectTo)}`
     : `/login?redirectTo=${encodeURIComponent(currentPath)}`;
@@ -45,7 +46,11 @@ async function validateTokenAndFetchUser(cookies: Cookies) {
   return user;
 }
 
-export async function requireAuth(cookies: Cookies, url: URL, redirectTo?: string) {
+export async function requireAuth(
+  cookies: Cookies,
+  url: URL,
+  redirectTo?: string,
+) {
   const user = await validateTokenAndFetchUser(cookies);
 
   if (!user) {
@@ -56,7 +61,12 @@ export async function requireAuth(cookies: Cookies, url: URL, redirectTo?: strin
   return user;
 }
 
-export async function requireAuthWithRoles(cookies: Cookies, url: URL, roles: Role[], redirectTo?: string) {
+export async function requireAuthWithRoles(
+  cookies: Cookies,
+  url: URL,
+  roles: Role[],
+  redirectTo?: string,
+) {
   const user = await requireAuth(cookies, url, redirectTo);
   if (!user.roles?.some((role) => roles.includes(role))) {
     throw redirect(302, redirectTo || "/");
@@ -65,7 +75,10 @@ export async function requireAuthWithRoles(cookies: Cookies, url: URL, roles: Ro
   return user;
 }
 
-export async function redirectIfAuthenticated(cookies: Cookies, redirectTo = "/") {
+export async function redirectIfAuthenticated(
+  cookies: Cookies,
+  redirectTo = "/",
+) {
   const user = await validateTokenAndFetchUser(cookies);
 
   if (user) {

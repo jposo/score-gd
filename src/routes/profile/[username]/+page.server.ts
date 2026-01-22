@@ -1,7 +1,7 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { fail, error } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
 import { z } from "zod";
@@ -9,8 +9,6 @@ import { z } from "zod";
 const UpdateList = z.object({
   list: z.array(z.number().min(1)),
 });
-
-const db = Database.instance;
 
 export const load: PageServerLoad = async (event) => {
   const username = event.params.username as string;
@@ -92,11 +90,7 @@ export const actions: Actions = {
       const data = result.data;
 
       for (let p = 0; p < data.list.length; p++) {
-        await Database.instance.updateListPlacement(
-          data.list[p],
-          user.id,
-          p + 1,
-        );
+        await db.updateListPlacement(data.list[p], user.id, p + 1);
       }
       return { success: true };
     } catch (err) {
