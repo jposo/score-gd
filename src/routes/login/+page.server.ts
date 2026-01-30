@@ -9,6 +9,7 @@ import {
   verifyPassword,
 } from "$lib/server/auth/utils";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
+import winston from "winston";
 
 const Login = z.object({
   login: z.union([
@@ -29,7 +30,6 @@ export const actions: Actions = {
     try {
       const form = await request.formData();
       const entries = Object.fromEntries(form);
-
       const result = Login.safeParse(entries);
 
       if (!result.success) {
@@ -64,7 +64,7 @@ export const actions: Actions = {
       cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
       return { success: true, message: "successfully logged in" };
     } catch (err) {
-      console.error(err);
+      winston.error("failed to log in", err);
       return fail(500, { message: "internal server error" });
     }
   },

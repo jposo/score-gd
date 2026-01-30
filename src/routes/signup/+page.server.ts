@@ -10,6 +10,7 @@ import {
 } from "$lib/server/auth/utils";
 import db from "$lib/server/db/instance";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
+import winston from "winston";
 
 const Register = z.object({
   username: z
@@ -32,7 +33,6 @@ export const actions: Actions = {
     try {
       const form = await request.formData();
       const entries = Object.fromEntries(form);
-
       const result = Register.safeParse(entries);
 
       if (!result.success) {
@@ -67,6 +67,7 @@ export const actions: Actions = {
       });
 
       if (!user) {
+        winston.error("failed to create account", { email: data.email });
         return fail(500, { message: "failed to create account" });
       }
 
@@ -77,9 +78,10 @@ export const actions: Actions = {
       });
 
       cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
+      winston.info("user created successfully", { userId: user.id });
       return { success: true, message: "account created successfully" };
     } catch (err) {
-      console.error(err);
+      winston.error("failed to create account", { error: err });
       return fail(500, { message: "internal server error" });
     }
   },

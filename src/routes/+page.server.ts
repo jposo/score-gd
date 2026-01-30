@@ -2,6 +2,7 @@ import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
+import winston from "winston";
 
 export const load: PageServerLoad = async () => {
   try {
@@ -25,7 +26,7 @@ export const load: PageServerLoad = async () => {
       })),
     };
   } catch (err) {
-    console.error(err);
+    winston.error("failed to load landing page", { error: err });
     error(500, "internal server error");
   }
 };

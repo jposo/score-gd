@@ -5,6 +5,7 @@ import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
 import { z } from "zod";
+import winston from "winston";
 
 const UpdateList = z.object({
   list: z.array(z.number().min(1)),
@@ -92,9 +93,10 @@ export const actions: Actions = {
       for (let p = 0; p < data.list.length; p++) {
         await db.updateListPlacement(data.list[p], user.id, p + 1);
       }
+      winston.info("list updated successfully", { userId: user.id });
       return { success: true };
     } catch (err) {
-      console.error("error updating list placement:", err);
+      winston.error("error updating list placement:", err);
       return fail(500, { message: "failed to update list placement" });
     }
   },

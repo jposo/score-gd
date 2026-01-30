@@ -4,6 +4,7 @@ import { error } from "@sveltejs/kit";
 import db from "$lib/server/db/instance";
 import { getCurrentDay } from "$lib/server/utils";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
+import winston from "winston";
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
   try {
@@ -31,7 +32,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
       return { vault, user: null };
     }
   } catch (err) {
-    console.error(err);
+    winston.error("failed to load layout", { error: err });
     error(500, "internal server error");
   }
 };

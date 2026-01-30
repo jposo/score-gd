@@ -4,6 +4,7 @@ import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { z } from "zod";
 import { difficulties, ratings, lengths } from "$lib/shared/gd";
+import winston from "winston";
 
 const Params = z.object({
   page: z.coerce.number().min(1).optional().default(1),
@@ -61,7 +62,7 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
       page: params.page,
     };
   } catch (err) {
-    console.error(err);
+    winston.error("failed to load levels", err);
     error(500, "internal server error");
   }
 };

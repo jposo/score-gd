@@ -8,6 +8,7 @@ import { randomUUID } from "crypto";
 import { Jimp } from "jimp";
 import { z } from "zod";
 import { Buffer } from "node:buffer";
+import winston from "winston";
 
 const MAX_FILE_SIZE = 1024 * 100; //100 kb
 
@@ -49,7 +50,6 @@ export const actions: Actions = {
 
     const form = await request.formData();
     const entries = Object.fromEntries(form);
-
     const result = QueueForm.safeParse(entries);
 
     if (!result.success) {
@@ -83,6 +83,10 @@ export const actions: Actions = {
       });
 
       if (compressedBuffer.byteLength > MAX_FILE_SIZE) {
+        winston.warn("image size exceeded limit after compression", {
+          filepath,
+          fileSize: compressedBuffer.byteLength,
+        });
         return fail(400, {
           message: "image size exceeds limit even after compression",
         });
@@ -94,7 +98,9 @@ export const actions: Actions = {
     try {
       // upload images to supabase storage
       const uploadedFiles = await uploadImages(files);
-      console.log(`${uploadedFiles.length} file(s) uploaded successfully`);
+      winston.info(`${uploadedFiles.length} file(s) uploaded successfully`, {
+        filepaths: uploadedFiles.map((file) => file.path),
+      });
 
       const images = uploadedFiles.map((file) => file.path);
 
@@ -111,7 +117,7 @@ export const actions: Actions = {
         message: "frames saved successfully",
       };
     } catch (error) {
-      console.error(error);
+      winston.error("failed to upload files in 'enqueue' action", { error });
       return fail(500, { message: "failed to upload files" });
     }
   },
