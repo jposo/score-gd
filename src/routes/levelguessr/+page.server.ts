@@ -1,11 +1,12 @@
 import type { PageServerLoad, Actions } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import env from "$lib/server/env";
 import { error, fail, type Cookies } from "@sveltejs/kit";
 import { z } from "zod";
 import { getCurrentDay, getNextDayDateTime } from "$lib/server/utils";
 import { get } from "$lib/server/gd/client";
 import type { Guess, Guesses, Hints } from "$lib/shared/types";
+import winston from "winston";
 
 const HINT_CONFIG = [
   { threshold: 0, when: 1, key: "rating", name: "rating" },
@@ -105,8 +106,6 @@ const Guess = z.object({
   guessId: z.coerce.number().min(1),
 });
 
-const db = Database.instance;
-
 export const load: PageServerLoad = async ({ url, cookies }) => {
   const currentDay = getCurrentDay();
   const requestedDay = parseInt(url.searchParams.get("day") ?? "");
@@ -114,6 +113,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
   const game = await db.findDaily(day);
   if (!game) {
+    winston.error("game not found", { day });
     error(404, "game not found");
   }
 
@@ -130,6 +130,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
   const answer = await getAnswer(day);
   if (!answer) {
+    winston.error("could not find answer", { day });
     error(404, "could not find answer");
   }
 
@@ -152,7 +153,6 @@ export const actions = {
   default: async ({ request, cookies }) => {
     const form = await request.formData();
     const entries = Object.fromEntries(form);
-
     const result = Guess.safeParse(entries);
 
     if (!result.success) {
@@ -180,11 +180,13 @@ export const actions = {
 
     const level = await get("levels").search(data.guessId);
     if (!level) {
+      winston.warn("could not find level", { guessId: data.guessId });
       return fail(404, { message: "guess does not exist" });
     }
 
     const answer = await getAnswer(data.day);
     if (!answer) {
+      winston.warn("could not find answer", { day: data.day });
       return fail(404, { message: "could not find answer" });
     }
     console.log(answer);

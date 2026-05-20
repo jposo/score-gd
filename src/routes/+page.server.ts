@@ -1,12 +1,11 @@
 import { error } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
+import winston from "winston";
 
 export const load: PageServerLoad = async () => {
   try {
-    const db = Database.instance;
-
     const levelIds = await db.findTopRatedLevels();
     const ids = levelIds.map((level) => level.id);
     const result = await get("levels").ids(ids);
@@ -27,7 +26,7 @@ export const load: PageServerLoad = async () => {
       })),
     };
   } catch (err) {
-    console.error(err);
+    winston.error("failed to load landing page", { error: err });
     error(500, "internal server error");
   }
 };

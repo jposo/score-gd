@@ -1,10 +1,11 @@
 import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { z } from "zod";
 import { get } from "$lib/server/gd/client";
 import { statusEnum, type InsertLevel } from "$lib/server/db/schema";
+import winston from "winston";
 
 // deno-lint-ignore no-explicit-any
 const process = (val: any) => (val === "" ? null : val);
@@ -61,8 +62,6 @@ const HideReviewForm = z.object({
   reviewId: z.coerce.number(),
 });
 
-const db = Database.instance;
-
 export const load: PageServerLoad = async ({
   params,
   parent,
@@ -75,6 +74,7 @@ export const load: PageServerLoad = async ({
     }
     const search = await get("levels").search(id);
     if (!search) {
+      winston.warn("level not found", { id });
       error(404, "level not found");
     }
     const result = search.result[0];
@@ -108,16 +108,14 @@ export const load: PageServerLoad = async ({
     const userProgress = await db.findUserProgressByLevelId(user.id, id);
     return { level, progress: userProgress };
   } catch (err) {
-    console.error(err);
+    winston.error("internal server error", { err });
     error(500, "internal server error");
   }
 };
 
 export const actions: Actions = {
-  updateProgress: async (event) => {
-    const { request, params } = event;
-
-    const user = await requireAuth(event);
+  updateProgress: async ({ cookies, url, request, params }) => {
+    const user = await requireAuth(cookies, url);
 
     const levelId = parseInt(params.id!);
 
@@ -144,34 +142,31 @@ export const actions: Actions = {
 
     const data = result.data;
 
-    // return fail(422, { message: "test mode" });
-
     try {
       const result = await db.upsertUserProgress(data);
 
       if (result) {
         return { success: true, message: "sucessfully updated progress" };
       } else {
+        winston.error("failed to update progress", { data, result });
         return fail(422, { message: "failed to update progress" });
       }
     } catch (err) {
-      console.error(err);
+      winston.error("internal server error", { err });
       return fail(500, { message: "internal server error" });
     }
   },
-  updateLevel: async (event) => {
-    const user = await requireAuthWithRoles(event, ["admin"]);
+  updateLevel: async ({ cookies, url, request, params }) => {
+    const user = await requireAuthWithRoles(cookies, url, ["admin"]);
 
-    const levelId = parseInt(event.params.id!);
+    const levelId = parseInt(params.id!);
 
     if (Number.isNaN(levelId)) {
       return fail(400, { message: "invalid level id" });
     }
 
-    const form = await event.request.formData();
-
+    const form = await request.formData();
     const entries = Object.fromEntries(form);
-
     const result = UpdateLevelForm.safeParse(entries);
 
     if (!result.success) {
@@ -187,26 +182,27 @@ export const actions: Actions = {
       updatedBy: user.id,
     } satisfies InsertLevel;
 
-    console.log(
-      `user ${user.username} (id:${user.id}) updated level ${levelId}`,
-    );
     try {
       const result = await db.updateLevel(data);
 
       if (result) {
+        winston.info(
+          `user ${user.username} (id:${user.id}) updated level ${levelId}`,
+        );
         return { success: true, message: "sucessfully updated level" };
       } else {
+        winston.error("failed to update level", { data });
         return fail(422, { message: "failed to update level" });
       }
     } catch (err) {
-      console.error(err);
+      winston.error("internal server error in 'updateLevel' action", { err });
       return fail(500, { message: "internal server error" });
     }
   },
-  hideReview: async (event) => {
-    const user = await requireAuthWithRoles(event, ["admin"]);
+  hideReview: async ({ cookies, url, request }) => {
+    const user = await requireAuthWithRoles(cookies, url, ["admin"]);
 
-    const form = await event.request.formData();
+    const form = await request.formData();
     const entries = Object.fromEntries(form);
 
     const result = HideReviewForm.safeParse(entries);
@@ -223,13 +219,15 @@ export const actions: Actions = {
     try {
       const result = await db.hideReview(data.reviewId);
       if (result) {
-        console.log(`user ${user.username} (id:${user.id}) hid review ${data.reviewId}`);
+        winston.info(
+          `user ${user.username} (id:${user.id}) hid review ${data.reviewId}`,
+        );
         return { success: true, message: "sucessfully hidden review" };
       } else {
         return fail(422, { message: "failed to hide review" });
       }
     } catch (err) {
-      console.error(err);
+      winston.error("internal server error in 'hideReview' action", { err });
       return fail(500, { message: "internal server error" });
     }
   },

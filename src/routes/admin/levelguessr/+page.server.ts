@@ -1,5 +1,5 @@
 import type { Actions, PageServerLoad } from "./$types";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { getProjectedDate } from "$lib/server/utils";
 import { error, fail } from "@sveltejs/kit";
 import { uploadImages } from "$lib/server/db/supabase";
@@ -8,10 +8,9 @@ import { randomUUID } from "crypto";
 import { Jimp } from "jimp";
 import { z } from "zod";
 import { Buffer } from "node:buffer";
+import winston from "winston";
 
 const MAX_FILE_SIZE = 1024 * 100; //100 kb
-
-const db = Database.instance;
 
 const QueueForm = z.object({
   levelId: z.coerce.number().min(1),
@@ -26,8 +25,8 @@ const QueueForm = z.object({
   }, z.array(z.string()).length(6)),
 });
 
-export const load: PageServerLoad = async (event) => {
-  const user = await requireAuthWithRoles(event, ["owner"]);
+export const load: PageServerLoad = async ({ cookies, url }) => {
+  const user = await requireAuthWithRoles(cookies, url, ["owner"]);
 
   const storedDays = await db.findAllDays();
   const latestDay = await db.findLatestDay();
@@ -41,19 +40,16 @@ export const load: PageServerLoad = async (event) => {
     storedDays: storedDays,
     sources,
     latestDay,
-    projectedDate: getProjectedDate(latestDay!),
+    projectedDate: getProjectedDate(latestDay),
   };
 };
 
 export const actions: Actions = {
-  enqueue: async (event) => {
-    await requireAuthWithRoles(event, ["owner"]);
-
-    const { request } = event;
+  enqueue: async ({ cookies, url, request }) => {
+    await requireAuthWithRoles(cookies, url, ["owner"]);
 
     const form = await request.formData();
     const entries = Object.fromEntries(form);
-
     const result = QueueForm.safeParse(entries);
 
     if (!result.success) {
@@ -65,10 +61,11 @@ export const actions: Actions = {
 
     const data = result.data;
     const latestDay = await db.findLatestDay();
+    if (latestDay === null) {
+      return fail(404, { message: "no latest day found" });
+    }
 
-    const nextDay = latestDay! + 1;
-
-    // data.frames.sort((a, b) => a.index - b.index);
+    const nextDay = latestDay + 1;
 
     const files: { file: Buffer; filepath: string }[] = [];
     for (const frame of data.frames) {
@@ -86,6 +83,10 @@ export const actions: Actions = {
       });
 
       if (compressedBuffer.byteLength > MAX_FILE_SIZE) {
+        winston.warn("image size exceeded limit after compression", {
+          filepath,
+          fileSize: compressedBuffer.byteLength,
+        });
         return fail(400, {
           message: "image size exceeds limit even after compression",
         });
@@ -97,7 +98,9 @@ export const actions: Actions = {
     try {
       // upload images to supabase storage
       const uploadedFiles = await uploadImages(files);
-      console.log(`${uploadedFiles.length} file(s) uploaded successfully`);
+      winston.info(`${uploadedFiles.length} file(s) uploaded successfully`, {
+        filepaths: uploadedFiles.map((file) => file.path),
+      });
 
       const images = uploadedFiles.map((file) => file.path);
 
@@ -114,7 +117,7 @@ export const actions: Actions = {
         message: "frames saved successfully",
       };
     } catch (error) {
-      console.error(error);
+      winston.error("failed to upload files in 'enqueue' action", { error });
       return fail(500, { message: "failed to upload files" });
     }
   },

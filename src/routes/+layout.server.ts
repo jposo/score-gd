@@ -1,11 +1,10 @@
 import type { LayoutServerLoad } from "./$types";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import { error } from "@sveltejs/kit";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { getCurrentDay } from "$lib/server/utils";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
-
-const db = Database.instance;
+import winston from "winston";
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
   try {
@@ -33,7 +32,7 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
       return { vault, user: null };
     }
   } catch (err) {
-    console.error(err);
+    winston.error("failed to load layout", { error: err });
     error(500, "internal server error");
   }
 };

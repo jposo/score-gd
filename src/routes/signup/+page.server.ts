@@ -8,10 +8,9 @@ import {
   hashPassword,
   isValidPassword,
 } from "$lib/server/auth/utils";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
-
-const db = Database.instance;
+import winston from "winston";
 
 const Register = z.object({
   username: z
@@ -23,21 +22,17 @@ const Register = z.object({
   password: z.string().min(8),
 });
 
-export const load: PageServerLoad = async (event) => {
-  // Redirect authenticated users away from signup page
-  await redirectIfAuthenticated(event);
+export const load: PageServerLoad = async ({ cookies, url }) => {
+  await redirectIfAuthenticated(cookies);
 
   return {};
 };
 
 export const actions: Actions = {
-  default: async (event) => {
+  default: async ({ request, cookies }) => {
     try {
-      const { request, cookies } = event;
-
       const form = await request.formData();
       const entries = Object.fromEntries(form);
-
       const result = Register.safeParse(entries);
 
       if (!result.success) {
@@ -72,6 +67,7 @@ export const actions: Actions = {
       });
 
       if (!user) {
+        winston.error("failed to create account", { email: data.email });
         return fail(500, { message: "failed to create account" });
       }
 
@@ -82,9 +78,10 @@ export const actions: Actions = {
       });
 
       cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
+      winston.info("user created successfully", { userId: user.id });
       return { success: true, message: "account created successfully" };
     } catch (err) {
-      console.error(err);
+      winston.error("failed to create account", { error: err });
       return fail(500, { message: "internal server error" });
     }
   },

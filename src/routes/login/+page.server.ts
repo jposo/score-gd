@@ -2,15 +2,14 @@ import type { PageServerLoad, Actions } from "./$types";
 import { redirectIfAuthenticated } from "$lib/server/auth/middleware";
 import { z } from "zod";
 import { fail } from "@sveltejs/kit";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import {
   cookieOptions,
   generateToken,
   verifyPassword,
 } from "$lib/server/auth/utils";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
-
-const db = Database.instance;
+import winston from "winston";
 
 const Login = z.object({
   login: z.union([
@@ -20,21 +19,17 @@ const Login = z.object({
   password: z.string().min(8),
 });
 
-export const load: PageServerLoad = async (event) => {
-  // Redirect authenticated users away from login page
-  await redirectIfAuthenticated(event);
+export const load: PageServerLoad = async ({ cookies, url }) => {
+  await redirectIfAuthenticated(cookies);
 
   return {};
 };
 
 export const actions: Actions = {
-  default: async (event) => {
+  default: async ({ request, cookies }) => {
     try {
-      const { request, cookies } = event;
-
       const form = await request.formData();
       const entries = Object.fromEntries(form);
-
       const result = Login.safeParse(entries);
 
       if (!result.success) {
@@ -69,7 +64,7 @@ export const actions: Actions = {
       cookies.set(AUTH_COOKIE_NAME, token, cookieOptions);
       return { success: true, message: "successfully logged in" };
     } catch (err) {
-      console.error(err);
+      winston.error("failed to log in", err);
       return fail(500, { message: "internal server error" });
     }
   },

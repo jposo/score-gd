@@ -1,16 +1,15 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { fail, error } from "@sveltejs/kit";
 import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
 import { z } from "zod";
+import winston from "winston";
 
 const UpdateList = z.object({
   list: z.array(z.number().min(1)),
 });
-
-const db = Database.instance;
 
 export const load: PageServerLoad = async (event) => {
   const username = event.params.username as string;
@@ -78,10 +77,8 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
-  default: async (event) => {
-    const { request } = event;
-
-    const user = await requireAuth(event);
+  default: async ({ request, cookies, url }) => {
+    const user = await requireAuth(cookies, url);
 
     try {
       const form = await request.formData();
@@ -94,15 +91,12 @@ export const actions: Actions = {
       const data = result.data;
 
       for (let p = 0; p < data.list.length; p++) {
-        await Database.instance.updateListPlacement(
-          data.list[p],
-          user.id,
-          p + 1,
-        );
+        await db.updateListPlacement(data.list[p], user.id, p + 1);
       }
+      winston.info("list updated successfully", { userId: user.id });
       return { success: true };
     } catch (err) {
-      console.error("error updating list placement:", err);
+      winston.error("error updating list placement:", err);
       return fail(500, { message: "failed to update list placement" });
     }
   },

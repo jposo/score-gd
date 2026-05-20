@@ -1,8 +1,9 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { requireAuth } from "$lib/server/auth/middleware";
-import Database from "$lib/server/db/instance";
+import db from "$lib/server/db/instance";
 import { fail } from "@sveltejs/kit";
 import { z } from "zod";
+import winston from "winston";
 
 const UpdateUser = z.object({
   bio: z.string().max(500).nullable(),
@@ -17,19 +18,15 @@ const UpdateUser = z.object({
     ),
 });
 
-export const load: PageServerLoad = async (event) => {
-  const user = await requireAuth(event);
+export const load: PageServerLoad = async ({ cookies, url }) => {
+  const user = await requireAuth(cookies, url);
 
   return { user };
 };
 
 export const actions: Actions = {
-  default: async (event) => {
-    const { request } = event;
-
-    // Ensure user is authenticated
-    const user = await requireAuth(event);
-
+  default: async ({ request, cookies, url }) => {
+    const user = await requireAuth(cookies, url);
     try {
       const form = await request.formData();
 
@@ -40,13 +37,14 @@ export const actions: Actions = {
 
       if (!result.success) {
         return fail(400, {
-          message: z.treeifyError(result.error) || "Invalid input",
+          message: "invalid input",
+          error: z.treeifyError(result.error),
         });
       }
 
       const data = result.data;
 
-      const updatedUser = await Database.instance.updateUser(user.id, {
+      const updatedUser = await db.updateUser(user.id, {
         bio: data.bio,
       });
 
@@ -54,15 +52,14 @@ export const actions: Actions = {
         return fail(500, { message: "failed to update profile" });
       }
 
+      winston.info("profile info updated", { user: updatedUser });
       return {
         success: true,
         message: "profile updated successfully",
       };
     } catch (error) {
-      console.error("profile update error:", error);
-      return fail(500, {
-        error: "internal server error",
-      });
+      winston.error("profile update error", { error });
+      return fail(500, { message: "internal server error" });
     }
   },
 };

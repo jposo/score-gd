@@ -1,6 +1,7 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { AUTH_COOKIE_NAME } from "$lib/constants";
+import winston from "winston";
 
 export const POST: RequestHandler = ({ cookies }) => {
   try {
@@ -18,7 +19,7 @@ export const POST: RequestHandler = ({ cookies }) => {
       message: "logout successful",
     });
   } catch (err) {
-    console.error("Logout error:", err);
+    winston.error("logout error:", { error: err });
     return error(500, "internal server error");
   }
 };
