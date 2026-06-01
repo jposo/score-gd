@@ -120,6 +120,13 @@
       "when": 1780256227247,
       "tag": "0016_foamy_shiver_man",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1780290196818,
+      "tag": "0017_petite_salo",
+      "breakpoints": true
     }
   ]
 }

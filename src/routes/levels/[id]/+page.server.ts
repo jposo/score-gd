@@ -153,7 +153,7 @@ export const actions: Actions = {
       }
     } catch (err) {
       if (isRedirect(err)) throw err;
-      winston.error("internal server error", { err });
+      winston.error("error updating user progress", { err });
       return fail(500, { message: "internal server error" });
     }
   },

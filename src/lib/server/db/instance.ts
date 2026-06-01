@@ -418,10 +418,7 @@ class Database {
   async upsertUserProgress(values: schema.InsertProgress) {
     const progress = await this.db
       .insert(schema.progress)
-      .values({
-        userId: values.userId,
-        levelId: values.levelId,
-      })
+      .values(values)
       .onConflictDoUpdate({
         target: [schema.progress.userId, schema.progress.levelId],
         set: {

@@ -1,7 +1,7 @@
 import { redirect } from "@sveltejs/kit";
 import db from "$lib/server/db/instance";
 import { rolesEnum } from "$lib/server/db/schema";
-import type { Cookies, RequestEvent } from "@sveltejs/kit";
+import type { RequestEvent } from "@sveltejs/kit";
 
 const roles = rolesEnum.enumValues;
 type Role = (typeof roles)[number];
