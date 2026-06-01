@@ -25,8 +25,8 @@ const QueueForm = z.object({
   }, z.array(z.string()).length(6)),
 });
 
-export const load: PageServerLoad = async ({ cookies, url }) => {
-  const user = await requireAuthWithRoles(cookies, url, ["owner"]);
+export const load: PageServerLoad = async (event) => {
+  const user = await requireAuthWithRoles(event, ["owner"]);
 
   const storedDays = await db.findAllDays();
   const latestDay = await db.findLatestDay();
@@ -45,12 +45,11 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 };
 
 export const actions: Actions = {
-  enqueue: async ({ cookies, url, request }) => {
-    await requireAuthWithRoles(cookies, url, ["owner"]);
+  enqueue: async (event) => {
+    await requireAuthWithRoles(event, ["owner"]);
 
-    const form = await request.formData();
-    const entries = Object.fromEntries(form);
-    const result = QueueForm.safeParse(entries);
+    const form = await event.request.formData();
+    const result = QueueForm.safeParse(Object.fromEntries(form));
 
     if (!result.success) {
       return fail(400, {

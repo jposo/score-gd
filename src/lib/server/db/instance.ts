@@ -128,7 +128,6 @@ class Database {
                 'status', ${schema.progress.status},
                 'score', ${schema.progress.score},
                 'review', ${schema.progress.review},
-                'profilePicturePath', ${schema.users.profilePicturePath},
                 'attempts', ${schema.progress.attempts},
                 'updatedAt', ${schema.progress.updatedAt}
               )
@@ -190,13 +189,27 @@ class Database {
         id: schema.users.id,
         username: schema.users.username,
         email: schema.users.email,
-        passwordHash: schema.users.passwordHash,
-        profilePicturePath: schema.users.profilePicturePath,
-        extraRoles: schema.users.extraRoles,
+        roles: schema.users.roles,
         createdAt: schema.users.createdAt,
       })
       .from(schema.users)
       .where(eq(schema.users.email, email))
+      .limit(1);
+
+    return result.length === 1 ? result[0] : null;
+  }
+
+  async findUserById(id: string) {
+    const result = await this.db
+      .select({
+        id: schema.users.id,
+        username: schema.users.username,
+        email: schema.users.email,
+        roles: schema.users.roles,
+        createdAt: schema.users.createdAt,
+      })
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
       .limit(1);
 
     return result.length === 1 ? result[0] : null;
@@ -208,9 +221,7 @@ class Database {
         id: schema.users.id,
         username: schema.users.username,
         email: schema.users.email,
-        passwordHash: schema.users.passwordHash,
-        profilePicturePath: schema.users.profilePicturePath,
-        extraRoles: schema.users.extraRoles,
+        roles: schema.users.roles,
         createdAt: schema.users.createdAt,
       })
       .from(schema.users)
@@ -226,8 +237,7 @@ class Database {
         id: schema.users.id,
         username: schema.users.username,
         bio: schema.users.bio,
-        profilePicturePath: schema.users.profilePicturePath,
-        roles: schema.users.extraRoles,
+        roles: schema.users.roles,
         createdAt: schema.users.createdAt,
         levelsCompleted: count(
           sql`CASE WHEN ${schema.progress.status} = 'completed' THEN 1 END`,
@@ -269,14 +279,14 @@ class Database {
       id: schema.users.id,
       username: schema.users.username,
       email: schema.users.email,
-      extraRoles: schema.users.extraRoles,
+      roles: schema.users.roles,
       createdAt: schema.users.createdAt,
     });
 
     return user.length ? user[0] : null;
   }
 
-  async updateUser(id: number, updates: Partial<schema.InsertUser>) {
+  async updateUser(id: string, updates: Partial<schema.InsertUser>) {
     const user = await this.db
       .update(schema.users)
       .set({
@@ -288,14 +298,13 @@ class Database {
         username: schema.users.username,
         email: schema.users.email,
         bio: schema.users.bio,
-        profilePicturePath: schema.users.profilePicturePath,
         createdAt: schema.users.createdAt,
       });
 
     return user[0] || null;
   }
 
-  async findUserProgressByLevelId(userId: number, levelId: number) {
+  async findUserProgressByLevelId(userId: string, levelId: number) {
     const progress = await this.db
       .select()
       .from(schema.progress)
@@ -328,7 +337,6 @@ class Database {
             'status', ${schema.progress.status},
             'score', ${schema.progress.score},
             'review', ${schema.progress.review},
-            'profilePicturePath', ${schema.users.profilePicturePath},
             'attempts', ${schema.progress.attempts},
             'updatedAt', ${schema.progress.updatedAt}
           )
@@ -363,7 +371,6 @@ class Database {
             'status', ${schema.progress.status},
             'score', ${schema.progress.score},
             'review', ${schema.progress.review},
-            'profilePicturePath', ${schema.users.profilePicturePath},
             'attempts', ${schema.progress.attempts},
             'updatedAt', ${schema.progress.updatedAt}
           )
@@ -379,7 +386,7 @@ class Database {
     return result;
   }
 
-  async insertUserProgress(userId: number, levelId: number) {
+  async insertUserProgress(userId: string, levelId: number) {
     const progress = await this.db
       .insert(schema.progress)
       .values({
@@ -411,10 +418,7 @@ class Database {
   async upsertUserProgress(values: schema.InsertProgress) {
     const progress = await this.db
       .insert(schema.progress)
-      .values({
-        userId: values.userId,
-        levelId: values.levelId,
-      })
+      .values(values)
       .onConflictDoUpdate({
         target: [schema.progress.userId, schema.progress.levelId],
         set: {
@@ -428,7 +432,7 @@ class Database {
 
   async updateListPlacement(
     levelId: number,
-    userId: number,
+    userId: string,
     placement: number,
   ) {
     const result = await this.db

@@ -1,6 +1,5 @@
 import type { PageServerLoad, Actions } from "./$types";
 import { fail, error } from "@sveltejs/kit";
-import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
 import db from "$lib/server/db/instance";
 import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
@@ -8,19 +7,33 @@ import { z } from "zod";
 import winston from "winston";
 
 const UpdateList = z.object({
-  list: z.array(z.number().min(1)),
+  list: z
+    .string()
+    .transform((str, ctx) => {
+      try {
+        return JSON.parse(str);
+      } catch (e) {
+        ctx.addIssue({
+          code: "invalid_type",
+          message: "Invalid JSON array string",
+          expected: "string",
+        });
+        return z.NEVER;
+      }
+    })
+    .pipe(z.array(z.number().min(1))),
 });
 
 export const load: PageServerLoad = async (event) => {
   const username = event.params.username as string;
-  const user = await db.findUserInfoByUsername(username);
+  const profile = await db.findUserInfoByUsername(username);
 
-  if (!user) {
+  if (!profile) {
     error(404, "user not found");
   }
 
-  const listLevelIds = user.list.map((item) => item.id);
-  const recentActivityLevelIds = user.recentActivity.map(
+  const listLevelIds = profile.list.map((item) => item.id);
+  const recentActivityLevelIds = profile.recentActivity.map(
     (item) => item.levelId,
   );
   const allIds = [...new Set([...listLevelIds, ...recentActivityLevelIds])];
@@ -40,31 +53,28 @@ export const load: PageServerLoad = async (event) => {
       },
     ]),
   );
-  const enrichedList = user.list.map((item) => ({
+  const enrichedList = profile.list.map((item) => ({
     ...item,
     details: levelMap.get(item.id) || null,
   }));
-  const enrichedActivity = user.recentActivity.map((item) => ({
+  const enrichedActivity = profile.recentActivity.map((item) => ({
     ...item,
     details: levelMap.get(item.levelId) || null,
   }));
 
-  const token = getTokenFromCookies(event.cookies);
-  let isUser = false;
-  if (token) {
-    const authToken = verifyToken(token);
-    isUser = authToken?.username === user.username;
-  }
+  const {
+    data: { user },
+  } = await event.locals.supabase.auth.getUser();
+  const isUser = user?.id === profile.id;
 
-  const enrichedUser = {
-    username: user.username,
-    bio: user.bio,
-    profilePicturePath: user.profilePicturePath,
-    registeredAt: user.createdAt!,
+  const enrichedProfile = {
+    username: profile.username,
+    bio: profile.bio,
+    registeredAt: profile.createdAt!,
     stats: {
-      averageScore: user.averageScore,
-      levelsCompleted: user.levelsCompleted,
-      reviewsWritten: user.reviewsWritten,
+      averageScore: profile.averageScore,
+      levelsCompleted: profile.levelsCompleted,
+      reviewsWritten: profile.reviewsWritten,
     },
     list: enrichedList,
     recentActivity: enrichedActivity,
@@ -72,19 +82,17 @@ export const load: PageServerLoad = async (event) => {
   };
 
   return {
-    profile: enrichedUser,
+    profile: enrichedProfile,
   };
 };
 
 export const actions: Actions = {
-  default: async ({ request, cookies, url }) => {
-    const user = await requireAuth(cookies, url);
+  default: async (event) => {
+    const user = await requireAuth(event);
 
     try {
-      const form = await request.formData();
-      const result = UpdateList.safeParse({
-        list: form.get("list"),
-      });
+      const form = await event.request.formData();
+      const result = UpdateList.safeParse(Object.fromEntries(form));
       if (!result.success) {
         return fail(400, { message: "invalid list data" });
       }
@@ -93,7 +101,6 @@ export const actions: Actions = {
       for (let p = 0; p < data.list.length; p++) {
         await db.updateListPlacement(data.list[p], user.id, p + 1);
       }
-      winston.info("list updated successfully", { userId: user.id });
       return { success: true };
     } catch (err) {
       winston.error("error updating list placement:", err);

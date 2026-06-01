@@ -12,6 +12,7 @@ const PrivateEnv = z.object({
 const PublicEnv = z.object({
   PUBLIC_SUPABASE_PROJECT_ID: z.string().min(1),
   PUBLIC_SUPABASE_PROJECT_URL: z.url(),
+  PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
 });
 
 const serverEnv = PrivateEnv.parse(env);

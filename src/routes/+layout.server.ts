@@ -1,37 +1,27 @@
 import type { LayoutServerLoad } from "./$types";
-import { getTokenFromCookies, verifyToken } from "$lib/server/auth/utils";
-import { error } from "@sveltejs/kit";
+import { error, isRedirect, redirect } from "@sveltejs/kit";
 import db from "$lib/server/db/instance";
 import { getCurrentDay } from "$lib/server/utils";
-import { AUTH_COOKIE_NAME } from "$lib/constants";
 import winston from "winston";
 
-export const load: LayoutServerLoad = async ({ cookies }) => {
+export const load: LayoutServerLoad = async (event) => {
   try {
-    // Get token from cookies
-    const token = getTokenFromCookies(cookies);
     const vault = (await db.findVault(getCurrentDay())).map((d) => d.day);
 
-    if (!token) {
-      return { vault, user: null };
-    }
+    const {
+      data: { user },
+    } = await event.locals.supabase.auth.getUser();
 
-    // Verify token
-    const authToken = verifyToken(token);
-    if (!authToken) {
-      return { vault, user: null };
-    }
+    if (!user) return { vault, user: null };
 
     // Get full user data from database
-    try {
-      const user = await db.findUserInfoByUsername(authToken.username);
-      return { vault, user };
-    } catch {
-      // delete cookie
-      cookies.set(AUTH_COOKIE_NAME, "", { path: "/" });
-      return { vault, user: null };
+    const profile = await db.findUserById(user.id);
+    if (!profile?.username && event.url.pathname !== "/profile/setup") {
+      redirect(303, "/profile/setup");
     }
+    return { vault, user: profile };
   } catch (err) {
+    if (isRedirect(err)) throw err;
     winston.error("failed to load layout", { error: err });
     error(500, "internal server error");
   }
