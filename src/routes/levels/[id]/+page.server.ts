@@ -1,4 +1,4 @@
-import { fail, error, type ServerLoadEvent } from "@sveltejs/kit";
+import { fail, error, type ServerLoadEvent, isRedirect } from "@sveltejs/kit";
 import type { PageServerLoad, Actions } from "./$types";
 import db from "$lib/server/db/instance";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
@@ -11,7 +11,7 @@ import winston from "winston";
 const process = (val: any) => (val === "" ? null : val);
 
 const ProgressForm = z.object({
-  userId: z.number().min(1),
+  userId: z.uuid(),
   levelId: z.number().min(1),
   status: z.enum(statusEnum.enumValues).optional(),
   score: z.coerce.number().min(1).max(10).nullable().optional(),
@@ -114,17 +114,17 @@ export const load: PageServerLoad = async ({
 };
 
 export const actions: Actions = {
-  updateProgress: async ({ cookies, url, request, params }) => {
-    const user = await requireAuth(cookies, url);
+  updateProgress: async (event) => {
+    const user = await requireAuth(event);
 
-    const levelId = parseInt(params.id!);
+    const levelId = parseInt(event.params.id!);
 
     if (Number.isNaN(levelId)) {
       return fail(400, { message: "invalid level id" });
     }
-    // check here if level id exists (maybe)
+    // TODO: check here if level id exists (maybe)
 
-    const form = await request.formData();
+    const form = await event.request.formData();
     const entries = {
       userId: user.id,
       levelId,
@@ -152,22 +152,22 @@ export const actions: Actions = {
         return fail(422, { message: "failed to update progress" });
       }
     } catch (err) {
+      if (isRedirect(err)) throw err;
       winston.error("internal server error", { err });
       return fail(500, { message: "internal server error" });
     }
   },
-  updateLevel: async ({ cookies, url, request, params }) => {
-    const user = await requireAuthWithRoles(cookies, url, ["admin"]);
+  updateLevel: async (event) => {
+    const user = await requireAuthWithRoles(event, ["admin"]);
 
-    const levelId = parseInt(params.id!);
+    const levelId = parseInt(event.params.id!);
 
     if (Number.isNaN(levelId)) {
       return fail(400, { message: "invalid level id" });
     }
 
-    const form = await request.formData();
-    const entries = Object.fromEntries(form);
-    const result = UpdateLevelForm.safeParse(entries);
+    const form = await event.request.formData();
+    const result = UpdateLevelForm.safeParse(Object.fromEntries(form));
 
     if (!result.success) {
       return fail(400, {
@@ -199,13 +199,11 @@ export const actions: Actions = {
       return fail(500, { message: "internal server error" });
     }
   },
-  hideReview: async ({ cookies, url, request }) => {
-    const user = await requireAuthWithRoles(cookies, url, ["admin"]);
+  hideReview: async (event) => {
+    const user = await requireAuthWithRoles(event, ["admin"]);
 
-    const form = await request.formData();
-    const entries = Object.fromEntries(form);
-
-    const result = HideReviewForm.safeParse(entries);
+    const form = await event.request.formData();
+    const result = HideReviewForm.safeParse(Object.fromEntries(form));
 
     if (!result.success) {
       return fail(400, {

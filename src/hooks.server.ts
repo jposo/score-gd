@@ -1,7 +1,26 @@
 import type { Handle } from "@sveltejs/kit";
 import env from "$lib/server/env";
+import { createServerClient } from "@supabase/ssr";
+import winston from "winston";
+
+winston.add(new winston.transports.Console());
 
 export const handle: Handle = async ({ event, resolve }) => {
+  event.locals.supabase = createServerClient(
+    env.public.PUBLIC_SUPABASE_PROJECT_URL,
+    env.public.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    {
+      cookies: {
+        getAll: () => event.cookies.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            event.cookies.set(name, value, { ...options, path: "/" }),
+          );
+        },
+      },
+    },
+  );
+
   const response = await resolve(event);
 
   // security headers
@@ -10,7 +29,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
   // set permissions policy, empty = disabled
   response.headers.set(
-    "Permissions-Policty",
+    "Permissions-Policy",
     "geolocation=(), microphone=(), camera=(), fullscreen=(self), payment=(), usb=()",
   );
 

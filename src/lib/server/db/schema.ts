@@ -13,8 +13,10 @@ import {
   uniqueIndex,
   index,
   check,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import { authUsers } from "drizzle-orm/supabase";
 
 export const difficultyEnum = pgEnum("difficulty", [
   "n/a",
@@ -82,11 +84,11 @@ export const dailyLevel = pgTable(
       .notNull()
       .references(() => sources.id),
     createdAt: timestamp("created_at").defaultNow(),
-    createdBy: integer("created_by").references(() => users.id),
+    createdBy: uuid("created_by").references(() => users.id),
     updatedAt: timestamp("updated_at").defaultNow(),
-    updatedBy: integer("updated_by").references(() => users.id),
+    updatedBy: uuid("updated_by").references(() => users.id),
     deletedAt: timestamp("deleted_at"),
-    deletedBy: integer("deleted_by").references(() => users.id),
+    deletedBy: uuid("deleted_by").references(() => users.id),
   },
   (table) => [uniqueIndex("unique_day_index").on(table.day)],
 ).enableRLS();
@@ -98,7 +100,7 @@ export const levels = pgTable("levels", {
   hidden: boolean("hidden").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-  updatedBy: integer("updated_by").references(() => users.id),
+  updatedBy: uuid("updated_by").references(() => users.id),
 }).enableRLS();
 
 export const levelCreators = pgTable(
@@ -116,7 +118,7 @@ export const progress = pgTable(
   "progress",
   {
     id: serial("id").primaryKey(),
-    userId: integer("user_id")
+    userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
     levelId: integer("level_id").notNull(),
@@ -136,7 +138,7 @@ export const progress = pgTable(
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     deletedAt: timestamp("deleted_at"),
-    deletedBy: integer("deleted_by").references(() => users.id),
+    deletedBy: uuid("deleted_by").references(() => users.id),
   },
   (table) => [
     check("score_check", sql`${table.score} >= 1 AND ${table.score} <= 10`),
@@ -155,7 +157,7 @@ export const progress = pgTable(
 export const reviewVotes = pgTable(
   "review_votes",
   {
-    userId: integer("user_id")
+    userId: uuid("user_id")
       .notNull()
       .references(() => users.id),
     progressId: integer("progress_id")
@@ -169,30 +171,20 @@ export const reviewVotes = pgTable(
 ).enableRLS();
 
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id")
+    .primaryKey()
+    .references(() => authUsers.id, { onDelete: "cascade" }),
   accountId: integer("account_id"),
-  username: text("username").notNull().unique(),
+  username: text("username").unique(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
   bio: text("bio"),
-  profilePicturePath: text("profile_picture_key"),
-  extraRoles: rolesEnum("roles").array(),
+  roles: rolesEnum("roles").array(),
   isActive: boolean("is_active").notNull().default(true),
   isShadowBanned: boolean("is_shadow_banned").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
   lastLoginAt: timestamp("last_login_at").defaultNow(),
-  lastLoginIp: text("last_login_ip"),
-  registrationIp: text("registration_ip"),
   deletedAt: timestamp("deleted_at"),
-}).enableRLS();
-
-export const loginAttempts = pgTable("login_attempts", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
-  ipAddress: text("ip_address").notNull(),
-  successful: boolean("successful").notNull(),
-  attemptedAt: timestamp("attempted_at").defaultNow(),
 }).enableRLS();
 
 export type InsertUser = typeof users.$inferInsert;
@@ -215,6 +207,3 @@ export type SelectSource = typeof sources.$inferSelect;
 
 export type InsertReviewVote = typeof reviewVotes.$inferInsert;
 export type SelectReviewVote = typeof reviewVotes.$inferSelect;
-
-export type InsertLoginAttempt = typeof loginAttempts.$inferInsert;
-export type SelectLoginAttempt = typeof loginAttempts.$inferSelect;

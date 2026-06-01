@@ -59,7 +59,6 @@ export const load: PageServerLoad = async (event) => {
   const enrichedUser = {
     username: user.username,
     bio: user.bio,
-    profilePicturePath: user.profilePicturePath,
     registeredAt: user.createdAt!,
     stats: {
       averageScore: user.averageScore,
@@ -77,11 +76,11 @@ export const load: PageServerLoad = async (event) => {
 };
 
 export const actions: Actions = {
-  default: async ({ request, cookies, url }) => {
-    const user = await requireAuth(cookies, url);
+  default: async (event) => {
+    const user = await requireAuth(event);
 
     try {
-      const form = await request.formData();
+      const form = await event.request.formData();
       const result = UpdateList.safeParse({
         list: form.get("list"),
       });

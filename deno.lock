@@ -1,6 +1,7 @@
 {
   "version": "5",
   "specifiers": {
+    "npm:@supabase/ssr@~0.10.3": "0.10.3_@supabase+supabase-js@2.89.0",
     "npm:@supabase/supabase-js@^2.89.0": "2.89.0",
     "npm:@sveltejs/adapter-auto@6": "6.1.0_@sveltejs+kit@2.37.1__@sveltejs+vite-plugin-svelte@6.2.0___svelte@5.38.8____acorn@8.15.0___vite@7.1.5____picomatch@4.0.3__svelte@5.38.8___acorn@8.15.0__vite@7.1.5___picomatch@4.0.3__acorn@8.15.0_@sveltejs+vite-plugin-svelte@6.2.0__svelte@5.38.8___acorn@8.15.0__vite@7.1.5___picomatch@4.0.3_svelte@5.38.8__acorn@8.15.0_vite@7.1.5__picomatch@4.0.3",
     "npm:@sveltejs/kit@^2.22.0": "2.37.1_@sveltejs+vite-plugin-svelte@6.2.0__svelte@5.38.8___acorn@8.15.0__vite@7.1.5___picomatch@4.0.3_svelte@5.38.8__acorn@8.15.0_vite@7.1.5__picomatch@4.0.3_acorn@8.15.0",
@@ -747,6 +748,13 @@
         "ws"
       ]
     },
+    "@supabase/ssr@0.10.3_@supabase+supabase-js@2.89.0": {
+      "integrity": "sha512-ux2CJgX89h0Fz2lY7ZNafNG2SkXpyRc5dz77K9eKeBLPdtywQixKwIuetDeIViAJBp/buOUVmgj8PVesOklNpw==",
+      "dependencies": [
+        "@supabase/supabase-js",
+        "cookie@1.1.1"
+      ]
+    },
     "@supabase/storage-js@2.89.0": {
       "integrity": "sha512-6zKcXofk/M/4Eato7iqpRh+B+vnxeiTumCIP+Tz26xEqIiywzD9JxHq+udRrDuv6hXE+pmetvJd8n5wcf4MFRQ==",
       "dependencies": [
@@ -784,7 +792,7 @@
         "@sveltejs/vite-plugin-svelte",
         "@types/cookie",
         "acorn",
-        "cookie",
+        "cookie@0.6.0",
         "devalue",
         "esm-env",
         "kleur",
@@ -1053,6 +1061,9 @@
     },
     "cookie@0.6.0": {
       "integrity": "sha512-U71cyTamuh1CRNCfpGY6to28lxvNwPG4Guz/EVjgf3Jmzv0vlDp1atT9eS5dDjMYHucpHbWns6Lwf3BKz6svdw=="
+    },
+    "cookie@1.1.1": {
+      "integrity": "sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ=="
     },
     "daisyui@5.1.9": {
       "integrity": "sha512-ucptlYpiVMiY33VCehYoO1jI3cVjo4TbTKTr+zNG7sV+FO9UFUKiT54mynoUjIwWi2FXxrm0vDPj+2PmXGkXgA=="
@@ -1720,7 +1731,8 @@
         "minizlib",
         "mkdirp",
         "yallist"
-      ]
+      ],
+      "deprecated": true
     },
     "text-hex@1.0.0": {
       "integrity": "sha512-uuVGNWzgJ4yhRaNSiubPY7OjISw4sw4E5Uv0wbjp+OzcbmVU/rsT8ujgcXJhn9ypzsgr5vlzpPqP+MBBKcGvbg=="
@@ -1844,6 +1856,7 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
+        "npm:@supabase/ssr@~0.10.3",
         "npm:@supabase/supabase-js@^2.89.0",
         "npm:@sveltejs/adapter-auto@6",
         "npm:@sveltejs/kit@^2.22.0",

@@ -16,8 +16,9 @@
         PUBLIC_SUPABASE_PROJECT_URL,
         PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     } from "$env/static/public";
+    import { createBrowserClient } from "@supabase/ssr";
 
-    const supabase = createClient(
+    const supabase = createBrowserClient(
         PUBLIC_SUPABASE_PROJECT_URL,
         PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     );
@@ -47,29 +48,16 @@
     async function handleSignIn() {
         await supabase.auth.signInWithOAuth({
             provider: "google",
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback?next=${window.location.pathname}`,
+            },
         });
     }
 
     // Logout function
     async function handleLogout() {
-        try {
-            const response = await fetch("/api/auth/logout", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (response.ok) {
-                // Reload the page to clear all client-side state
-                await invalidateAll();
-                // window.location.href = "/";
-            } else {
-                console.error("Logout failed");
-            }
-        } catch (error) {
-            console.error("Logout error:", error);
-        }
+        await supabase.auth.signOut();
+        await invalidateAll();
     }
 
     function openSearch() {

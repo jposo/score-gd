@@ -7,33 +7,20 @@ import winston from "winston";
 
 const UpdateUser = z.object({
   bio: z.string().max(500).nullable(),
-  profilePicture: z
-    .instanceof(File, { message: "please upload a valid image" })
-    .refine((file) => file.size <= 1024 * 200, {
-      message: "file size must be less than 200 KB",
-    })
-    .refine(
-      (file) => ["image/jpeg", "image/png", "image/webp"].includes(file.type),
-      { message: "file type must be jpeg, png or webp" },
-    ),
 });
 
-export const load: PageServerLoad = async ({ cookies, url }) => {
-  const user = await requireAuth(cookies, url);
+export const load: PageServerLoad = async (event) => {
+  const user = await requireAuth(event);
 
   return { user };
 };
 
 export const actions: Actions = {
-  default: async ({ request, cookies, url }) => {
-    const user = await requireAuth(cookies, url);
+  default: async (event) => {
+    const user = await requireAuth(event);
     try {
-      const form = await request.formData();
-
-      const result = UpdateUser.safeParse({
-        bio: form.get("bio") ?? null,
-        profilePicture: form.get("profile_picture") ?? null,
-      });
+      const form = await event.request.formData();
+      const result = UpdateUser.safeParse(Object.fromEntries(form));
 
       if (!result.success) {
         return fail(400, {
