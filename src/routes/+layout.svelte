@@ -11,7 +11,6 @@
     import { navigating } from "$app/state";
     import type { SearchResult } from "$lib/shared/types";
     import Avatar from "$lib/components/Avatar.svelte";
-    import { createClient, type Provider } from "@supabase/supabase-js";
     import {
         PUBLIC_SUPABASE_PROJECT_URL,
         PUBLIC_SUPABASE_PUBLISHABLE_KEY,
