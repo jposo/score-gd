@@ -1,6 +1,6 @@
 <script lang="ts">
     import { flip } from "svelte/animate";
-    import { dndzone } from "svelte-dnd-action";
+    import { dndzone, type DndEvent } from "svelte-dnd-action";
     import { Icon, Bars3 } from "svelte-hero-icons";
     import { formatDate } from "$lib/tools/utils";
 
@@ -16,11 +16,11 @@
 
     const flipDurationMs = 300;
 
-    function handleDndConsider(e) {
+    function handleDndConsider(e: CustomEvent<DndEvent<any>>) {
         items = e.detail.items;
     }
 
-    function handleDndFinalize(e) {
+    function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
         const { items: newItems } = e.detail;
         items = newItems;
         onDrop([...newItems]);

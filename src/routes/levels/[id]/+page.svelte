@@ -89,6 +89,9 @@
                             bind:this={quickUpdateForm}
                             action="?/updateProgress"
                             use:enhance={(() => {
+                                if (data.level.length === "platformer") {
+                                    completionPercentage = 100;
+                                }
                                 return async ({ result }) => {
                                     if (result.type === "success") {
                                         toastManager.add(

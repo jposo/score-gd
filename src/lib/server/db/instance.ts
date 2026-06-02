@@ -261,24 +261,29 @@ class Database {
                 )
                 ORDER BY ${schema.progress.listPlacement} ASC
               ) FILTER (WHERE ${schema.progress.status} = 'completed'), '[]')`,
-                recentActivity: sql<Activity[]>`coalesce(json_agg(
-                json_build_object(
+        recentActivity: sql<Activity[]>`(
+          SELECT coalesce(json_agg(act), '[]')
+          FROM (
+              SELECT json_build_object(
                   'levelId', ${schema.progress.levelId},
                   'status', ${schema.progress.status},
+                  'completionPercentage', ${schema.progress.completionPercentage},
                   'score', ${schema.progress.score},
                   'review', ${schema.progress.review},
                   'createdAt', ${schema.progress.createdAt}
-                )
-                ORDER BY ${schema.progress.updatedAt} DESC
-              ) FILTER (WHERE ${schema.progress.levelId} IS NOT NULL), '[]')`,
-            })
-            .from(schema.users)
-            .leftJoin(
-                schema.progress,
-                eq(schema.users.id, schema.progress.userId),
-            )
-            .where(eq(schema.users.username, username))
-            .groupBy(schema.users.id);
+              ) AS act
+              FROM ${schema.progress}
+              WHERE ${schema.progress.userId} = ${schema.users.id}
+                  AND ${schema.progress.levelId} IS NOT NULL
+              ORDER BY ${schema.progress.updatedAt} DESC
+              LIMIT 10
+          ) sub
+        )`,
+      })
+      .from(schema.users)
+      .leftJoin(schema.progress, eq(schema.users.id, schema.progress.userId))
+      .where(eq(schema.users.username, username))
+      .groupBy(schema.users.id);
 
         return user.length ? user[0] : null;
     }
