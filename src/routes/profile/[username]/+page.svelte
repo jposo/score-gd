@@ -3,7 +3,7 @@
     import { Icon, Check, ListBullet, Clock, Pencil } from "svelte-hero-icons";
     import Activity from "$lib/components/Activity.svelte";
     import List from "$lib/components/ListDragAndDrop.svelte";
-    import { formatDate, equalArrayOfObjectsWithIds } from "$lib/tools/utils";
+    import { formatDate } from "$lib/tools/utils";
     import type { ListItem } from "$lib/shared/types";
     import { toastManager } from "$lib/state/toasts.svelte";
     import { goto } from "$app/navigation";
@@ -16,6 +16,7 @@
     let editMode = $state(false);
     let lastState = $state<number[]>([]);
     let firstState: number[] | undefined = undefined;
+    let requestingUpdate = $state(false);
 
     const tabs = {
         recent: "recent",
@@ -35,7 +36,7 @@
         }
     });
 
-    function handleDrop(newItems: ListItem[]) {
+    function handleDrop(newItems: any[]) {
         // if (lastState === undefined) {
         //   firstState = newItems;
         // }
@@ -44,7 +45,7 @@
 </script>
 
 <svelte:head>
-    <title>profile - {data.user?.username} - loggd</title>
+    <title>profile: {data.user?.username} - loggd</title>
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">
@@ -87,10 +88,8 @@
                         >
                     </p>
 
-                    <p class="text-base-content/80 mb-4">
-                        {data.profile.bio
-                            ? data.profile.bio
-                            : "no bio added yet."}
+                    <p class="text-base-content/80 mb-4 italic">
+                        {data.profile.bio ? data.profile.bio : ""}
                     </p>
 
                     {#if data.profile.isUser}
@@ -205,9 +204,11 @@
                             <form
                                 method="POST"
                                 use:enhance={() => {
-                                    console.log(lastState);
+                                    // console.log(lastState);
+                                    requestingUpdate = true;
                                     return async ({ result }) => {
-                                        console.log(result);
+                                        // console.log(result);
+                                        requestingUpdate = false;
                                         if (result.type === "success") {
                                             toastManager.add(
                                                 "successfully updated list",
@@ -239,12 +240,21 @@
                                     class="btn btn-sm btn-square"
                                     type={editMode ? "button" : "submit"}
                                     onclick={() => (editMode = !editMode)}
+                                    disabled={requestingUpdate}
                                 >
                                     {#if editMode}
                                         <Icon
                                             src={Check}
                                             class="size-[1.2em]"
                                         />
+                                    {:else if requestingUpdate}
+                                        <span
+                                            class="loading loading-dots size-[1.2em]"
+                                        ></span>
+                                        <!-- <Icon
+                                            src={Pencil}
+                                            class="size-[1.2em]"
+                                        /> -->
                                     {:else}
                                         <Icon
                                             src={Pencil}
@@ -257,16 +267,7 @@
                     {/if}
                     {#if data.profile.list && data.profile.list.length > 0}
                         <List
-                            items={data.profile.list.map((item) => ({
-                                id: item.id,
-                                levelName:
-                                    item.details?.name ?? "unknown level",
-                                publisher:
-                                    item.details?.publisher ??
-                                    "unknown publisher",
-                                attempts: item.attempts,
-                                rating: item.score,
-                            }))!}
+                            items={data.profile.list}
                             {editMode}
                             onDrop={handleDrop}
                         />

@@ -31,6 +31,7 @@
     let startDate = $derived(data.progress?.startedAt ?? undefined);
     let completionDate = $derived(data.progress?.completedAt ?? undefined);
     let review = $derived(data.progress?.review ?? undefined);
+    let progressVideoUrl = $derived(data.progress?.videoUrl ?? undefined);
 
     const scoreOptions = [
         { value: 1, label: "terrible" },
@@ -475,6 +476,7 @@
                     </svg>
                     <input
                         name="videoUrl"
+                        bind:value={progressVideoUrl}
                         type="url"
                         placeholder="https://www.youtube.com/watch?v=xvFZjo5PgG0"
                         pattern="^(https?://)?([a-zA-Z0-9]([a-zA-Z0-9\-].*[a-zA-Z0-9])?\.)+[a-zA-Z].*$"

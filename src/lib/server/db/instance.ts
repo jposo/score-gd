@@ -254,7 +254,10 @@ class Database {
                   'id', ${schema.progress.levelId},
                   'placement', ${schema.progress.listPlacement},
                   'score', ${schema.progress.score},
-                  'attempts', ${schema.progress.attempts}
+                  'attempts', ${schema.progress.attempts},
+                  'startedAt', ${schema.progress.startedAt},
+                  'completedAt', ${schema.progress.completedAt},
+                  'videoUrl', ${schema.progress.videoUrl}
                 )
                 ORDER BY ${schema.progress.listPlacement} ASC
               ) FILTER (WHERE ${schema.progress.status} = 'completed'), '[]')`,
