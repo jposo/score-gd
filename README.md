@@ -4,7 +4,7 @@ A web application for the Geometry Dash community.
 
 ## Features
 
-*   **User Authentication:** Secure signup and login functionality.
+*   **User Authentication:** OAuth sign-in.
 *   **Level Browser:** Search and view details for Geometry Dash levels.
 *   **levelguessr:** A fun game to guess levels.
 *   **User Profiles:** View and edit user profiles.
@@ -37,20 +37,14 @@ A web application for the Geometry Dash community.
     ```sh
     deno install
     ```
-3.  Set up your Supabase environment variables. You will need to create a `.env` file in the root of the project with your Supabase URL and anon key.
-    ```
-    PUBLIC_SUPABASE_PROJECT_ID="<your_project_id>"
-    DATABASE_URL="<your_database_url>"
-    SUPABASE_API_KEY="<your_supabase_api_key>"
-    SUPABASE_PROJECT_URL="<your_supabase_project_url>"
-    ```
+3.  Set up your environment variables. You will need to create a `.env` file in the root of the project with values in `.env.example`.
 
 ### Development
 
 Start the development server:
 
 ```sh
-deno run dev
+deno task dev
 ```
 
 ### Building
@@ -58,7 +52,7 @@ deno run dev
 To create a production version of your app:
 
 ```sh
-deno run build
+deno task build
 ```
 
-You can preview the production build with `npm run preview`.
+You can preview the production build with `deno task preview`.
