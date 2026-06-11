@@ -6,11 +6,9 @@ const PrivateEnv = z.object({
   STARTING_DATE: z.string().min(1),
   DATABASE_URL: z.url(),
   SUPABASE_API_KEY: z.string().min(1),
-  JWT_SECRET: z.string().min(32),
 });
 
 const PublicEnv = z.object({
-  PUBLIC_SUPABASE_PROJECT_ID: z.string().min(1),
   PUBLIC_SUPABASE_PROJECT_URL: z.url(),
   PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
 });
