@@ -1,11 +1,51 @@
 {
+  "nodeModulesDir": "auto",
   "lint": {
     "rules": {
-      "exclude": ["no-sloppy-imports", "import-prefix-missing"]
+      "exclude": [
+        "no-sloppy-imports",
+        "import-prefix-missing"
+      ]
     }
   },
   "allowScripts": {
     "allow": [],
-    "deny": ["npm:@tailwindcss/oxide@4.1.13", "npm:esbuild@0.18.20", "npm:esbuild@0.25.9"]
+    "deny": [
+      "npm:@tailwindcss/oxide@4.1.13",
+      "npm:esbuild@0.18.20",
+      "npm:esbuild@0.25.9"
+    ]
+  },
+  "imports": {
+    "@supabase/ssr": "npm:@supabase/ssr@^0.12.0",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.108.1",
+    "@sveltejs/adapter-auto": "npm:@sveltejs/adapter-auto@^7.0.1",
+    "@sveltejs/kit": "npm:@sveltejs/kit@^2.65.0",
+    "@sveltejs/vite-plugin-svelte": "npm:@sveltejs/vite-plugin-svelte@^7.1.2",
+    "@tailwindcss/vite": "npm:@tailwindcss/vite@^4.1.13",
+    "daisyui": "npm:daisyui@^5.5.23",
+    "drizzle-kit": "npm:drizzle-kit@^0.31.10",
+    "drizzle-orm": "npm:drizzle-orm@^0.45.2",
+    "jimp": "npm:jimp@^1.6.1",
+    "postgres": "npm:postgres@^3.4.9",
+    "svelte": "npm:svelte@^5.56.3",
+    "svelte-check": "npm:svelte-check@^4.6.0",
+    "svelte-dnd-action": "npm:svelte-dnd-action@^0.9.69",
+    "svelte-hero-icons": "npm:svelte-hero-icons@^5.2.0",
+    "tailwindcss": "npm:tailwindcss@^4.3.0",
+    "typescript": "npm:typescript@^6.0.3",
+    "vite": "npm:vite@^7.0.4",
+    "winston": "npm:winston@^3.19.0",
+    "zod": "npm:zod@^4.4.3"
+  },
+  "tasks": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "svelte-kit sync || echo ''",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "drizzle:generate": "deno run -A npm:drizzle-kit generate",
+    "drizzle:migrate": "deno run -A npm:drizzle-kit migrate"
   }
 }
