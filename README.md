@@ -37,7 +37,7 @@ A web application for the Geometry Dash community.
     ```sh
     deno install
     ```
-3.  Set up your environment variables. You will need to create a `.env` file in the root of the project with values in `.env.local`.
+3.  Set up your environment variables. You will need to create a `.env` file in the root of the project with values in `.env.example`.
 
 ### Development
 
