@@ -1,32 +1,20 @@
 <script lang="ts">
     import { enhance } from "$app/forms";
     import { goto } from "$app/navigation";
-    import type { PageData, ActionData } from "./$types";
+    import { toastManager } from "$lib/state/toasts.svelte";
+    import type { PageData, ActionData, SubmitFunction } from "./$types";
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    let bio = $state(data.user.bio || "");
+    let bio = $state("");
     let loading = $state(false);
 
     // Update form values if there was an error
-    $effect(() => {
-        if (form?.bio !== undefined) {
-            bio = form.bio;
-        }
-    });
-
-    function handleSubmit() {
-        loading = true;
-        return async ({ update }) => {
-            await update();
-            loading = false;
-
-            // If successful, redirect to profile
-            if (form?.success) {
-                goto(`/profile/${data.user.username}`);
-            }
-        };
-    }
+    // $effect(() => {
+    //     if (form?.bio !== undefined) {
+    //         bio = form.bio;
+    //     }
+    // });
 
     function handleCancel() {
         goto(`/profile/${data.user.username}`);
@@ -49,7 +37,32 @@
 
         <!-- Edit Form -->
         <div class="bg-base-200 rounded-lg shadow-lg p-6">
-            <form method="POST" use:enhance={handleSubmit} class="space-y-6">
+            <form
+                method="POST"
+                class="space-y-6"
+                use:enhance={(() => {
+                    loading = true;
+                    return async ({ result }) => {
+                        loading = false;
+                        if (result.type === "success") {
+                            toastManager.add(
+                                result.data?.message ??
+                                    "successfully updated details",
+                                "success",
+                            );
+                        } else if (result.type === "failure") {
+                            toastManager.add(
+                                result.data?.message ??
+                                    "failed to update details",
+                                "error",
+                            );
+                        } else {
+                            console.error(result);
+                            toastManager.add("unknown error occurred", "error");
+                        }
+                    };
+                }) satisfies SubmitFunction}
+            >
                 <!-- Bio -->
                 <fieldset class="fieldset w-full">
                     <legend class="fieldset-legend">bio {bio.length}/200</legend
