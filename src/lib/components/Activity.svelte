@@ -7,12 +7,12 @@
         completionPercentage: number | null;
         status: string;
         createdAt: Date;
-        rating: number | null;
+        score: number | null;
         review: string | null;
     } = $props();
 
     const subtitle = [
-        props.rating,
+        props.score ? `${props.score}/10` : null,
         props.status,
         props.completionPercentage ? `${props.completionPercentage}%` : null,
     ]

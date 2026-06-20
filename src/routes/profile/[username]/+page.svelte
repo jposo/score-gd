@@ -177,7 +177,7 @@
                                 <Activity
                                     link={`/levels/${a.levelId}`}
                                     title={a.details?.name ?? "unknown level"}
-                                    rating={a.score}
+                                    score={a.score}
                                     status={a.status}
                                     completionPercentage={a.completionPercentage}
                                     createdAt={new Date(a.createdAt)}

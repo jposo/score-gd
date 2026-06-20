@@ -36,7 +36,7 @@
     const scoreOptions = [
         { value: 1, label: "terrible" },
         { value: 2, label: "horrible" },
-        { value: 3, label: "very Bad" },
+        { value: 3, label: "very bad" },
         { value: 4, label: "bad" },
         { value: 5, label: "mediocre" },
         { value: 6, label: "fine" },
