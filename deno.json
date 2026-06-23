@@ -27,6 +27,7 @@
     ]
   },
   "imports": {
+    "@deno/svelte-adapter": "npm:@deno/svelte-adapter@^0.2.1",
     "@supabase/ssr": "npm:@supabase/ssr@^0.10.3",
     "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.108.2",
     "@sveltejs/adapter-auto": "npm:@sveltejs/adapter-auto@^6.1.1",

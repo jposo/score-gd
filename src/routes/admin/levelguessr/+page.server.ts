@@ -4,7 +4,7 @@ import { getProjectedDate } from "$lib/server/utils";
 import { error, fail } from "@sveltejs/kit";
 import { uploadImages } from "$lib/server/db/supabase";
 import { requireAuthWithRoles } from "$lib/server/auth/middleware";
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { Jimp } from "jimp";
 import { z } from "zod";
 import { Buffer } from "node:buffer";
