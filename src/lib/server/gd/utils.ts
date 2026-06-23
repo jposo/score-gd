@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash } from "node:crypto";
 
 export function safeB64Encode(input: string): string {
   let standardBase64 = input
