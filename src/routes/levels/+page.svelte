@@ -8,48 +8,57 @@
     let { data }: { data: PageData } = $props();
 
     let pageParam = $state(page.url.searchParams.get("page") || "1");
-    let selectedDifficulty = $state(
-        page.url.searchParams.get("difficulty") || undefined,
+    let selectedDifficulties = $state(
+        page.url.searchParams.getAll("difficulty") || [],
     );
-    let selectedRating = $state(
-        page.url.searchParams.get("rating") || undefined,
-    );
-    let selectedLength = $state(
-        page.url.searchParams.get("length") || undefined,
-    );
+    let selectedRatings = $state(page.url.searchParams.getAll("rating") || []);
+    let selectedLengths = $state(page.url.searchParams.getAll("length") || []);
+    let searchQuery = $state(page.url.searchParams.get("q") || "");
 
     function advancePage(direction?: "back" | "next") {
         const delta = direction === "next" ? 1 : direction === "back" ? -1 : 0;
         const targetPage = parseInt(pageParam) + delta;
-        const paramsObject: Record<string, string> = {
-            page: targetPage.toString(),
+        const params = new URLSearchParams();
+
+        params.set("page", targetPage.toString());
+        if (searchQuery) params.set("q", searchQuery);
+
+        const appendArray = (key: string, values: string[]) => {
+            values.forEach((value) => params.append(key, value));
         };
-        if (selectedDifficulty) {
-            paramsObject.difficulty = selectedDifficulty;
+
+        if (selectedDifficulties.length > 0) {
+            appendArray("difficulty", selectedDifficulties);
         }
-        if (selectedRating) {
-            paramsObject.rating = selectedRating;
+        if (selectedRatings.length > 0) {
+            appendArray("rating", selectedRatings);
         }
-        if (selectedLength) {
-            paramsObject.length = selectedLength;
+        if (selectedLengths.length > 0) {
+            appendArray("length", selectedLengths);
         }
-        const params = new URLSearchParams(paramsObject);
+
         goto(`/levels?${params.toString()}`);
         pageParam = targetPage.toString();
     }
 
-    function changeDifficulty(value: string | undefined) {
-        selectedDifficulty = value;
+    function addDifficulty(value: string | undefined) {
+        selectedDifficulties = value
+            ? [value, ...difficulties.filter((d) => d !== value)]
+            : [...difficulties];
         advancePage();
     }
 
-    function changeRating(value: string | undefined) {
-        selectedRating = value;
+    function addRating(value: string | undefined) {
+        selectedRatings = value
+            ? [value, ...ratings.filter((r) => r !== value)]
+            : [...ratings];
         advancePage();
     }
 
-    function changeLength(value: string | undefined) {
-        selectedLength = value;
+    function addLength(value: string | undefined) {
+        selectedLengths = value
+            ? [value, ...lengths.filter((l) => l !== value)]
+            : [...lengths];
         advancePage();
     }
 </script>
@@ -65,17 +74,17 @@
                 class="btn btn-square"
                 type="reset"
                 value="×"
-                onclick={() => changeDifficulty(undefined)}
+                onclick={() => addDifficulty(undefined)}
             />
             {#each difficulties as difficulty}
                 <input
                     class="btn"
-                    type="radio"
+                    type="checkbox"
                     name="difficulty"
                     value={difficulty}
                     aria-label={difficulty}
-                    onclick={() => changeDifficulty(difficulty)}
-                    checked={selectedDifficulty === difficulty}
+                    onclick={() => addDifficulty(difficulty)}
+                    checked={selectedDifficulties.includes(difficulty)}
                 />
             {/each}
         </form>
@@ -87,17 +96,17 @@
                 class="btn btn-square"
                 type="reset"
                 value="×"
-                onclick={() => changeRating(undefined)}
+                onclick={() => addRating(undefined)}
             />
             {#each ratings as rating}
                 <input
                     class="btn"
-                    type="radio"
+                    type="checkbox"
                     name="rating"
                     value={rating}
                     aria-label={rating}
-                    onclick={() => changeRating(rating)}
-                    checked={selectedRating === rating}
+                    onclick={() => addRating(rating)}
+                    checked={selectedRatings.includes(rating)}
                 />
             {/each}
         </form>
@@ -109,19 +118,37 @@
                 class="btn btn-square"
                 type="reset"
                 value="×"
-                onclick={() => changeRating(undefined)}
+                onclick={() => addLength(undefined)}
             />
             {#each lengths as length}
                 <input
                     class="btn"
-                    type="radio"
-                    name="rating"
+                    type="checkbox"
+                    name="length"
                     value={length}
                     aria-label={length}
-                    onclick={() => changeLength(length)}
-                    checked={selectedLength === length}
+                    onclick={() => addLength(length)}
+                    checked={selectedLengths.includes(length)}
                 />
             {/each}
+        </form>
+    </div>
+
+    <div class="pb-4">
+        <form>
+            <input
+                type="text"
+                placeholder="search..."
+                class="input"
+                name="query"
+                bind:value={searchQuery}
+                onkeydown={(e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        advancePage();
+                    }
+                }}
+            />
         </form>
     </div>
 
