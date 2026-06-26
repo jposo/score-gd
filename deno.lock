@@ -9,6 +9,7 @@
     "npm:@sveltejs/vite-plugin-svelte@6.2.4": "6.2.4_svelte@5.56.4__acorn@8.17.0_vite@7.0.4__picomatch@4.0.4",
     "npm:@tailwindcss/vite@4.1.13": "4.1.13_vite@7.0.4__picomatch@4.0.4",
     "npm:daisyui@5.5.23": "5.5.23",
+    "npm:drizzle-kit@*": "0.31.10",
     "npm:drizzle-kit@0.31.10": "0.31.10",
     "npm:drizzle-orm@0.45.2": "0.45.2_postgres@3.4.9",
     "npm:jimp@1.6.1": "1.6.1",
@@ -1815,7 +1816,8 @@
         "minizlib",
         "mkdirp",
         "yallist"
-      ]
+      ],
+      "deprecated": true
     },
     "text-hex@1.0.0": {
       "integrity": "sha512-uuVGNWzgJ4yhRaNSiubPY7OjISw4sw4E5Uv0wbjp+OzcbmVU/rsT8ujgcXJhn9ypzsgr5vlzpPqP+MBBKcGvbg=="

@@ -1,0 +1,132 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1766380246121,
+      "tag": "0000_mixed_colleen_wing",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766383124290,
+      "tag": "0001_plain_black_bolt",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1766383207760,
+      "tag": "0002_broad_makkari",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1766467786952,
+      "tag": "0003_orange_kingpin",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1766469172733,
+      "tag": "0004_legal_justice",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1767831968169,
+      "tag": "0005_bouncy_sue_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767832051760,
+      "tag": "0006_quiet_wendell_rand",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1767914069981,
+      "tag": "0007_aspiring_callisto",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1768449028357,
+      "tag": "0008_red_mikhail_rasputin",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1768449192538,
+      "tag": "0009_optimal_moonstone",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1768544011287,
+      "tag": "0010_past_mach_iv",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1768544652848,
+      "tag": "0011_perfect_scrambler",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1768545204029,
+      "tag": "0012_lame_kulan_gath",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1780212463099,
+      "tag": "0013_bright_shocker",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1780213246481,
+      "tag": "0014_calm_loners",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1780218722379,
+      "tag": "0015_public_tomorrow_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1780256227247,
+      "tag": "0016_foamy_shiver_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1780290196818,
+      "tag": "0017_petite_salo",
+      "breakpoints": true
+    }
+  ]
+}
