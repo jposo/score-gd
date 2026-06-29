@@ -7,21 +7,34 @@ import { z } from "zod";
 import winston from "winston";
 
 const UpdateList = z.object({
-  movedLevelId: z.coerce.number().min(1),
-  previousLevelId: z.preprocess(
-    (val) => {
-      if (val === "" || val === "null" || val === null) return null;
-      return val;
-    },
-    z.coerce.number().min(1).nullable(),
-  ),
-  nextLevelId: z.preprocess(
-    (val) => {
-      if (val === "" || val === "null" || val === null) return null;
-      return val;
-    },
-    z.coerce.number().min(1).nullable(),
-  ),
+  activeList: z
+    .string()
+    .transform((str, ctx) => {
+      try {
+        return JSON.parse(str);
+      } catch {
+        ctx.addIssue({
+          code: "custom",
+          message: "invalid active list payload",
+        });
+        return z.NEVER;
+      }
+    })
+    .pipe(z.array(z.coerce.number().min(1)).max(25)),
+  inactiveList: z
+    .string()
+    .transform((str, ctx) => {
+      try {
+        return JSON.parse(str);
+      } catch {
+        ctx.addIssue({
+          code: "custom",
+          message: "invalid inactive list payload",
+        });
+        return z.NEVER;
+      }
+    })
+    .pipe(z.array(z.coerce.number().min(1))),
 });
 
 export const load: PageServerLoad = async (event) => {
@@ -33,10 +46,13 @@ export const load: PageServerLoad = async (event) => {
   }
 
   const listLevelIds = profile.list.map((item) => item.id);
+  const inactiveLevelIds = profile.inactiveList.map((item) => item.id);
   const recentActivityLevelIds = profile.recentActivity.map(
     (item) => item.levelId,
   );
-  const allIds = [...new Set([...listLevelIds, ...recentActivityLevelIds])];
+  const allIds = [
+    ...new Set([...listLevelIds, ...inactiveLevelIds, ...recentActivityLevelIds]),
+  ];
 
   const allLevels = await get("levels").ids(allIds);
 
@@ -54,6 +70,10 @@ export const load: PageServerLoad = async (event) => {
     ]),
   );
   const enrichedList = profile.list.map((item) => ({
+    ...item,
+    details: levelMap.get(item.id) || null,
+  }));
+  const enrichedInactiveList = profile.inactiveList.map((item) => ({
     ...item,
     details: levelMap.get(item.id) || null,
   }));
@@ -77,6 +97,7 @@ export const load: PageServerLoad = async (event) => {
       reviewsWritten: profile.reviewsWritten,
     },
     list: enrichedList,
+    inactiveList: enrichedInactiveList,
     recentActivity: enrichedActivity,
     isUser,
   };
@@ -98,16 +119,23 @@ export const actions: Actions = {
       }
       const data = result.data;
 
-      const updated = await db.moveActiveListItemFractional(
+      const ids = [...data.activeList, ...data.inactiveList];
+      const uniqueIds = new Set(ids);
+      if (ids.length !== uniqueIds.size) {
+        return fail(400, {
+          message: "list payload contains duplicate levels",
+        });
+      }
+
+      const updated = await db.syncCompletedListMembership(
         user.id,
-        data.movedLevelId,
-        data.previousLevelId,
-        data.nextLevelId,
+        data.activeList,
+        data.inactiveList,
       );
 
       if (!updated) {
         return fail(422, {
-          message: "failed to reorder list item",
+          message: "failed to update list membership",
         });
       }
 

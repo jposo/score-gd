@@ -13,15 +13,11 @@
 
     let { data }: { data: PageData } = $props();
 
-    type MovePayload = {
-        movedLevelId: number;
-        previousLevelId: number | null;
-        nextLevelId: number | null;
-    };
-
     let editMode = $state(false);
-    let lastState = $state<number[]>([]);
-    let lastMove = $state<MovePayload | null>(null);
+    let activeItems = $state<any[]>([]);
+    let inactiveItems = $state<any[]>([]);
+    let initialActiveState = $state<number[]>([]);
+    let initialInactiveState = $state<number[]>([]);
     let requestingUpdate = $state(false);
 
     const tabs = {
@@ -32,8 +28,40 @@
 
     let tab = $state(tabs.recent);
 
+    const zoneType = "profile-list-transfer";
+
+    const hasChanges = $derived.by(() => {
+        const activeIds = activeItems.map((item) => item.id);
+        const inactiveIds = inactiveItems.map((item) => item.id);
+
+        if (activeIds.length !== initialActiveState.length) {
+            return true;
+        }
+
+        if (inactiveIds.length !== initialInactiveState.length) {
+            return true;
+        }
+
+        for (let i = 0; i < activeIds.length; i++) {
+            if (activeIds[i] !== initialActiveState[i]) {
+                return true;
+            }
+        }
+
+        for (let i = 0; i < inactiveIds.length; i++) {
+            if (inactiveIds[i] !== initialInactiveState[i]) {
+                return true;
+            }
+        }
+
+        return false;
+    });
+
     onMount(() => {
-        lastState = data.profile.list?.map((item) => item.id) ?? [];
+        activeItems = data.profile.list ?? [];
+        inactiveItems = data.profile.inactiveList ?? [];
+        initialActiveState = activeItems.map((item) => item.id);
+        initialInactiveState = inactiveItems.map((item) => item.id);
 
         if (page.url.hash === "#" + tabs.recent) {
             tab = tabs.recent;
@@ -44,32 +72,23 @@
         }
     });
 
-    function handleDrop(newItems: any[], movedItemId: number | null) {
-        const nextState = newItems.map((item) => item.id);
-        const fallbackMovedId = nextState.find(
-            (id, index) => lastState[index] !== id,
-        );
-
-        const resolvedMovedId = movedItemId ?? fallbackMovedId ?? null;
-
-        if (resolvedMovedId !== null) {
-            const movedIndex = nextState.findIndex(
-                (id) => id === resolvedMovedId,
-            );
-            if (movedIndex !== -1) {
-                lastMove = {
-                    movedLevelId: resolvedMovedId,
-                    previousLevelId:
-                        movedIndex > 0 ? nextState[movedIndex - 1] : null,
-                    nextLevelId:
-                        movedIndex < nextState.length - 1
-                            ? nextState[movedIndex + 1]
-                            : null,
-                };
-            }
+    function handleDrop(
+        listKey: string,
+        newItems: any[],
+        _movedItemId: number | null,
+    ) {
+        if (listKey === "active") {
+            activeItems = newItems;
+        } else if (listKey === "inactive") {
+            inactiveItems = newItems;
         }
 
-        lastState = nextState;
+        if (activeItems.length > 25) {
+            toastManager.add(
+                "active list is capped at 25 items. move one back to inactive.",
+                "error",
+            );
+        }
     }
 </script>
 
@@ -229,19 +248,24 @@
                     list
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
-                    {#if data.profile.isUser && data.profile.list && data.profile.list.length > 0}
+                    {#if data.profile.isUser}
                         <div class="flex justify-end">
                             <form
                                 method="POST"
                                 use:enhance={() => {
-                                    // console.log(lastState);
                                     requestingUpdate = true;
                                     return async ({ result }) => {
-                                        // console.log(result);
                                         requestingUpdate = false;
                                         if (result.type === "success") {
                                             editMode = false;
-                                            lastMove = null;
+                                            initialActiveState =
+                                                activeItems.map(
+                                                    (item) => item.id,
+                                                );
+                                            initialInactiveState =
+                                                inactiveItems.map(
+                                                    (item) => item.id,
+                                                );
                                             toastManager.add(
                                                 "successfully updated list",
                                                 "success",
@@ -264,34 +288,33 @@
                             >
                                 <input
                                     type="hidden"
-                                    name="movedLevelId"
-                                    value={lastMove?.movedLevelId ?? ""}
+                                    name="activeList"
+                                    value={JSON.stringify(
+                                        activeItems.map((item) => item.id),
+                                    )}
                                 />
                                 <input
                                     type="hidden"
-                                    name="previousLevelId"
-                                    value={lastMove?.previousLevelId ?? ""}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="nextLevelId"
-                                    value={lastMove?.nextLevelId ?? ""}
+                                    name="inactiveList"
+                                    value={JSON.stringify(
+                                        inactiveItems.map((item) => item.id),
+                                    )}
                                 />
                                 <!-- onclick={updateListPlacement} -->
                                 <button
                                     class="btn btn-sm btn-square"
-                                    type={editMode && lastMove
+                                    type={editMode && hasChanges
                                         ? "submit"
                                         : "button"}
                                     onclick={() => {
                                         if (!editMode) {
                                             editMode = true;
-                                            lastMove = null;
-                                        } else if (!lastMove) {
+                                        } else if (!hasChanges) {
                                             editMode = false;
                                         }
                                     }}
-                                    disabled={requestingUpdate}
+                                    disabled={requestingUpdate ||
+                                        activeItems.length > 25}
                                 >
                                     {#if editMode}
                                         <Icon
@@ -316,9 +339,54 @@
                             </form>
                         </div>
                     {/if}
-                    {#if data.profile.list && data.profile.list.length > 0}
+
+                    {#if editMode}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-base-200 p-4 rounded-lg">
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h3 class="text-lg font-semibold">
+                                        active list
+                                    </h3>
+                                    <span class="badge badge-primary">
+                                        {activeItems.length}/25
+                                    </span>
+                                </div>
+                                <List
+                                    listKey="active"
+                                    {zoneType}
+                                    items={activeItems}
+                                    {editMode}
+                                    onDrop={handleDrop}
+                                />
+                            </div>
+
+                            <div class="bg-base-200 p-4 rounded-lg">
+                                <div
+                                    class="flex items-center justify-between mb-2"
+                                >
+                                    <h3 class="text-lg font-semibold">
+                                        inactive completed
+                                    </h3>
+                                    <span class="badge badge-outline">
+                                        {inactiveItems.length}
+                                    </span>
+                                </div>
+                                <List
+                                    listKey="inactive"
+                                    {zoneType}
+                                    items={inactiveItems}
+                                    {editMode}
+                                    onDrop={handleDrop}
+                                />
+                            </div>
+                        </div>
+                    {:else if activeItems.length > 0}
                         <List
-                            items={data.profile.list}
+                            listKey="active"
+                            {zoneType}
+                            items={activeItems}
                             {editMode}
                             onDrop={handleDrop}
                         />

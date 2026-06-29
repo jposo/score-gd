@@ -43,9 +43,12 @@ type List = {
     levelId: number;
     // levelName: string;
     // publisher: string;
-    placement: string;
+    placement: string | null;
     score: number;
     attempts: number;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    videoUrl: string | null;
 }[];
 
 class Database {
@@ -264,6 +267,21 @@ class Database {
                             ) FILTER (
                                 WHERE ${schema.progress.status} = 'completed'
                                 AND ${schema.progress.listPlacement} IS NOT NULL
+                            ), '[]')`,
+                inactiveList: sql<List>`coalesce(json_agg(
+                                json_build_object(
+                                    'id', ${schema.progress.levelId},
+                                    'placement', ${schema.progress.listPlacement},
+                                    'score', ${schema.progress.score},
+                                    'attempts', ${schema.progress.attempts},
+                                    'startedAt', ${schema.progress.startedAt},
+                                    'completedAt', ${schema.progress.completedAt},
+                                    'videoUrl', ${schema.progress.videoUrl}
+                                )
+                                ORDER BY ${schema.progress.updatedAt} DESC
+                            ) FILTER (
+                                WHERE ${schema.progress.status} = 'completed'
+                                AND ${schema.progress.listPlacement} IS NULL
                             ), '[]')`,
                 recentActivity: sql<Activity[]>`(
           SELECT coalesce(json_agg(act), '[]')
@@ -592,6 +610,85 @@ class Database {
                 .returning();
 
             return result[0] || null;
+        });
+    }
+
+    async syncCompletedListMembership(
+        userId: string,
+        activeLevelIds: number[],
+        inactiveLevelIds: number[],
+    ) {
+        if (activeLevelIds.length > 25) {
+            return null;
+        }
+
+        const allIds = [...new Set([...activeLevelIds, ...inactiveLevelIds])];
+
+        return this.db.transaction(async (tx) => {
+            if (allIds.length > 0) {
+                const matching = await tx
+                    .select({
+                        levelId: schema.progress.levelId,
+                        status: schema.progress.status,
+                        listPlacement: schema.progress.listPlacement,
+                    })
+                    .from(schema.progress)
+                    .where(
+                        and(
+                            eq(schema.progress.userId, userId),
+                            inArray(schema.progress.levelId, allIds),
+                        ),
+                    );
+
+                if (matching.length !== allIds.length) {
+                    return null;
+                }
+
+                const byId = new Map(matching.map((item) => [item.levelId, item]));
+
+                for (const id of allIds) {
+                    const row = byId.get(id);
+                    if (!row || row.status !== "completed") {
+                        return null;
+                    }
+                }
+            }
+
+            for (let index = 0; index < activeLevelIds.length; index++) {
+                const levelId = activeLevelIds[index];
+                const placement = ((index + 1) * 1000).toString();
+
+                await tx
+                    .update(schema.progress)
+                    .set({
+                        listPlacement: placement,
+                    })
+                    .where(
+                        and(
+                            eq(schema.progress.userId, userId),
+                            eq(schema.progress.levelId, levelId),
+                        ),
+                    );
+            }
+
+            for (const levelId of inactiveLevelIds) {
+                await tx
+                    .update(schema.progress)
+                    .set({
+                        listPlacement: null,
+                    })
+                    .where(
+                        and(
+                            eq(schema.progress.userId, userId),
+                            eq(schema.progress.levelId, levelId),
+                        ),
+                    );
+            }
+
+            return {
+                activeCount: activeLevelIds.length,
+                inactiveCount: inactiveLevelIds.length,
+            };
         });
     }
 

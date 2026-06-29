@@ -5,13 +5,21 @@
     import { formatDate } from "$lib/tools/utils";
 
     let {
+        listKey,
+        zoneType,
         items,
         editMode,
         onDrop,
     }: {
+        listKey: string;
+        zoneType: string;
         items: any[];
         editMode: boolean;
-        onDrop: (newItems: any[], movedItemId: number | null) => void;
+        onDrop: (
+            listKey: string,
+            newItems: any[],
+            movedItemId: number | null,
+        ) => void;
     } = $props();
 
     const flipDurationMs = 300;
@@ -28,7 +36,7 @@
             rawMovedItemId === undefined || rawMovedItemId === null
                 ? null
                 : Number(rawMovedItemId);
-        onDrop([...newItems], movedItemId);
+        onDrop(listKey, [...newItems], movedItemId);
     }
 
     function getYoutubeId(url: string) {
@@ -51,7 +59,12 @@
 </script>
 
 <ul
-    use:dndzone={{ items, flipDurationMs, dragDisabled: !editMode }}
+    use:dndzone={{
+        items,
+        flipDurationMs,
+        dragDisabled: !editMode,
+        type: zoneType,
+    }}
     onconsider={handleDndConsider}
     onfinalize={handleDndFinalize}
     class="list"
