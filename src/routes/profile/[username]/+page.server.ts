@@ -40,6 +40,12 @@ const UpdateList = z.object({
 export const load: PageServerLoad = async (event) => {
   const username = event.params.username as string;
   const profile = await db.findUserInfoByUsername(username);
+  const snapshotAtParam = event.url.searchParams.get("at");
+  const parsedSnapshotAt = snapshotAtParam ? new Date(snapshotAtParam) : null;
+  const snapshotAt =
+    parsedSnapshotAt && !Number.isNaN(parsedSnapshotAt.getTime())
+      ? parsedSnapshotAt
+      : null;
 
   if (!profile) {
     error(404, "user not found");
@@ -47,11 +53,26 @@ export const load: PageServerLoad = async (event) => {
 
   const listLevelIds = profile.list.map((item) => item.id);
   const inactiveLevelIds = profile.inactiveList.map((item) => item.id);
+  const snapshot = snapshotAt
+    ? await db.findCompletedListSnapshotByUserId(profile.id, snapshotAt)
+    : null;
+  const snapshotActiveIds = snapshot ? snapshot.activeList.map((item) => item.id) : [];
+  const snapshotInactiveIds = snapshot
+    ? snapshot.inactiveList.map((item) => item.id)
+    : [];
   const recentActivityLevelIds = profile.recentActivity.map(
     (item) => item.levelId,
   );
+  const allProgressLevelIds = profile.allProgress.map((item) => item.levelId);
   const allIds = [
-    ...new Set([...listLevelIds, ...inactiveLevelIds, ...recentActivityLevelIds]),
+    ...new Set([
+      ...listLevelIds,
+      ...inactiveLevelIds,
+      ...recentActivityLevelIds,
+      ...allProgressLevelIds,
+      ...snapshotActiveIds,
+      ...snapshotInactiveIds,
+    ]),
   ];
 
   const allLevels = await get("levels").ids(allIds);
@@ -81,6 +102,23 @@ export const load: PageServerLoad = async (event) => {
     ...item,
     details: levelMap.get(item.levelId) || null,
   }));
+  const enrichedAllProgress = profile.allProgress.map((item) => ({
+    ...item,
+    details: levelMap.get(item.levelId) || null,
+  }));
+  const enrichedSnapshot = snapshot
+    ? {
+      at: snapshot.at.toISOString(),
+      activeList: snapshot.activeList.map((item) => ({
+        ...item,
+        details: levelMap.get(item.id) || null,
+      })),
+      inactiveList: snapshot.inactiveList.map((item) => ({
+        ...item,
+        details: levelMap.get(item.id) || null,
+      })),
+    }
+    : null;
 
   const {
     data: { user },
@@ -99,6 +137,9 @@ export const load: PageServerLoad = async (event) => {
     list: enrichedList,
     inactiveList: enrichedInactiveList,
     recentActivity: enrichedActivity,
+    allProgress: enrichedAllProgress,
+    snapshot: enrichedSnapshot,
+    snapshotAtParam,
     isUser,
   };
 

@@ -38,6 +38,17 @@ type Activity = {
     createdAt: Date;
 };
 
+type ProgressEntry = {
+    levelId: number;
+    status: string;
+    completionPercentage: number;
+    score: number;
+    attempts: number;
+    review: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
 type List = {
     id: number;
     levelId: number;
@@ -50,6 +61,18 @@ type List = {
     completedAt: Date | null;
     videoUrl: string | null;
 }[];
+
+type SnapshotState = {
+    id: number;
+    status: string | null;
+    placement: string | null;
+    score: number | null;
+    attempts: number | null;
+    startedAt: string | null;
+    completedAt: string | null;
+    videoUrl: string | null;
+    createdAt: Date | null;
+};
 
 class Database {
     static #instance: Database;
@@ -352,6 +375,25 @@ class Database {
                   AND ${schema.progress.levelId} IS NOT NULL
               ORDER BY ${schema.progress.updatedAt} DESC
               LIMIT 10
+          ) sub
+        )`,
+                allProgress: sql<ProgressEntry[]>`(
+          SELECT coalesce(json_agg(p), '[]')
+          FROM (
+              SELECT json_build_object(
+                  'levelId', ${schema.progress.levelId},
+                  'status', ${schema.progress.status},
+                  'completionPercentage', ${schema.progress.completionPercentage},
+                  'score', ${schema.progress.score},
+                  'attempts', ${schema.progress.attempts},
+                  'review', ${schema.progress.review},
+                  'createdAt', ${schema.progress.createdAt},
+                  'updatedAt', ${schema.progress.updatedAt}
+              ) AS p
+              FROM ${schema.progress}
+              WHERE ${schema.progress.userId} = ${schema.users.id}
+                  AND ${schema.progress.levelId} IS NOT NULL
+              ORDER BY ${schema.progress.updatedAt} DESC
           ) sub
         )`,
             })
@@ -855,6 +897,126 @@ class Database {
                 updatedRows,
             };
         });
+    }
+
+    async findCompletedListSnapshotByUserId(userId: string, at: Date) {
+        const currentRows = await this.db
+            .select({
+                levelId: schema.progress.levelId,
+                status: schema.progress.status,
+                listPlacement: schema.progress.listPlacement,
+                score: schema.progress.score,
+                attempts: schema.progress.attempts,
+                startedAt: schema.progress.startedAt,
+                completedAt: schema.progress.completedAt,
+                videoUrl: schema.progress.videoUrl,
+                createdAt: schema.progress.createdAt,
+            })
+            .from(schema.progress)
+            .where(eq(schema.progress.userId, userId));
+
+        const historyRows = await this.db
+            .select({
+                levelId: schema.progressHistory.levelId,
+                oldStatus: schema.progressHistory.oldStatus,
+                oldListPlacement: schema.progressHistory.oldListPlacement,
+                changeType: schema.progressHistory.changeType,
+                changedAt: schema.progressHistory.changedAt,
+                validFrom: schema.progressHistory.validFrom,
+            })
+            .from(schema.progressHistory)
+            .where(
+                and(
+                    eq(schema.progressHistory.userId, userId),
+                    sql`${schema.progressHistory.changedAt} > ${at}`,
+                ),
+            )
+            .orderBy(desc(schema.progressHistory.changedAt));
+
+        const stateByLevelId = new Map<number, SnapshotState>();
+
+        for (const row of currentRows) {
+            stateByLevelId.set(row.levelId, {
+                id: row.levelId,
+                status: row.status ?? null,
+                placement: row.listPlacement ?? null,
+                score: row.score ?? null,
+                attempts: row.attempts ?? null,
+                startedAt: row.startedAt ?? null,
+                completedAt: row.completedAt ?? null,
+                videoUrl: row.videoUrl ?? null,
+                createdAt: row.createdAt ?? null,
+            });
+        }
+
+        for (const event of historyRows) {
+            if (event.validFrom && event.validFrom > at) {
+                continue;
+            }
+
+            const existing = stateByLevelId.get(event.levelId) ?? {
+                id: event.levelId,
+                status: null,
+                placement: null,
+                score: null,
+                attempts: null,
+                startedAt: null,
+                completedAt: null,
+                videoUrl: null,
+                createdAt: null,
+            };
+
+            if (event.changeType === "update" || event.changeType === "delete") {
+                existing.status = event.oldStatus ?? null;
+                existing.placement = event.oldListPlacement ?? null;
+                stateByLevelId.set(event.levelId, existing);
+            }
+        }
+
+        const snapshotRows = [...stateByLevelId.values()]
+            .filter((row) => {
+                if (row.createdAt && row.createdAt > at) {
+                    return false;
+                }
+
+                return row.status === "completed";
+            });
+
+        const activeList = snapshotRows
+            .filter((row) => row.placement !== null)
+            .sort((a, b) => {
+                const aPlacement = Number(a.placement ?? "0");
+                const bPlacement = Number(b.placement ?? "0");
+                return aPlacement - bPlacement;
+            })
+            .map((row) => ({
+                id: row.id,
+                placement: row.placement,
+                score: row.score,
+                attempts: row.attempts,
+                startedAt: row.startedAt,
+                completedAt: row.completedAt,
+                videoUrl: row.videoUrl,
+            }));
+
+        const inactiveList = snapshotRows
+            .filter((row) => row.placement === null)
+            .sort((a, b) => b.id - a.id)
+            .map((row) => ({
+                id: row.id,
+                placement: row.placement,
+                score: row.score,
+                attempts: row.attempts,
+                startedAt: row.startedAt,
+                completedAt: row.completedAt,
+                videoUrl: row.videoUrl,
+            }));
+
+        return {
+            at,
+            activeList,
+            inactiveList,
+        };
     }
 
     async updateListPlacement(

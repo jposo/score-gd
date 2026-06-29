@@ -21,6 +21,7 @@
     let initialActiveItems = $state<any[]>([]);
     let initialInactiveItems = $state<any[]>([]);
     let requestingUpdate = $state(false);
+    let snapshotModal = $state<HTMLDialogElement | null>(null);
 
     const tabs = {
         recent: "recent",
@@ -62,6 +63,36 @@
         return false;
     });
 
+    const progressStatuses = [
+        "completed",
+        "in progress",
+        "to try",
+        "dropped",
+    ] as const;
+
+    const groupedProgress = $derived.by(() => {
+        const groups = {
+            completed: [] as any[],
+            "in progress": [] as any[],
+            "to try": [] as any[],
+            dropped: [] as any[],
+        };
+
+        for (const item of data.profile.allProgress ?? []) {
+            if (item.status === "completed") {
+                groups.completed.push(item);
+            } else if (item.status === "in progress") {
+                groups["in progress"].push(item);
+            } else if (item.status === "to try") {
+                groups["to try"].push(item);
+            } else if (item.status === "dropped") {
+                groups.dropped.push(item);
+            }
+        }
+
+        return groups;
+    });
+
     onMount(() => {
         activeItems = data.profile.list ?? [];
         inactiveItems = data.profile.inactiveList ?? [];
@@ -69,6 +100,11 @@
         initialInactiveItems = [...inactiveItems];
         initialActiveState = activeItems.map((item) => item.id);
         initialInactiveState = inactiveItems.map((item) => item.id);
+
+        if (data.profile.snapshotAtParam) {
+            tab = tabs.list;
+            return;
+        }
 
         if (page.url.hash === "#" + tabs.recent) {
             tab = tabs.recent;
@@ -106,6 +142,10 @@
     function cancelEditMode() {
         resetPendingChanges();
         editMode = false;
+    }
+
+    function clearSnapshotFilter() {
+        goto(page.url.pathname + "#" + tabs.list);
     }
 </script>
 
@@ -266,7 +306,15 @@
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
                     {#if data.profile.isUser}
-                        <div class="flex justify-end">
+                        <div class="flex justify-end gap-2">
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline"
+                                onclick={() => snapshotModal?.showModal()}
+                            >
+                                time machine
+                            </button>
+
                             <form
                                 method="POST"
                                 use:enhance={() => {
@@ -360,6 +408,70 @@
                                     {/if}
                                 </button>
                             </form>
+                        </div>
+                    {/if}
+
+                    {#if data.profile.snapshot}
+                        <div class="bg-base-200 p-4 rounded-lg mb-4">
+                            <div
+                                class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
+                            >
+                                <p class="text-sm text-base-content/80">
+                                    showing snapshot for {new Date(
+                                        data.profile.snapshot.at,
+                                    ).toLocaleString()}
+                                </p>
+                                <button
+                                    type="button"
+                                    class="btn btn-xs btn-ghost"
+                                    onclick={clearSnapshotFilter}
+                                >
+                                    clear snapshot
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="bg-base-100 p-4 rounded-lg">
+                                    <h3 class="text-lg font-semibold mb-2">
+                                        active list at time
+                                    </h3>
+                                    {#if data.profile.snapshot.activeList.length > 0}
+                                        <List
+                                            listKey="snapshot-active"
+                                            {zoneType}
+                                            items={data.profile.snapshot
+                                                .activeList}
+                                            editMode={false}
+                                            onDrop={() => {}}
+                                        />
+                                    {:else}
+                                        <p class="text-sm text-base-content/70">
+                                            no active items at this time.
+                                        </p>
+                                    {/if}
+                                </div>
+
+                                <div class="bg-base-100 p-4 rounded-lg">
+                                    <h3 class="text-lg font-semibold mb-2">
+                                        inactive completed at time
+                                    </h3>
+                                    {#if data.profile.snapshot.inactiveList.length > 0}
+                                        <List
+                                            listKey="snapshot-inactive"
+                                            {zoneType}
+                                            items={data.profile.snapshot
+                                                .inactiveList}
+                                            editMode={false}
+                                            onDrop={() => {}}
+                                        />
+                                    {:else}
+                                        <p class="text-sm text-base-content/70">
+                                            no inactive completed items at this
+                                            time.
+                                        </p>
+                                    {/if}
+                                </div>
+                            </div>
                         </div>
                     {/if}
 
@@ -485,15 +597,125 @@
                     all progress
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
-                    <div class="text-center">
-                        <h3
-                            class="text-lg font-semibold text-base-content/70 mb-2"
-                        >
-                            hello
-                        </h3>
-                    </div>
+                    {#if !data.profile.allProgress || data.profile.allProgress.length === 0}
+                        <div class="text-center">
+                            <h3
+                                class="text-lg font-semibold text-base-content/70 mb-2"
+                            >
+                                no progress yet
+                            </h3>
+                        </div>
+                    {:else}
+                        <div class="flex flex-col gap-6">
+                            {#each progressStatuses as statusName}
+                                <div class="bg-base-200 p-4 rounded-lg">
+                                    <div
+                                        class="flex items-center justify-between mb-3"
+                                    >
+                                        <h3 class="text-lg font-semibold">
+                                            {statusName}
+                                        </h3>
+                                        <span class="badge badge-outline">
+                                            {groupedProgress[statusName].length}
+                                        </span>
+                                    </div>
+
+                                    {#if groupedProgress[statusName].length === 0}
+                                        <p class="text-sm text-base-content/60">
+                                            nothing here yet.
+                                        </p>
+                                    {:else}
+                                        <div class="flex flex-col gap-2">
+                                            {#each groupedProgress[statusName] as item}
+                                                <div
+                                                    class="bg-base-100 rounded-lg p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
+                                                >
+                                                    <div>
+                                                        <a
+                                                            href={`/levels/${item.levelId}`}
+                                                            class="font-semibold hover:link"
+                                                        >
+                                                            {item.details
+                                                                ?.name ??
+                                                                `level ${item.levelId}`}
+                                                        </a>
+                                                        <div
+                                                            class="text-xs text-base-content/60"
+                                                        >
+                                                            by {item.details
+                                                                ?.publisher ??
+                                                                "unknown"}
+                                                        </div>
+                                                    </div>
+
+                                                    <div
+                                                        class="text-xs text-base-content/70 flex gap-3"
+                                                    >
+                                                        {#if item.score !== null}
+                                                            <span>
+                                                                {item.score}/10
+                                                            </span>
+                                                        {/if}
+                                                        {#if item.completionPercentage !== null}
+                                                            <span>
+                                                                {item.completionPercentage}%
+                                                            </span>
+                                                        {/if}
+                                                        <span>
+                                                            {new Date(
+                                                                item.updatedAt,
+                                                            ).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            {/each}
+                                        </div>
+                                    {/if}
+                                </div>
+                            {/each}
+                        </div>
+                    {/if}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<dialog class="modal" bind:this={snapshotModal}>
+    <div class="modal-box">
+        <h3 class="font-semibold text-lg mb-3">time machine</h3>
+        <p class="text-sm text-base-content/70 mb-4">
+            pick a timestamp to load a historical snapshot of active and
+            inactive completed lists.
+        </p>
+
+        <form method="GET" action="" class="flex flex-col gap-3">
+            <label class="form-control w-full">
+                <span class="label-text text-sm mb-1">
+                    view list at a point in time
+                </span>
+                <input
+                    type="datetime-local"
+                    name="at"
+                    class="input input-bordered input-sm w-full"
+                    value={data.profile.snapshotAtParam
+                        ? data.profile.snapshotAtParam.slice(0, 16)
+                        : ""}
+                />
+            </label>
+
+            <div class="modal-action mt-2">
+                <button class="btn btn-sm btn-primary" type="submit">
+                    load snapshot
+                </button>
+                <button
+                    class="btn btn-sm btn-ghost"
+                    type="button"
+                    onclick={() => snapshotModal?.close()}
+                >
+                    close
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
