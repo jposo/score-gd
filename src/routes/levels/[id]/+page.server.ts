@@ -155,14 +155,12 @@ export const actions: Actions = {
       const activeCount = await db.countActiveCompleted(user.id);
 
       if (activeCount >= 25) {
-        return fail(422, {
-          message:
-            "your active completed list already has 25 items. demote one item before adding a new one.",
-        });
+        // Keep completion valid but leave it inactive until the user promotes it.
+        data.listPlacement = null;
+      } else {
+        const placement = await db.findNextActiveListPlacement(user.id);
+        data.listPlacement = placement.toString();
       }
-
-      const placement = await db.findNextActiveListPlacement(user.id);
-      data.listPlacement = placement.toString();
     }
 
     try {

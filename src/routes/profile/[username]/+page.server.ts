@@ -98,14 +98,6 @@ export const actions: Actions = {
       }
       const data = result.data;
 
-      const activeCount = await db.countActiveCompleted(user.id);
-      if (activeCount > 25) {
-        return fail(422, {
-          message:
-            "active completed list can only contain up to 25 items. demote one item before reordering.",
-        });
-      }
-
       const updated = await db.moveActiveListItemFractional(
         user.id,
         data.movedLevelId,

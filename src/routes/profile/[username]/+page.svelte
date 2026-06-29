@@ -327,7 +327,7 @@
                             <h3
                                 class="text-lg font-semibold text-base-content/70 mb-2"
                             >
-                                no levels completed yet
+                                no active list items yet
                             </h3>
                         </div>
                     {/if}
