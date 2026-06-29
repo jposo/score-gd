@@ -18,6 +18,8 @@
     let inactiveItems = $state<any[]>([]);
     let initialActiveState = $state<number[]>([]);
     let initialInactiveState = $state<number[]>([]);
+    let initialActiveItems = $state<any[]>([]);
+    let initialInactiveItems = $state<any[]>([]);
     let requestingUpdate = $state(false);
 
     const tabs = {
@@ -29,6 +31,9 @@
     let tab = $state(tabs.recent);
 
     const zoneType = "profile-list-transfer";
+    const activeLimit = 25;
+
+    const isActiveListFull = $derived(activeItems.length >= activeLimit);
 
     const hasChanges = $derived.by(() => {
         const activeIds = activeItems.map((item) => item.id);
@@ -60,6 +65,8 @@
     onMount(() => {
         activeItems = data.profile.list ?? [];
         inactiveItems = data.profile.inactiveList ?? [];
+        initialActiveItems = [...activeItems];
+        initialInactiveItems = [...inactiveItems];
         initialActiveState = activeItems.map((item) => item.id);
         initialInactiveState = inactiveItems.map((item) => item.id);
 
@@ -89,6 +96,16 @@
                 "error",
             );
         }
+    }
+
+    function resetPendingChanges() {
+        activeItems = [...initialActiveItems];
+        inactiveItems = [...initialInactiveItems];
+    }
+
+    function cancelEditMode() {
+        resetPendingChanges();
+        editMode = false;
     }
 </script>
 
@@ -258,6 +275,12 @@
                                         requestingUpdate = false;
                                         if (result.type === "success") {
                                             editMode = false;
+                                            initialActiveItems = [
+                                                ...activeItems,
+                                            ];
+                                            initialInactiveItems = [
+                                                ...inactiveItems,
+                                            ];
                                             initialActiveState =
                                                 activeItems.map(
                                                     (item) => item.id,
@@ -314,7 +337,7 @@
                                         }
                                     }}
                                     disabled={requestingUpdate ||
-                                        activeItems.length > 25}
+                                        activeItems.length > activeLimit}
                                 >
                                     {#if editMode}
                                         <Icon
@@ -341,6 +364,30 @@
                     {/if}
 
                     {#if editMode}
+                        {#if hasChanges}
+                            <div
+                                class="alert alert-info mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                            >
+                                <span> you have unsaved list changes. </span>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-ghost"
+                                        onclick={resetPendingChanges}
+                                    >
+                                        reset changes
+                                    </button>
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline"
+                                        onclick={cancelEditMode}
+                                    >
+                                        cancel editing
+                                    </button>
+                                </div>
+                            </div>
+                        {/if}
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-base-200 p-4 rounded-lg">
                                 <div
@@ -349,15 +396,28 @@
                                     <h3 class="text-lg font-semibold">
                                         active list
                                     </h3>
-                                    <span class="badge badge-primary">
-                                        {activeItems.length}/25
+                                    <span
+                                        class="badge {isActiveListFull
+                                            ? 'badge-warning'
+                                            : 'badge-primary'}"
+                                    >
+                                        {activeItems.length}/{activeLimit}
                                     </span>
                                 </div>
+                                {#if isActiveListFull}
+                                    <p
+                                        class="text-xs text-base-content/70 mb-2"
+                                    >
+                                        active list is full. drag an item to
+                                        inactive before promoting another.
+                                    </p>
+                                {/if}
                                 <List
                                     listKey="active"
                                     {zoneType}
                                     items={activeItems}
                                     {editMode}
+                                    dropFromOthersDisabled={isActiveListFull}
                                     onDrop={handleDrop}
                                 />
                             </div>

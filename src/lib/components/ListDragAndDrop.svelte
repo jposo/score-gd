@@ -9,12 +9,14 @@
         zoneType,
         items,
         editMode,
+        dropFromOthersDisabled = false,
         onDrop,
     }: {
         listKey: string;
         zoneType: string;
         items: any[];
         editMode: boolean;
+        dropFromOthersDisabled?: boolean;
         onDrop: (
             listKey: string,
             newItems: any[],
@@ -64,6 +66,7 @@
         flipDurationMs,
         dragDisabled: !editMode,
         type: zoneType,
+        dropFromOthersDisabled,
     }}
     onconsider={handleDndConsider}
     onfinalize={handleDndFinalize}
