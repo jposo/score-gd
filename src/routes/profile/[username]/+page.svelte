@@ -13,9 +13,15 @@
 
     let { data }: { data: PageData } = $props();
 
+    type MovePayload = {
+        movedLevelId: number;
+        previousLevelId: number | null;
+        nextLevelId: number | null;
+    };
+
     let editMode = $state(false);
     let lastState = $state<number[]>([]);
-    let firstState: number[] | undefined = undefined;
+    let lastMove = $state<MovePayload | null>(null);
     let requestingUpdate = $state(false);
 
     const tabs = {
@@ -27,6 +33,8 @@
     let tab = $state(tabs.recent);
 
     onMount(() => {
+        lastState = data.profile.list?.map((item) => item.id) ?? [];
+
         if (page.url.hash === "#" + tabs.recent) {
             tab = tabs.recent;
         } else if (page.url.hash === "#" + tabs.list) {
@@ -36,11 +44,32 @@
         }
     });
 
-    function handleDrop(newItems: any[]) {
-        // if (lastState === undefined) {
-        //   firstState = newItems;
-        // }
-        lastState = newItems.map((item) => item.id);
+    function handleDrop(newItems: any[], movedItemId: number | null) {
+        const nextState = newItems.map((item) => item.id);
+        const fallbackMovedId = nextState.find(
+            (id, index) => lastState[index] !== id,
+        );
+
+        const resolvedMovedId = movedItemId ?? fallbackMovedId ?? null;
+
+        if (resolvedMovedId !== null) {
+            const movedIndex = nextState.findIndex(
+                (id) => id === resolvedMovedId,
+            );
+            if (movedIndex !== -1) {
+                lastMove = {
+                    movedLevelId: resolvedMovedId,
+                    previousLevelId:
+                        movedIndex > 0 ? nextState[movedIndex - 1] : null,
+                    nextLevelId:
+                        movedIndex < nextState.length - 1
+                            ? nextState[movedIndex + 1]
+                            : null,
+                };
+            }
+        }
+
+        lastState = nextState;
     }
 </script>
 
@@ -211,6 +240,8 @@
                                         // console.log(result);
                                         requestingUpdate = false;
                                         if (result.type === "success") {
+                                            editMode = false;
+                                            lastMove = null;
                                             toastManager.add(
                                                 "successfully updated list",
                                                 "success",
@@ -233,14 +264,33 @@
                             >
                                 <input
                                     type="hidden"
-                                    name="list"
-                                    value={JSON.stringify(lastState)}
+                                    name="movedLevelId"
+                                    value={lastMove?.movedLevelId ?? ""}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="previousLevelId"
+                                    value={lastMove?.previousLevelId ?? ""}
+                                />
+                                <input
+                                    type="hidden"
+                                    name="nextLevelId"
+                                    value={lastMove?.nextLevelId ?? ""}
                                 />
                                 <!-- onclick={updateListPlacement} -->
                                 <button
                                     class="btn btn-sm btn-square"
-                                    type={editMode ? "button" : "submit"}
-                                    onclick={() => (editMode = !editMode)}
+                                    type={editMode && lastMove
+                                        ? "submit"
+                                        : "button"}
+                                    onclick={() => {
+                                        if (!editMode) {
+                                            editMode = true;
+                                            lastMove = null;
+                                        } else if (!lastMove) {
+                                            editMode = false;
+                                        }
+                                    }}
                                     disabled={requestingUpdate}
                                 >
                                     {#if editMode}

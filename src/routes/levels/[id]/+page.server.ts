@@ -4,7 +4,11 @@ import db from "$lib/server/db/instance";
 import { requireAuth, requireAuthWithRoles } from "$lib/server/auth/middleware";
 import { z } from "zod";
 import { get } from "$lib/server/gd/client";
-import { statusEnum, type InsertLevel } from "$lib/server/db/schema";
+import {
+  statusEnum,
+  type InsertLevel,
+  type InsertProgress,
+} from "$lib/server/db/schema";
 import winston from "winston";
 
 // deno-lint-ignore no-explicit-any
@@ -140,7 +144,26 @@ export const actions: Actions = {
       });
     }
 
-    const data = result.data;
+    const existingProgress = await db.findUserProgressByLevelId(user.id, levelId);
+    const data: InsertProgress = { ...result.data };
+
+    if (data.status && data.status !== "completed") {
+      data.listPlacement = null;
+    }
+
+    if (data.status === "completed" && !existingProgress?.listPlacement) {
+      const activeCount = await db.countActiveCompleted(user.id);
+
+      if (activeCount >= 25) {
+        return fail(422, {
+          message:
+            "your active completed list already has 25 items. demote one item before adding a new one.",
+        });
+      }
+
+      const placement = await db.findNextActiveListPlacement(user.id);
+      data.listPlacement = placement.toString();
+    }
 
     try {
       const result = await db.upsertUserProgress(data);

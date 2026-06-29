@@ -7,21 +7,21 @@ import { z } from "zod";
 import winston from "winston";
 
 const UpdateList = z.object({
-  list: z
-    .string()
-    .transform((str, ctx) => {
-      try {
-        return JSON.parse(str);
-      } catch (e) {
-        ctx.addIssue({
-          code: "invalid_type",
-          message: "Invalid JSON array string",
-          expected: "string",
-        });
-        return z.NEVER;
-      }
-    })
-    .pipe(z.array(z.number().min(1))),
+  movedLevelId: z.coerce.number().min(1),
+  previousLevelId: z.preprocess(
+    (val) => {
+      if (val === "" || val === "null" || val === null) return null;
+      return val;
+    },
+    z.coerce.number().min(1).nullable(),
+  ),
+  nextLevelId: z.preprocess(
+    (val) => {
+      if (val === "" || val === "null" || val === null) return null;
+      return val;
+    },
+    z.coerce.number().min(1).nullable(),
+  ),
 });
 
 export const load: PageServerLoad = async (event) => {
@@ -98,9 +98,27 @@ export const actions: Actions = {
       }
       const data = result.data;
 
-      for (let p = 0; p < data.list.length; p++) {
-        await db.updateListPlacement(data.list[p], user.id, p + 1);
+      const activeCount = await db.countActiveCompleted(user.id);
+      if (activeCount > 25) {
+        return fail(422, {
+          message:
+            "active completed list can only contain up to 25 items. demote one item before reordering.",
+        });
       }
+
+      const updated = await db.moveActiveListItemFractional(
+        user.id,
+        data.movedLevelId,
+        data.previousLevelId,
+        data.nextLevelId,
+      );
+
+      if (!updated) {
+        return fail(422, {
+          message: "failed to reorder list item",
+        });
+      }
+
       return { success: true };
     } catch (err) {
       winston.error("error updating list placement:", err);

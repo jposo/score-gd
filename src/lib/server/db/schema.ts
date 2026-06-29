@@ -14,6 +14,7 @@ import {
   index,
   check,
   uuid,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { authUsers } from "drizzle-orm/supabase";
@@ -134,7 +135,7 @@ export const progress = pgTable(
     hideReview: boolean("hide_review").notNull().default(false),
     helpfulVotes: integer("helpful_votes").notNull().default(0),
     unhelpfulVotes: integer("unhelpful_votes").notNull().default(0),
-    listPlacement: integer("list_placement"),
+    listPlacement: numeric("list_placement", { precision: 40, scale: 20 }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     deletedAt: timestamp("deleted_at"),
@@ -151,6 +152,39 @@ export const progress = pgTable(
     index("level_id_index").on(table.levelId),
     index("score_index").on(table.score),
     index("completed_at_index").on(table.completedAt),
+  ],
+).enableRLS();
+
+export const progressHistory = pgTable(
+  "progress_history",
+  {
+    id: serial("id").primaryKey(),
+    progressId: integer("progress_id"),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    levelId: integer("level_id").notNull(),
+    oldStatus: statusEnum("old_status"),
+    newStatus: statusEnum("new_status"),
+    oldListPlacement: numeric("old_list_placement", {
+      precision: 40,
+      scale: 20,
+    }),
+    newListPlacement: numeric("new_list_placement", {
+      precision: 40,
+      scale: 20,
+    }),
+    changeType: text("change_type").notNull(),
+    validFrom: timestamp("valid_from").defaultNow().notNull(),
+    validTo: timestamp("valid_to"),
+    changedAt: timestamp("changed_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("progress_history_user_changed_at_index").on(
+      table.userId,
+      table.changedAt,
+    ),
+    index("progress_history_progress_id_index").on(table.progressId),
   ],
 ).enableRLS();
 
@@ -192,6 +226,9 @@ export type SelectUser = typeof users.$inferSelect;
 
 export type InsertProgress = typeof progress.$inferInsert;
 export type SelectProgress = typeof progress.$inferSelect;
+
+export type InsertProgressHistory = typeof progressHistory.$inferInsert;
+export type SelectProgressHistory = typeof progressHistory.$inferSelect;
 
 export type InsertLevel = typeof levels.$inferInsert;
 export type SelectLevel = typeof levels.$inferSelect;

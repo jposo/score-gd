@@ -43,7 +43,7 @@ type List = {
     levelId: number;
     // levelName: string;
     // publisher: string;
-    placement: number;
+    placement: string;
     score: number;
     attempts: number;
 }[];
@@ -261,7 +261,10 @@ class Database {
                   'videoUrl', ${schema.progress.videoUrl}
                 )
                 ORDER BY ${schema.progress.listPlacement} ASC
-              ) FILTER (WHERE ${schema.progress.status} = 'completed'), '[]')`,
+                            ) FILTER (
+                                WHERE ${schema.progress.status} = 'completed'
+                                AND ${schema.progress.listPlacement} IS NOT NULL
+                            ), '[]')`,
                 recentActivity: sql<Activity[]>`(
           SELECT coalesce(json_agg(act), '[]')
           FROM (
@@ -457,6 +460,141 @@ class Database {
         return progress[0] || null;
     }
 
+    async countActiveCompleted(userId: string) {
+        const result = await this.db
+            .select({
+                count: count(),
+            })
+            .from(schema.progress)
+            .where(
+                sql`${schema.progress.userId} = ${userId}
+                    AND ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NOT NULL`,
+            );
+
+        return result[0]?.count ?? 0;
+    }
+
+    async findNextActiveListPlacement(userId: string) {
+        const result = await this.db
+            .select({
+                maxPlacement: sql<number>`coalesce(max(${schema.progress.listPlacement}::numeric), 0)::float8`,
+            })
+            .from(schema.progress)
+            .where(
+                sql`${schema.progress.userId} = ${userId}
+                    AND ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NOT NULL`,
+            );
+
+        return (result[0]?.maxPlacement ?? 0) + 1000;
+    }
+
+    async moveActiveListItemFractional(
+        userId: string,
+        movedLevelId: number,
+        previousLevelId: number | null,
+        nextLevelId: number | null,
+    ) {
+        return this.db.transaction(async (tx) => {
+            const moved = await tx
+                .select({
+                    levelId: schema.progress.levelId,
+                    status: schema.progress.status,
+                    listPlacement: sql<number>`${schema.progress.listPlacement}::float8`,
+                })
+                .from(schema.progress)
+                .where(
+                    and(
+                        eq(schema.progress.userId, userId),
+                        eq(schema.progress.levelId, movedLevelId),
+                    ),
+                )
+                .limit(1);
+
+            if (!moved.length || moved[0].status !== "completed") {
+                return null;
+            }
+
+            let leftPlacement: number | null = null;
+            let rightPlacement: number | null = null;
+
+            if (previousLevelId !== null) {
+                const previous = await tx
+                    .select({
+                        listPlacement:
+                            sql<number>`${schema.progress.listPlacement}::float8`,
+                    })
+                    .from(schema.progress)
+                    .where(
+                        sql`${schema.progress.userId} = ${userId}
+                            AND ${schema.progress.levelId} = ${previousLevelId}
+                            AND ${schema.progress.status} = 'completed'
+                            AND ${schema.progress.listPlacement} IS NOT NULL`,
+                    )
+                    .limit(1);
+
+                if (!previous.length) {
+                    return null;
+                }
+
+                leftPlacement = previous[0].listPlacement;
+            }
+
+            if (nextLevelId !== null) {
+                const next = await tx
+                    .select({
+                        listPlacement:
+                            sql<number>`${schema.progress.listPlacement}::float8`,
+                    })
+                    .from(schema.progress)
+                    .where(
+                        sql`${schema.progress.userId} = ${userId}
+                            AND ${schema.progress.levelId} = ${nextLevelId}
+                            AND ${schema.progress.status} = 'completed'
+                            AND ${schema.progress.listPlacement} IS NOT NULL`,
+                    )
+                    .limit(1);
+
+                if (!next.length) {
+                    return null;
+                }
+
+                rightPlacement = next[0].listPlacement;
+            }
+
+            let nextPlacement = moved[0].listPlacement ?? 1000;
+
+            if (leftPlacement === null && rightPlacement === null) {
+                nextPlacement = 1000;
+            } else if (leftPlacement === null && rightPlacement !== null) {
+                nextPlacement = rightPlacement - 1000;
+            } else if (leftPlacement !== null && rightPlacement === null) {
+                nextPlacement = leftPlacement + 1000;
+            } else if (leftPlacement !== null && rightPlacement !== null) {
+                if (leftPlacement >= rightPlacement) {
+                    return null;
+                }
+                nextPlacement = (leftPlacement + rightPlacement) / 2;
+            }
+
+            const result = await tx
+                .update(schema.progress)
+                .set({
+                    listPlacement: nextPlacement.toString(),
+                })
+                .where(
+                    and(
+                        eq(schema.progress.levelId, movedLevelId),
+                        eq(schema.progress.userId, userId),
+                    ),
+                )
+                .returning();
+
+            return result[0] || null;
+        });
+    }
+
     async updateListPlacement(
         levelId: number,
         userId: string,
@@ -464,7 +602,7 @@ class Database {
     ) {
         const result = await this.db
             .update(schema.progress)
-            .set({ listPlacement: placement })
+            .set({ listPlacement: placement.toString() })
             .where(
                 and(
                     eq(schema.progress.levelId, levelId),

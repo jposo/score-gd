@@ -11,7 +11,7 @@
     }: {
         items: any[];
         editMode: boolean;
-        onDrop: (newItems: any[]) => void;
+        onDrop: (newItems: any[], movedItemId: number | null) => void;
     } = $props();
 
     const flipDurationMs = 300;
@@ -23,7 +23,12 @@
     function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
         const { items: newItems } = e.detail;
         items = newItems;
-        onDrop([...newItems]);
+        const rawMovedItemId = e.detail.info?.id;
+        const movedItemId =
+            rawMovedItemId === undefined || rawMovedItemId === null
+                ? null
+                : Number(rawMovedItemId);
+        onDrop([...newItems], movedItemId);
     }
 
     function getYoutubeId(url: string) {
