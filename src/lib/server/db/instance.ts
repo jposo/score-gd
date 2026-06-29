@@ -55,6 +55,59 @@ class Database {
     static #instance: Database;
     private db: ReturnType<typeof drizzle>;
 
+    private arraysEqual(a: number[], b: number[]) {
+        if (a.length !== b.length) {
+            return false;
+        }
+
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private hasSameMembers(a: number[], b: number[]) {
+        if (a.length !== b.length) {
+            return false;
+        }
+
+        const setA = new Set(a);
+        if (setA.size !== b.length) {
+            return false;
+        }
+
+        for (const value of b) {
+            if (!setA.has(value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private detectSingleMovedId(previous: number[], next: number[]) {
+        if (previous.length !== next.length) {
+            return null;
+        }
+
+        if (this.arraysEqual(previous, next)) {
+            return null;
+        }
+
+        for (const candidate of previous) {
+            const previousWithout = previous.filter((id) => id !== candidate);
+            const nextWithout = next.filter((id) => id !== candidate);
+            if (this.arraysEqual(previousWithout, nextWithout)) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
     private constructor() {
         const client = postgres(env.DATABASE_URL);
         this.db = drizzle(client, { schema });
@@ -625,38 +678,139 @@ class Database {
         const allIds = [...new Set([...activeLevelIds, ...inactiveLevelIds])];
 
         return this.db.transaction(async (tx) => {
-            if (allIds.length > 0) {
-                const matching = await tx
-                    .select({
-                        levelId: schema.progress.levelId,
-                        status: schema.progress.status,
-                        listPlacement: schema.progress.listPlacement,
-                    })
-                    .from(schema.progress)
-                    .where(
-                        and(
-                            eq(schema.progress.userId, userId),
-                            inArray(schema.progress.levelId, allIds),
-                        ),
+            const completedRows = await tx
+                .select({
+                    levelId: schema.progress.levelId,
+                    status: schema.progress.status,
+                    listPlacement: sql<number | null>`${schema.progress.listPlacement}::float8`,
+                })
+                .from(schema.progress)
+                .where(
+                    and(
+                        eq(schema.progress.userId, userId),
+                        eq(schema.progress.status, "completed"),
+                    ),
+                );
+
+            const completedIds = completedRows.map((row) => row.levelId);
+
+            if (!this.hasSameMembers(completedIds, allIds)) {
+                return null;
+            }
+
+            const byId = new Map(completedRows.map((row) => [row.levelId, row]));
+
+            const currentActive = completedRows
+                .filter((row) => row.listPlacement !== null)
+                .sort((a, b) => (a.listPlacement ?? 0) - (b.listPlacement ?? 0))
+                .map((row) => row.levelId);
+
+            const currentInactive = completedRows
+                .filter((row) => row.listPlacement === null)
+                .map((row) => row.levelId);
+
+            if (
+                this.arraysEqual(currentActive, activeLevelIds) &&
+                this.hasSameMembers(currentInactive, inactiveLevelIds)
+            ) {
+                return {
+                    activeCount: activeLevelIds.length,
+                    inactiveCount: inactiveLevelIds.length,
+                    updatedRows: 0,
+                };
+            }
+
+            const sameActiveMembers = this.hasSameMembers(
+                currentActive,
+                activeLevelIds,
+            );
+            const sameInactiveMembers = this.hasSameMembers(
+                currentInactive,
+                inactiveLevelIds,
+            );
+
+            if (sameActiveMembers && sameInactiveMembers) {
+                const movedLevelId = this.detectSingleMovedId(
+                    currentActive,
+                    activeLevelIds,
+                );
+
+                if (movedLevelId !== null) {
+                    const movedIndex = activeLevelIds.findIndex(
+                        (id) => id === movedLevelId,
                     );
+                    const previousLevelId =
+                        movedIndex > 0 ? activeLevelIds[movedIndex - 1] : null;
+                    const nextLevelId =
+                        movedIndex < activeLevelIds.length - 1
+                            ? activeLevelIds[movedIndex + 1]
+                            : null;
 
-                if (matching.length !== allIds.length) {
-                    return null;
-                }
+                    let leftPlacement: number | null = null;
+                    let rightPlacement: number | null = null;
 
-                const byId = new Map(matching.map((item) => [item.levelId, item]));
-
-                for (const id of allIds) {
-                    const row = byId.get(id);
-                    if (!row || row.status !== "completed") {
-                        return null;
+                    if (previousLevelId !== null) {
+                        leftPlacement = byId.get(previousLevelId)?.listPlacement ?? null;
                     }
+
+                    if (nextLevelId !== null) {
+                        rightPlacement = byId.get(nextLevelId)?.listPlacement ?? null;
+                    }
+
+                    let targetPlacement = byId.get(movedLevelId)?.listPlacement ?? 1000;
+
+                    if (leftPlacement === null && rightPlacement === null) {
+                        targetPlacement = 1000;
+                    } else if (leftPlacement === null && rightPlacement !== null) {
+                        targetPlacement = rightPlacement - 1000;
+                    } else if (leftPlacement !== null && rightPlacement === null) {
+                        targetPlacement = leftPlacement + 1000;
+                    } else if (leftPlacement !== null && rightPlacement !== null) {
+                        if (leftPlacement >= rightPlacement) {
+                            return null;
+                        }
+                        targetPlacement = (leftPlacement + rightPlacement) / 2;
+                    }
+
+                    const currentPlacement = byId.get(movedLevelId)?.listPlacement ?? null;
+                    if (currentPlacement !== targetPlacement) {
+                        await tx
+                            .update(schema.progress)
+                            .set({
+                                listPlacement: targetPlacement.toString(),
+                            })
+                            .where(
+                                and(
+                                    eq(schema.progress.userId, userId),
+                                    eq(schema.progress.levelId, movedLevelId),
+                                ),
+                            );
+
+                        return {
+                            activeCount: activeLevelIds.length,
+                            inactiveCount: inactiveLevelIds.length,
+                            updatedRows: 1,
+                        };
+                    }
+
+                    return {
+                        activeCount: activeLevelIds.length,
+                        inactiveCount: inactiveLevelIds.length,
+                        updatedRows: 0,
+                    };
                 }
             }
+
+            let updatedRows = 0;
 
             for (let index = 0; index < activeLevelIds.length; index++) {
                 const levelId = activeLevelIds[index];
                 const placement = ((index + 1) * 1000).toString();
+                const currentPlacement = byId.get(levelId)?.listPlacement;
+
+                if (currentPlacement === Number(placement)) {
+                    continue;
+                }
 
                 await tx
                     .update(schema.progress)
@@ -669,9 +823,17 @@ class Database {
                             eq(schema.progress.levelId, levelId),
                         ),
                     );
+
+                updatedRows++;
             }
 
             for (const levelId of inactiveLevelIds) {
+                const currentPlacement = byId.get(levelId)?.listPlacement;
+
+                if (currentPlacement === null) {
+                    continue;
+                }
+
                 await tx
                     .update(schema.progress)
                     .set({
@@ -683,11 +845,14 @@ class Database {
                             eq(schema.progress.levelId, levelId),
                         ),
                     );
+
+                updatedRows++;
             }
 
             return {
                 activeCount: activeLevelIds.length,
                 inactiveCount: inactiveLevelIds.length,
+                updatedRows,
             };
         });
     }
