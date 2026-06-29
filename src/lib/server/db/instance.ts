@@ -33,6 +33,7 @@ type Activity = {
     status: string;
     score: number;
     // levelName: string;
+    completionPercentage: number;
     review: string | null;
     createdAt: Date;
 };
@@ -261,7 +262,7 @@ class Database {
                 )
                 ORDER BY ${schema.progress.listPlacement} ASC
               ) FILTER (WHERE ${schema.progress.status} = 'completed'), '[]')`,
-        recentActivity: sql<Activity[]>`(
+                recentActivity: sql<Activity[]>`(
           SELECT coalesce(json_agg(act), '[]')
           FROM (
               SELECT json_build_object(
@@ -279,11 +280,14 @@ class Database {
               LIMIT 10
           ) sub
         )`,
-      })
-      .from(schema.users)
-      .leftJoin(schema.progress, eq(schema.users.id, schema.progress.userId))
-      .where(eq(schema.users.username, username))
-      .groupBy(schema.users.id);
+            })
+            .from(schema.users)
+            .leftJoin(
+                schema.progress,
+                eq(schema.users.id, schema.progress.userId),
+            )
+            .where(eq(schema.users.username, username))
+            .groupBy(schema.users.id);
 
         return user.length ? user[0] : null;
     }

@@ -89,7 +89,7 @@
                             bind:this={quickUpdateForm}
                             action="?/updateProgress"
                             use:enhance={(() => {
-                                if (data.level.length === "platformer") {
+                                if (status === "completed") {
                                     completionPercentage = 100;
                                 }
                                 return async ({ result }) => {
@@ -145,6 +145,13 @@
                                     >
                                 {/each}
                             </select>
+                            <input
+                                bind:value={completionPercentage}
+                                name="completionPercentage"
+                                min="0"
+                                max="100"
+                                type="hidden"
+                            />
                         </form>
                         <button
                             class="btn btn-secondary btn-block"
@@ -495,8 +502,7 @@
                     name="review"
                     bind:value={review}
                     class="textarea w-full"
-                    placeholder="enter your thoughts..."
-                ></textarea>
+                    placeholder="enter your thoughts..."></textarea>
             </fieldset>
 
             <div class="modal-action flex justify-end gap-2">
