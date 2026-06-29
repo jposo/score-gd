@@ -9,6 +9,10 @@
     import Review from "$lib/components/Review.svelte";
     import { toastManager } from "$lib/state/toasts.svelte";
     import { enhance } from "$app/forms";
+    import {
+        PROGRESS_SCORE_OPTIONS,
+        PROGRESS_STATUS_OPTIONS,
+    } from "$lib/constants";
 
     let { data }: { data: PageData } = $props();
 
@@ -33,25 +37,8 @@
     let review = $derived(data.progress?.review ?? undefined);
     let progressVideoUrl = $derived(data.progress?.videoUrl ?? undefined);
 
-    const scoreOptions = [
-        { value: 1, label: "terrible" },
-        { value: 2, label: "horrible" },
-        { value: 3, label: "very bad" },
-        { value: 4, label: "bad" },
-        { value: 5, label: "mediocre" },
-        { value: 6, label: "fine" },
-        { value: 7, label: "good" },
-        { value: 8, label: "very good" },
-        { value: 9, label: "excellent" },
-        { value: 10, label: "perfect" },
-    ];
-
-    const statusOptions = [
-        { value: "in progress", label: "in progress" },
-        { value: "completed", label: "completed" },
-        { value: "dropped", label: "dropped" },
-        { value: "to try", label: "to try" },
-    ];
+    const scoreOptions = PROGRESS_SCORE_OPTIONS;
+    const statusOptions = PROGRESS_STATUS_OPTIONS;
 
     async function quickUpdate(event: Event) {
         event.preventDefault();
@@ -502,7 +489,8 @@
                     name="review"
                     bind:value={review}
                     class="textarea w-full"
-                    placeholder="enter your thoughts..."></textarea>
+                    placeholder="enter your thoughts..."
+                ></textarea>
             </fieldset>
 
             <div class="modal-action flex justify-end gap-2">

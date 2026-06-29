@@ -10,6 +10,10 @@
     import { onMount } from "svelte";
     import { page } from "$app/state";
     import { enhance } from "$app/forms";
+    import {
+        PROGRESS_SCORE_OPTIONS,
+        PROGRESS_STATUS_OPTIONS,
+    } from "$lib/constants";
 
     let { data }: { data: PageData } = $props();
 
@@ -22,6 +26,21 @@
     let initialInactiveItems = $state<any[]>([]);
     let requestingUpdate = $state(false);
     let snapshotModal = $state<HTMLDialogElement | null>(null);
+    let progressModal = $state<HTMLDialogElement | null>(null);
+
+    type EditableProgress = {
+        levelId: number;
+        status: "to try" | "in progress" | "completed" | "dropped" | "";
+        score: number | "";
+        levelName: string;
+    };
+
+    let selectedProgress = $state<EditableProgress>({
+        levelId: 0,
+        status: "",
+        score: "",
+        levelName: "",
+    });
 
     const tabs = {
         recent: "recent",
@@ -69,6 +88,9 @@
         "to try",
         "dropped",
     ] as const;
+
+    const statusOptions = PROGRESS_STATUS_OPTIONS;
+    const scoreOptions = PROGRESS_SCORE_OPTIONS;
 
     const groupedProgress = $derived.by(() => {
         const groups = {
@@ -146,6 +168,16 @@
 
     function clearSnapshotFilter() {
         goto(page.url.pathname + "#" + tabs.list);
+    }
+
+    function openProgressEditor(item: any) {
+        selectedProgress = {
+            levelId: item.levelId,
+            status: (item.status ?? "") as EditableProgress["status"],
+            score: item.score ?? "",
+            levelName: item.details?.name ?? `level ${item.levelId}`,
+        };
+        progressModal?.showModal();
     }
 </script>
 
@@ -649,23 +681,40 @@
                                                     </div>
 
                                                     <div
-                                                        class="text-xs text-base-content/70 flex gap-3"
+                                                        class="flex items-center gap-3"
                                                     >
-                                                        {#if item.score !== null}
+                                                        <div
+                                                            class="text-xs text-base-content/70 flex gap-3"
+                                                        >
+                                                            {#if item.score !== null}
+                                                                <span>
+                                                                    {item.score}/10
+                                                                </span>
+                                                            {/if}
+                                                            {#if item.completionPercentage !== null}
+                                                                <span>
+                                                                    {item.completionPercentage}%
+                                                                </span>
+                                                            {/if}
                                                             <span>
-                                                                {item.score}/10
+                                                                {new Date(
+                                                                    item.updatedAt,
+                                                                ).toLocaleDateString()}
                                                             </span>
+                                                        </div>
+
+                                                        {#if data.profile.isUser}
+                                                            <button
+                                                                type="button"
+                                                                class="btn btn-xs btn-outline"
+                                                                onclick={() =>
+                                                                    openProgressEditor(
+                                                                        item,
+                                                                    )}
+                                                            >
+                                                                edit
+                                                            </button>
                                                         {/if}
-                                                        {#if item.completionPercentage !== null}
-                                                            <span>
-                                                                {item.completionPercentage}%
-                                                            </span>
-                                                        {/if}
-                                                        <span>
-                                                            {new Date(
-                                                                item.updatedAt,
-                                                            ).toLocaleDateString()}
-                                                        </span>
                                                     </div>
                                                 </div>
                                             {/each}
@@ -714,6 +763,98 @@
                     onclick={() => snapshotModal?.close()}
                 >
                     close
+                </button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<dialog class="modal" bind:this={progressModal}>
+    <div class="modal-box">
+        <h3 class="font-semibold text-lg mb-3">
+            edit progress: {selectedProgress.levelName}
+        </h3>
+
+        <form
+            method="POST"
+            action="?/updateProgress"
+            class="flex flex-col gap-3"
+            use:enhance={() => {
+                return async ({ result }) => {
+                    if (result.type === "success") {
+                        toastManager.add(
+                            (result.data?.message as string) ??
+                                "successfully updated progress",
+                            "success",
+                        );
+                        progressModal?.close();
+                        await goto(
+                            page.url.pathname +
+                                page.url.search +
+                                "#" +
+                                tabs.progress,
+                            {
+                                invalidateAll: true,
+                            },
+                        );
+                    } else if (result.type === "failure") {
+                        toastManager.add(
+                            (result.data?.message as string) ??
+                                "failed to update progress",
+                            "error",
+                        );
+                    } else {
+                        toastManager.add("unknown error occurred", "error");
+                    }
+                };
+            }}
+        >
+            <input
+                type="hidden"
+                name="levelId"
+                value={selectedProgress.levelId}
+            />
+
+            <label class="form-control w-full">
+                <span class="label-text text-sm mb-1">status</span>
+                <select
+                    class="select select-bordered"
+                    name="status"
+                    bind:value={selectedProgress.status}
+                >
+                    <option value="">leave unchanged</option>
+                    {#each statusOptions as option}
+                        <option value={option.value}>{option.label}</option>
+                    {/each}
+                </select>
+            </label>
+
+            <label class="form-control w-full">
+                <span class="label-text text-sm mb-1">score</span>
+                <select
+                    class="select select-bordered"
+                    name="score"
+                    bind:value={selectedProgress.score}
+                >
+                    <option value="">no score</option>
+                    {#each scoreOptions as option}
+                        <option value={option.value}>
+                            {option.value} - {option.label}
+                        </option>
+                    {/each}
+                </select>
+            </label>
+
+            <div class="modal-action mt-2">
+                <button class="btn btn-sm btn-primary" type="submit">
+                    save
+                </button>
+                <button
+                    class="btn btn-sm btn-ghost"
+                    type="button"
+                    onclick={() => progressModal?.close()}
+                >
+                    cancel
                 </button>
             </div>
         </form>
