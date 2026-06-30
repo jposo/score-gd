@@ -466,7 +466,7 @@
         >
             <a
                 aria-label="youtube channel url"
-                href="https://www.youtube.com/@devpixel7"
+                href="https://www.youtube.com/channel/UCke91-1wo4q0Yw1w-2MvJJw"
                 target="_blank"
             >
                 <svg

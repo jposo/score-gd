@@ -1,11 +1,6 @@
 <script lang="ts">
     import type { PageData, SubmitFunction } from "./$types";
-    import {
-        dateToISOString,
-        dateToLocaleString,
-        calculateNewAverage,
-        getYouTubeEmbedUrl,
-    } from "$lib/tools/utils";
+    import { dateToLocaleString, getYouTubeEmbedUrl } from "$lib/tools/utils";
     import Review from "$lib/components/Review.svelte";
     import { toastManager } from "$lib/state/toasts.svelte";
     import { enhance } from "$app/forms";
@@ -133,7 +128,7 @@
                                 {/each}
                             </select>
                             <input
-                                bind:value={completionPercentage}
+                                value={completionPercentage}
                                 name="completionPercentage"
                                 min="0"
                                 max="100"
@@ -153,7 +148,7 @@
                 <div class="stat">
                     <div class="stat-title">score</div>
                     <div class="stat-value">
-                        {average ? average.toFixed(1) : "N/A"}
+                        {average ? average.toFixed(1) : "n/a"}
                     </div>
                 </div>
 
@@ -385,6 +380,41 @@
         >
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <fieldset class="fieldset">
+                    <legend class="fieldset-legend">status</legend>
+                    <select
+                        class="select"
+                        name="status"
+                        bind:value={status}
+                        onchange={() => {
+                            if (status === "completed") {
+                                completionPercentage = 100;
+                            }
+                        }}
+                    >
+                        <option disabled selected value={undefined}
+                            >status</option
+                        >
+                        {#each statusOptions as option}
+                            <option value={option.value}>{option.label}</option>
+                        {/each}
+                    </select>
+                </fieldset>
+                <fieldset class="fieldset">
+                    <legend class="fieldset-legend">score</legend>
+                    <select class="select" name="score" bind:value={score}>
+                        <option disabled selected value={undefined}
+                            >score</option
+                        >
+                        {#each scoreOptions as option}
+                            <option value={option.value}
+                                >{option.value} - {option.label}</option
+                            >
+                        {/each}
+                    </select>
+                </fieldset>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <fieldset class="fieldset">
                     {#if data.level.length !== "platformer"}
                         <legend class="fieldset-legend"
                             >completion percentage</legend
@@ -489,8 +519,7 @@
                     name="review"
                     bind:value={review}
                     class="textarea w-full"
-                    placeholder="enter your thoughts..."
-                ></textarea>
+                    placeholder="enter your thoughts..."></textarea>
             </fieldset>
 
             <div class="modal-action flex justify-end gap-2">

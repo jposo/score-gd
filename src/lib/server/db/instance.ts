@@ -5,6 +5,7 @@ import { env } from "$env/dynamic/private";
 import {
     sql,
     eq,
+    gt,
     desc,
     and,
     or,
@@ -32,10 +33,10 @@ type Activity = {
     levelId: number;
     status: string;
     score: number;
-    // levelName: string;
     completionPercentage: number;
     review: string | null;
     createdAt: Date;
+    updatedAt: Date;
 };
 
 type ProgressEntry = {
@@ -330,72 +331,73 @@ class Database {
                     sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`,
                 ),
                 list: sql<List>`coalesce(json_agg(
-                json_build_object(
-                  'id', ${schema.progress.levelId},
-                  'placement', ${schema.progress.listPlacement},
-                  'score', ${schema.progress.score},
-                  'attempts', ${schema.progress.attempts},
-                  'startedAt', ${schema.progress.startedAt},
-                  'completedAt', ${schema.progress.completedAt},
-                  'videoUrl', ${schema.progress.videoUrl}
-                )
-                ORDER BY ${schema.progress.listPlacement} ASC
-                            ) FILTER (
-                                WHERE ${schema.progress.status} = 'completed'
-                                AND ${schema.progress.listPlacement} IS NOT NULL
-                            ), '[]')`,
+                    json_build_object(
+                        'id', ${schema.progress.levelId},
+                        'placement', ${schema.progress.listPlacement},
+                        'score', ${schema.progress.score},
+                        'attempts', ${schema.progress.attempts},
+                        'startedAt', ${schema.progress.startedAt},
+                        'completedAt', ${schema.progress.completedAt},
+                        'videoUrl', ${schema.progress.videoUrl}
+                    )
+                    ORDER BY ${schema.progress.listPlacement} ASC
+                ) FILTER (
+                    WHERE ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NOT NULL
+                ), '[]')`,
                 inactiveList: sql<List>`coalesce(json_agg(
-                                json_build_object(
-                                    'id', ${schema.progress.levelId},
-                                    'placement', ${schema.progress.listPlacement},
-                                    'score', ${schema.progress.score},
-                                    'attempts', ${schema.progress.attempts},
-                                    'startedAt', ${schema.progress.startedAt},
-                                    'completedAt', ${schema.progress.completedAt},
-                                    'videoUrl', ${schema.progress.videoUrl}
-                                )
-                                ORDER BY ${schema.progress.updatedAt} DESC
-                            ) FILTER (
-                                WHERE ${schema.progress.status} = 'completed'
-                                AND ${schema.progress.listPlacement} IS NULL
-                            ), '[]')`,
+                    json_build_object(
+                        'id', ${schema.progress.levelId},
+                        'placement', ${schema.progress.listPlacement},
+                        'score', ${schema.progress.score},
+                        'attempts', ${schema.progress.attempts},
+                        'startedAt', ${schema.progress.startedAt},
+                        'completedAt', ${schema.progress.completedAt},
+                        'videoUrl', ${schema.progress.videoUrl}
+                    )
+                    ORDER BY ${schema.progress.updatedAt} DESC
+                ) FILTER (
+                    WHERE ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NULL
+                ), '[]')`,
                 recentActivity: sql<Activity[]>`(
-          SELECT coalesce(json_agg(act), '[]')
-          FROM (
-              SELECT json_build_object(
-                  'levelId', ${schema.progress.levelId},
-                  'status', ${schema.progress.status},
-                  'completionPercentage', ${schema.progress.completionPercentage},
-                  'score', ${schema.progress.score},
-                  'review', ${schema.progress.review},
-                  'createdAt', ${schema.progress.createdAt}
-              ) AS act
-              FROM ${schema.progress}
-              WHERE ${schema.progress.userId} = ${schema.users.id}
-                  AND ${schema.progress.levelId} IS NOT NULL
-              ORDER BY ${schema.progress.updatedAt} DESC
-              LIMIT 10
-          ) sub
-        )`,
+                    SELECT coalesce(json_agg(act), '[]')
+                    FROM (
+                        SELECT json_build_object(
+                            'levelId', ${schema.progress.levelId},
+                            'status', ${schema.progress.status},
+                            'completionPercentage', ${schema.progress.completionPercentage},
+                            'score', ${schema.progress.score},
+                            'review', ${schema.progress.review},
+                            'createdAt', ${schema.progress.createdAt},
+                            'updatedAt', ${schema.progress.updatedAt}
+                        ) AS act
+                        FROM ${schema.progress}
+                        WHERE ${schema.progress.userId} = ${schema.users.id}
+                            AND ${schema.progress.levelId} IS NOT NULL
+                        ORDER BY ${schema.progress.updatedAt} DESC
+                        LIMIT 10
+                    ) sub
+                )`,
                 allProgress: sql<ProgressEntry[]>`(
-          SELECT coalesce(json_agg(p), '[]')
-          FROM (
-              SELECT json_build_object(
-                  'levelId', ${schema.progress.levelId},
-                  'status', ${schema.progress.status},
-                  'completionPercentage', ${schema.progress.completionPercentage},
-                  'score', ${schema.progress.score},
-                  'attempts', ${schema.progress.attempts},
-                  'review', ${schema.progress.review},
-                  'createdAt', ${schema.progress.createdAt},
-                  'updatedAt', ${schema.progress.updatedAt}
-              ) AS p
-              FROM ${schema.progress}
-              WHERE ${schema.progress.userId} = ${schema.users.id}
-                  AND ${schema.progress.levelId} IS NOT NULL
-              ORDER BY ${schema.progress.updatedAt} DESC
-          ) sub
-        )`,
+                    SELECT coalesce(json_agg(p), '[]')
+                    FROM (
+                        SELECT json_build_object(
+                            'levelId', ${schema.progress.levelId},
+                            'status', ${schema.progress.status},
+                            'completionPercentage', ${schema.progress.completionPercentage},
+                            'score', ${schema.progress.score},
+                            'attempts', ${schema.progress.attempts},
+                            'review', ${schema.progress.review},
+                            'createdAt', ${schema.progress.createdAt},
+                            'updatedAt', ${schema.progress.updatedAt}
+                        ) AS p
+                        FROM ${schema.progress}
+                        WHERE ${schema.progress.userId} = ${schema.users.id}
+                            AND ${schema.progress.levelId} IS NOT NULL
+                        ORDER BY ${schema.progress.updatedAt} DESC
+                    ) sub
+                )`,
             })
             .from(schema.users)
             .leftJoin(
@@ -635,8 +637,7 @@ class Database {
             if (previousLevelId !== null) {
                 const previous = await tx
                     .select({
-                        listPlacement:
-                            sql<number>`${schema.progress.listPlacement}::float8`,
+                        listPlacement: sql<number>`${schema.progress.listPlacement}::float8`,
                     })
                     .from(schema.progress)
                     .where(
@@ -657,8 +658,7 @@ class Database {
             if (nextLevelId !== null) {
                 const next = await tx
                     .select({
-                        listPlacement:
-                            sql<number>`${schema.progress.listPlacement}::float8`,
+                        listPlacement: sql<number>`${schema.progress.listPlacement}::float8`,
                     })
                     .from(schema.progress)
                     .where(
@@ -724,7 +724,9 @@ class Database {
                 .select({
                     levelId: schema.progress.levelId,
                     status: schema.progress.status,
-                    listPlacement: sql<number | null>`${schema.progress.listPlacement}::float8`,
+                    listPlacement: sql<
+                        number | null
+                    >`${schema.progress.listPlacement}::float8`,
                 })
                 .from(schema.progress)
                 .where(
@@ -740,7 +742,9 @@ class Database {
                 return null;
             }
 
-            const byId = new Map(completedRows.map((row) => [row.levelId, row]));
+            const byId = new Map(
+                completedRows.map((row) => [row.levelId, row]),
+            );
 
             const currentActive = completedRows
                 .filter((row) => row.listPlacement !== null)
@@ -792,29 +796,42 @@ class Database {
                     let rightPlacement: number | null = null;
 
                     if (previousLevelId !== null) {
-                        leftPlacement = byId.get(previousLevelId)?.listPlacement ?? null;
+                        leftPlacement =
+                            byId.get(previousLevelId)?.listPlacement ?? null;
                     }
 
                     if (nextLevelId !== null) {
-                        rightPlacement = byId.get(nextLevelId)?.listPlacement ?? null;
+                        rightPlacement =
+                            byId.get(nextLevelId)?.listPlacement ?? null;
                     }
 
-                    let targetPlacement = byId.get(movedLevelId)?.listPlacement ?? 1000;
+                    let targetPlacement =
+                        byId.get(movedLevelId)?.listPlacement ?? 1000;
 
                     if (leftPlacement === null && rightPlacement === null) {
                         targetPlacement = 1000;
-                    } else if (leftPlacement === null && rightPlacement !== null) {
+                    } else if (
+                        leftPlacement === null &&
+                        rightPlacement !== null
+                    ) {
                         targetPlacement = rightPlacement - 1000;
-                    } else if (leftPlacement !== null && rightPlacement === null) {
+                    } else if (
+                        leftPlacement !== null &&
+                        rightPlacement === null
+                    ) {
                         targetPlacement = leftPlacement + 1000;
-                    } else if (leftPlacement !== null && rightPlacement !== null) {
+                    } else if (
+                        leftPlacement !== null &&
+                        rightPlacement !== null
+                    ) {
                         if (leftPlacement >= rightPlacement) {
                             return null;
                         }
                         targetPlacement = (leftPlacement + rightPlacement) / 2;
                     }
 
-                    const currentPlacement = byId.get(movedLevelId)?.listPlacement ?? null;
+                    const currentPlacement =
+                        byId.get(movedLevelId)?.listPlacement ?? null;
                     if (currentPlacement !== targetPlacement) {
                         await tx
                             .update(schema.progress)
@@ -928,7 +945,7 @@ class Database {
             .where(
                 and(
                     eq(schema.progressHistory.userId, userId),
-                    sql`${schema.progressHistory.changedAt} > ${at}`,
+                    gt(schema.progressHistory.changedAt, at),
                 ),
             )
             .orderBy(desc(schema.progressHistory.changedAt));
@@ -966,21 +983,23 @@ class Database {
                 createdAt: null,
             };
 
-            if (event.changeType === "update" || event.changeType === "delete") {
+            if (
+                event.changeType === "update" ||
+                event.changeType === "delete"
+            ) {
                 existing.status = event.oldStatus ?? null;
                 existing.placement = event.oldListPlacement ?? null;
                 stateByLevelId.set(event.levelId, existing);
             }
         }
 
-        const snapshotRows = [...stateByLevelId.values()]
-            .filter((row) => {
-                if (row.createdAt && row.createdAt > at) {
-                    return false;
-                }
+        const snapshotRows = [...stateByLevelId.values()].filter((row) => {
+            if (row.createdAt && row.createdAt > at) {
+                return false;
+            }
 
-                return row.status === "completed";
-            });
+            return row.status === "completed";
+        });
 
         const activeList = snapshotRows
             .filter((row) => row.placement !== null)

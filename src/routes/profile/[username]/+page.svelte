@@ -1,7 +1,15 @@
 <script lang="ts">
     import type { PageData } from "./$types";
-    import { Icon, Check, ListBullet, Clock, Pencil } from "svelte-hero-icons";
+    import {
+        Icon,
+        Check,
+        ListBullet,
+        Clock,
+        Pencil,
+        Backward,
+    } from "svelte-hero-icons";
     import Activity from "$lib/components/Activity.svelte";
+    import Activity2 from "$lib/components/Activity2.svelte";
     import List from "$lib/components/ListDragAndDrop.svelte";
     import { formatDate } from "$lib/tools/utils";
     import type { ListItem } from "$lib/shared/types";
@@ -50,7 +58,7 @@
 
     let tab = $state(tabs.recent);
 
-    const zoneType = "profile-list-transfer";
+    const zoneType = "columns";
     const activeLimit = 25;
 
     const isActiveListFull = $derived(activeItems.length >= activeLimit);
@@ -239,9 +247,6 @@
                             >
                                 edit profile
                             </a>
-                            <button class="btn btn-outline btn-sm">
-                                view progress
-                            </button>
                         </div>
                     {/if}
                 </div>
@@ -291,27 +296,41 @@
                     recent activity
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
-                    <div class="text-center">
+                    <div>
                         {#if !data.profile.recentActivity || data.profile.recentActivity.length === 0}
-                            <!-- <div class="text-6xl mb-4">📊</div> -->
-                            <h3
-                                class="text-lg font-semibold text-base-content/70 mb-2"
-                            >
-                                no activity yet
-                            </h3>
-                            {#if data.profile.isUser}
-                                <p class="text-base-content/50 mb-4">
-                                    start tracking your <span class="font-bold"
-                                        >geometry dash</span
-                                    > progress to see activity here!
-                                </p>
-                                <a href="/levels" class="btn btn-primary">
-                                    browse levels
-                                </a>
-                            {/if}
+                            <div class="text-center">
+                                <h3
+                                    class="text-lg font-semibold text-base-content/70 mb-2"
+                                >
+                                    no activity yet
+                                </h3>
+                                {#if data.profile.isUser}
+                                    <p class="text-base-content/50 mb-4">
+                                        start tracking your <span
+                                            class="font-bold"
+                                            >geometry dash</span
+                                        > progress to see activity here!
+                                    </p>
+                                    <a href="/levels" class="btn btn-primary">
+                                        browse levels
+                                    </a>
+                                {/if}
+                            </div>
                         {:else}
-                            {#each data.profile.recentActivity as a}
-                                <Activity
+                            <div class="flex flex-col gap-2">
+                                {#each data.profile.recentActivity as a}
+                                    <Activity2
+                                        id={a.levelId}
+                                        name={a.details?.name}
+                                        publisher={a.details?.publisher}
+                                        score={a.score}
+                                        status={a.status}
+                                        completionPercentage={a.completionPercentage}
+                                        updatedAt={a.updatedAt}
+                                        isUser={data.profile.isUser}
+                                        onClick={() => openProgressEditor(a)}
+                                    />
+                                    <!-- <Activity
                                     link={`/levels/${a.levelId}`}
                                     title={a.details?.name ?? "unknown level"}
                                     score={a.score}
@@ -319,9 +338,10 @@
                                     completionPercentage={a.completionPercentage}
                                     createdAt={new Date(a.createdAt)}
                                     review={a.review}
-                                />
-                                <div class="divider"></div>
-                            {/each}
+                                /> -->
+                                    <!-- <div class="divider"></div> -->
+                                {/each}
+                            </div>
                         {/if}
                     </div>
                 </div>
@@ -338,16 +358,18 @@
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
                     {#if data.profile.isUser}
-                        <div class="flex justify-end gap-2">
+                        <div class="flex justify-end gap-2 mb-1">
                             <button
                                 type="button"
-                                class="btn btn-sm btn-outline"
+                                class="btn btn-sm btn-square"
                                 onclick={() => snapshotModal?.showModal()}
                             >
-                                time machine
+                                <Icon src={Backward} class="size-[1.2em]" />
+                                <!-- time machine -->
                             </button>
 
                             <form
+                                action="?/updateList"
                                 method="POST"
                                 use:enhance={() => {
                                     requestingUpdate = true;
@@ -405,7 +427,9 @@
                                 />
                                 <!-- onclick={updateListPlacement} -->
                                 <button
-                                    class="btn btn-sm btn-square"
+                                    class="btn btn-sm btn-square {hasChanges
+                                        ? 'btn-outline'
+                                        : ''}"
                                     type={editMode && hasChanges
                                         ? "submit"
                                         : "button"}
@@ -508,7 +532,7 @@
                     {/if}
 
                     {#if editMode}
-                        {#if hasChanges}
+                        <!-- {#if hasChanges}
                             <div
                                 class="alert alert-info mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
                             >
@@ -530,7 +554,7 @@
                                     </button>
                                 </div>
                             </div>
-                        {/if}
+                        {/if} -->
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-base-200 p-4 rounded-lg">
@@ -659,64 +683,21 @@
                                     {:else}
                                         <div class="flex flex-col gap-2">
                                             {#each groupedProgress[statusName] as item}
-                                                <div
-                                                    class="bg-base-100 rounded-lg p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2"
-                                                >
-                                                    <div>
-                                                        <a
-                                                            href={`/levels/${item.levelId}`}
-                                                            class="font-semibold hover:link"
-                                                        >
-                                                            {item.details
-                                                                ?.name ??
-                                                                `level ${item.levelId}`}
-                                                        </a>
-                                                        <div
-                                                            class="text-xs text-base-content/60"
-                                                        >
-                                                            by {item.details
-                                                                ?.publisher ??
-                                                                "unknown"}
-                                                        </div>
-                                                    </div>
-
-                                                    <div
-                                                        class="flex items-center gap-3"
-                                                    >
-                                                        <div
-                                                            class="text-xs text-base-content/70 flex gap-3"
-                                                        >
-                                                            {#if item.score !== null}
-                                                                <span>
-                                                                    {item.score}/10
-                                                                </span>
-                                                            {/if}
-                                                            {#if item.completionPercentage !== null}
-                                                                <span>
-                                                                    {item.completionPercentage}%
-                                                                </span>
-                                                            {/if}
-                                                            <span>
-                                                                {new Date(
-                                                                    item.updatedAt,
-                                                                ).toLocaleDateString()}
-                                                            </span>
-                                                        </div>
-
-                                                        {#if data.profile.isUser}
-                                                            <button
-                                                                type="button"
-                                                                class="btn btn-xs btn-outline"
-                                                                onclick={() =>
-                                                                    openProgressEditor(
-                                                                        item,
-                                                                    )}
-                                                            >
-                                                                edit
-                                                            </button>
-                                                        {/if}
-                                                    </div>
-                                                </div>
+                                                <Activity2
+                                                    id={item.levelId}
+                                                    name={item.details?.name}
+                                                    publisher={item.details
+                                                        ?.publisher}
+                                                    score={item.score}
+                                                    status={item.status}
+                                                    completionPercentage={item.completionPercentage}
+                                                    updatedAt={item.updatedAt}
+                                                    isUser={data.profile.isUser}
+                                                    onClick={() =>
+                                                        openProgressEditor(
+                                                            item,
+                                                        )}
+                                                />
                                             {/each}
                                         </div>
                                     {/if}

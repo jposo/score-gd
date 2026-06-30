@@ -70,7 +70,7 @@
     }}
     onconsider={handleDndConsider}
     onfinalize={handleDndFinalize}
-    class="list"
+    class="list h-full"
 >
     {#each items as item, index (item.id)}
         <li
@@ -135,28 +135,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- <div
-                class="mt-2 flex w-full flex-wrap gap-x-6 gap-y-1 text-sm opacity-70"
-            >
-                {#if item.attempts}
-                    <div>
-                        {item.attempts} attempt{item.attempts !== 1 ? "s" : ""}
-                    </div>
-                {/if}
-                {#if item.startedAt}
-                    <div>{formatDate(item.startedAt)}</div>
-                {/if}
-                {#if item.completedAt}
-                    <div>completed: {formatDate(item.completedAt)}</div>
-                {/if}
-            </div> -->
         </li>
     {/each}
 </ul>
-
-<style>
-    .gd-stats span:not(:last-child)::after {
-        content: " • ";
-    }
-</style>
