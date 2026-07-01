@@ -29,22 +29,15 @@ type Review = {
     updatedAt: Date;
 };
 
-type Activity = {
-    levelId: number;
-    status: string;
-    score: number;
-    completionPercentage: number;
-    review: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-};
-
 type ProgressEntry = {
     levelId: number;
     status: string;
     completionPercentage: number;
     score: number;
     attempts: number;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    videoUrl: string | null;
     review: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -288,6 +281,7 @@ class Database {
             .select({
                 id: schema.users.id,
                 username: schema.users.username,
+                bio: schema.users.bio,
                 email: schema.users.email,
                 roles: schema.users.roles,
                 createdAt: schema.users.createdAt,
@@ -360,7 +354,7 @@ class Database {
                     WHERE ${schema.progress.status} = 'completed'
                     AND ${schema.progress.listPlacement} IS NULL
                 ), '[]')`,
-                recentActivity: sql<Activity[]>`(
+                recentActivity: sql<ProgressEntry[]>`(
                     SELECT coalesce(json_agg(act), '[]')
                     FROM (
                         SELECT json_build_object(
@@ -368,6 +362,10 @@ class Database {
                             'status', ${schema.progress.status},
                             'completionPercentage', ${schema.progress.completionPercentage},
                             'score', ${schema.progress.score},
+                            'attempts', ${schema.progress.attempts},
+                            'startedAt', ${schema.progress.startedAt},
+                            'completedAt', ${schema.progress.completedAt},
+                            'videoUrl', ${schema.progress.videoUrl},
                             'review', ${schema.progress.review},
                             'createdAt', ${schema.progress.createdAt},
                             'updatedAt', ${schema.progress.updatedAt}
@@ -388,6 +386,9 @@ class Database {
                             'completionPercentage', ${schema.progress.completionPercentage},
                             'score', ${schema.progress.score},
                             'attempts', ${schema.progress.attempts},
+                            'startedAt', ${schema.progress.startedAt},
+                            'completedAt', ${schema.progress.completedAt},
+                            'videoUrl', ${schema.progress.videoUrl},
                             'review', ${schema.progress.review},
                             'createdAt', ${schema.progress.createdAt},
                             'updatedAt', ${schema.progress.updatedAt}

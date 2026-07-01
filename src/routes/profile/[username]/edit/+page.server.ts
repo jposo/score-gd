@@ -6,7 +6,7 @@ import { z } from "zod";
 import winston from "winston";
 
 const UpdateUser = z.object({
-  bio: z.string().max(500).nullable(),
+  bio: z.string().max(200).nullable(),
 });
 
 export const load: PageServerLoad = async (event) => {

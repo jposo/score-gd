@@ -114,10 +114,10 @@
                         href={`/levels/${item.id}`}
                         class="font-semibold hover:link truncate block text-base"
                     >
-                        {item.details.name}
+                        {item.level.name}
                     </a>
                     <div class="text-xs text-base-content/60">
-                        by {item.details.publisher}
+                        by {item.level.publisher}
                     </div>
                 </div>
 

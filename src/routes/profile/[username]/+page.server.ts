@@ -85,6 +85,7 @@ export const load: PageServerLoad = async (event) => {
     type Level = {
         name: string;
         publisher: string;
+        length: string;
     }
 
     const levelMap = new Map<number, Level>(
@@ -93,12 +94,14 @@ export const load: PageServerLoad = async (event) => {
             {
                 name: level.name,
                 publisher: level.creator?.username ?? "unknown",
+                length: level.length
             },
         ]),
     );
     const fallbackLevel: Level = {
         name: "unknown level",
         publisher: "unknown",
+        length: "tiny",
     }
     const enrichedList = profile.list.map((item) => ({
         ...item,

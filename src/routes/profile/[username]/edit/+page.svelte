@@ -6,7 +6,7 @@
 
     let { data, form }: { data: PageData; form: ActionData } = $props();
 
-    let bio = $state("");
+    let bio = $derived(data.user.bio);
     let loading = $state(false);
 
     // Update form values if there was an error
@@ -47,13 +47,12 @@
                         if (result.type === "success") {
                             toastManager.add(
                                 result.data?.message ??
-                                    "successfully updated details",
+                                    "successfully updated info",
                                 "success",
                             );
                         } else if (result.type === "failure") {
                             toastManager.add(
-                                result.data?.message ??
-                                    "failed to update details",
+                                result.data?.message ?? "failed to update info",
                                 "error",
                             );
                         } else {
@@ -65,7 +64,8 @@
             >
                 <!-- Bio -->
                 <fieldset class="fieldset w-full">
-                    <legend class="fieldset-legend">bio {bio.length}/200</legend
+                    <legend class="fieldset-legend"
+                        >bio {bio?.length}/200</legend
                     >
                     <textarea
                         name="bio"

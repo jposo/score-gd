@@ -54,8 +54,8 @@
     function openProgressEditor(item: any) {
         selectedLevel = {
             id: item.levelId,
-            name: item.details?.name ?? `level ${item.levelId}`,
-            length: item.details?.length ?? "",
+            name: item.level.name,
+            length: item.level.length,
         };
         status = item.status ?? undefined;
         score = item.score ?? undefined;
