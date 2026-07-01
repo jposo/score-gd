@@ -7,6 +7,7 @@
         Clock,
         Pencil,
         Backward,
+        Forward,
     } from "svelte-hero-icons";
     import Activity2 from "$lib/components/Activity2.svelte";
     import List from "$lib/components/ListDragAndDrop.svelte";
@@ -35,21 +36,14 @@
     let snapshotModal = $state<HTMLDialogElement | null>(null);
     let progressDialog = $state<ProgressDialog | null>(null);
 
-    type EditableProgress = {
-        levelId: number;
-        status: "to try" | "in progress" | "completed" | "dropped" | "";
-        score: number | "";
-        levelName: string;
-    };
-
-    let status = $state<string | undefined>(undefined);
-    let score = $state<number | undefined>(undefined);
-    let completionPercentage = $state<number | undefined>(undefined);
-    let attempts = $state<number | undefined>(undefined);
-    let startDate = $state<string | undefined>(undefined);
-    let completionDate = $state<string | undefined>(undefined);
-    let review = $state<string | undefined>(undefined);
-    let progressVideoUrl = $state<string | undefined>(undefined);
+    let status = $state<string | undefined>();
+    let score = $state<number | undefined>();
+    let completionPercentage = $state<number | undefined>();
+    let attempts = $state<number | undefined>();
+    let startDate = $state<string | undefined>();
+    let completionDate = $state<string | undefined>();
+    let review = $state<string | undefined>();
+    let progressVideoUrl = $state<string | undefined>();
 
     let selectedLevel = $state<{ id: number; name: string; length: string }>({
         id: 0,
@@ -127,13 +121,13 @@
 
     const groupedProgress = $derived.by(() => {
         const groups = {
-            completed: [] as any[],
-            "in progress": [] as any[],
-            "to try": [] as any[],
-            dropped: [] as any[],
+            completed: [] as typeof data.allProgress,
+            "in progress": [] as typeof data.allProgress,
+            "to try": [] as typeof data.allProgress,
+            dropped: [] as typeof data.allProgress,
         };
 
-        for (const item of data.profile.allProgress ?? []) {
+        for (const item of data.allProgress ?? []) {
             if (item.status === "completed") {
                 groups.completed.push(item);
             } else if (item.status === "in progress") {
@@ -149,14 +143,14 @@
     });
 
     onMount(() => {
-        activeItems = data.profile.list ?? [];
-        inactiveItems = data.profile.inactiveList ?? [];
+        activeItems = data.list.active ?? [];
+        inactiveItems = data.list.inactive ?? [];
         initialActiveItems = [...activeItems];
         initialInactiveItems = [...inactiveItems];
         initialActiveState = activeItems.map((item) => item.id);
         initialInactiveState = inactiveItems.map((item) => item.id);
 
-        if (data.profile.snapshotAtParam) {
+        if (data.list.snapshotAt) {
             tab = tabs.list;
             return;
         }
@@ -227,9 +221,7 @@
                 class="w-full h-full object-cover"
               />
             {:else} -->
-                        <span class="text-3xl"
-                            >{data.profile.username?.charAt(0)}</span
-                        >
+                        <span class="text-3xl">{data.username?.charAt(0)}</span>
                         <!-- {/if} -->
                     </div>
                 </div>
@@ -237,27 +229,27 @@
                 <!-- Profile Info -->
                 <div class="flex-1 text-center md:text-left">
                     <h1 class="text-3xl font-bold text-base-content mb-2">
-                        {data.profile.username}
+                        {data.username}
                     </h1>
 
                     <p class="text-base-content/70 mb-4">
                         member since <b
                             >{formatDate(
-                                data.profile.registeredAt ?? new Date(),
+                                data.registeredAt ?? new Date(),
                             ).toLowerCase()}</b
                         >
                     </p>
 
                     <p class="text-base-content/80 mb-4 italic">
-                        {data.profile.bio ? data.profile.bio : ""}
+                        {data.bio ? data.bio : ""}
                     </p>
 
-                    {#if data.profile.isUser}
+                    {#if data.isOwner}
                         <div
                             class="flex flex-wrap gap-2 justify-center md:justify-start"
                         >
                             <a
-                                href="/profile/{data.profile.username}/edit"
+                                href="/profile/{data.username}/edit"
                                 class="btn btn-primary btn-sm"
                             >
                                 edit profile
@@ -274,8 +266,8 @@
             <div class="stat">
                 <div class="stat-title">average score</div>
                 <div class="stat-value text-secondary">
-                    {data.profile.stats.averageScore
-                        ? data.profile.stats.averageScore.toFixed(1)
+                    {data.stats.averageScore
+                        ? data.stats.averageScore.toFixed(1)
                         : "n/a"}
                 </div>
                 <!-- <div class="stat-desc">No demons yet</div> -->
@@ -284,7 +276,7 @@
             <div class="stat">
                 <div class="stat-title">levels completed</div>
                 <div class="stat-value text-primary">
-                    {data.profile.stats.levelsCompleted}
+                    {data.stats.levelsCompleted}
                 </div>
                 <!-- <div class="stat-desc">Pump those numbers up!</div> -->
             </div>
@@ -292,7 +284,7 @@
             <div class="stat">
                 <div class="stat-title">reviews written</div>
                 <div class="stat-value text-accent">
-                    {data.profile.stats.reviewsWritten}
+                    {data.stats.reviewsWritten}
                 </div>
                 <!-- <div class="stat-desc">No reviews yet</div> -->
             </div>
@@ -312,14 +304,14 @@
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
                     <div>
-                        {#if !data.profile.recentActivity || data.profile.recentActivity.length === 0}
+                        {#if !data.recentActivity || data.recentActivity.length === 0}
                             <div class="text-center">
                                 <h3
                                     class="text-lg font-semibold text-base-content/70 mb-2"
                                 >
                                     no activity yet
                                 </h3>
-                                {#if data.profile.isUser}
+                                {#if data.isOwner}
                                     <p class="text-base-content/50 mb-4">
                                         start tracking your <span
                                             class="font-bold"
@@ -333,17 +325,17 @@
                             </div>
                         {:else}
                             <div class="flex flex-col gap-2">
-                                {#each data.profile.recentActivity as a}
+                                {#each data.recentActivity as item}
                                     <Activity2
-                                        id={a.levelId}
-                                        name={a.details?.name}
-                                        publisher={a.details?.publisher}
-                                        score={a.score}
-                                        status={a.status}
-                                        completionPercentage={a.completionPercentage}
-                                        updatedAt={a.updatedAt}
-                                        isUser={data.profile.isUser}
-                                        onClick={() => openProgressEditor(a)}
+                                        id={item.levelId}
+                                        name={item.level.name}
+                                        publisher={item.level.publisher}
+                                        score={item.score}
+                                        status={item.status}
+                                        completionPercentage={item.completionPercentage}
+                                        updatedAt={item.updatedAt}
+                                        showEdit={data.isOwner}
+                                        onClick={() => openProgressEditor(item)}
                                     />
                                 {/each}
                             </div>
@@ -362,124 +354,140 @@
                     list
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
-                    {#if data.profile.isUser}
+                    {#if data.isOwner}
                         <div class="flex justify-end gap-2 mb-1">
                             <button
                                 type="button"
                                 class="btn btn-sm btn-square"
-                                onclick={() => snapshotModal?.showModal()}
-                            >
-                                <Icon src={Backward} class="size-[1.2em]" />
-                                <!-- time machine -->
-                            </button>
-
-                            <form
-                                action="?/updateList"
-                                method="POST"
-                                use:enhance={() => {
-                                    requestingUpdate = true;
-                                    return async ({ result }) => {
-                                        requestingUpdate = false;
-                                        if (result.type === "success") {
-                                            editMode = false;
-                                            initialActiveItems = [
-                                                ...activeItems,
-                                            ];
-                                            initialInactiveItems = [
-                                                ...inactiveItems,
-                                            ];
-                                            initialActiveState =
-                                                activeItems.map(
-                                                    (item) => item.id,
-                                                );
-                                            initialInactiveState =
-                                                inactiveItems.map(
-                                                    (item) => item.id,
-                                                );
-                                            toastManager.add(
-                                                "successfully updated list",
-                                                "success",
-                                            );
-                                        } else if (result.type === "failure") {
-                                            toastManager.add(
-                                                (result.data
-                                                    ?.message as string) ??
-                                                    "error updating list",
-                                                "error",
-                                            );
-                                        } else {
-                                            toastManager.add(
-                                                "unknown error",
-                                                "error",
-                                            );
-                                        }
-                                    };
+                                onclick={() => {
+                                    if (data.list.snapshotAt) {
+                                        clearSnapshotFilter();
+                                    } else {
+                                        snapshotModal?.showModal();
+                                    }
                                 }}
                             >
-                                <input
-                                    type="hidden"
-                                    name="activeList"
-                                    value={JSON.stringify(
-                                        activeItems.map((item) => item.id),
-                                    )}
-                                />
-                                <input
-                                    type="hidden"
-                                    name="inactiveList"
-                                    value={JSON.stringify(
-                                        inactiveItems.map((item) => item.id),
-                                    )}
-                                />
-                                <!-- onclick={updateListPlacement} -->
-                                <button
-                                    class="btn btn-sm btn-square {hasChanges
-                                        ? 'btn-outline'
-                                        : ''}"
-                                    type={editMode && hasChanges
-                                        ? "submit"
-                                        : "button"}
-                                    onclick={() => {
-                                        if (!editMode) {
-                                            editMode = true;
-                                        } else if (!hasChanges) {
-                                            editMode = false;
-                                        }
+                                {#if data.list.snapshotAt}
+                                    <Icon src={Forward} class="size-[1.2em]" />
+                                {:else}
+                                    <Icon src={Backward} class="size-[1.2em]" />
+                                {/if}
+                            </button>
+
+                            <!-- snapshots are read-only -->
+                            {#if !data.list.snapshotAt}
+                                <form
+                                    action="?/updateList"
+                                    method="POST"
+                                    use:enhance={() => {
+                                        requestingUpdate = true;
+                                        return async ({ result }) => {
+                                            requestingUpdate = false;
+                                            if (result.type === "success") {
+                                                editMode = false;
+                                                initialActiveItems = [
+                                                    ...activeItems,
+                                                ];
+                                                initialInactiveItems = [
+                                                    ...inactiveItems,
+                                                ];
+                                                initialActiveState =
+                                                    activeItems.map(
+                                                        (item) => item.id,
+                                                    );
+                                                initialInactiveState =
+                                                    inactiveItems.map(
+                                                        (item) => item.id,
+                                                    );
+                                                toastManager.add(
+                                                    "successfully updated list",
+                                                    "success",
+                                                );
+                                            } else if (
+                                                result.type === "failure"
+                                            ) {
+                                                toastManager.add(
+                                                    (result.data
+                                                        ?.message as string) ??
+                                                        "error updating list",
+                                                    "error",
+                                                );
+                                            } else {
+                                                toastManager.add(
+                                                    "unknown error",
+                                                    "error",
+                                                );
+                                            }
+                                        };
                                     }}
-                                    disabled={requestingUpdate ||
-                                        activeItems.length > activeLimit}
                                 >
-                                    {#if editMode}
-                                        <Icon
-                                            src={Check}
-                                            class="size-[1.2em]"
-                                        />
-                                    {:else if requestingUpdate}
-                                        <span
-                                            class="loading loading-dots size-[1.2em]"
-                                        ></span>
-                                        <!-- <Icon
+                                    <input
+                                        type="hidden"
+                                        name="activeList"
+                                        value={JSON.stringify(
+                                            activeItems.map((item) => item.id),
+                                        )}
+                                    />
+                                    <input
+                                        type="hidden"
+                                        name="inactiveList"
+                                        value={JSON.stringify(
+                                            inactiveItems.map(
+                                                (item) => item.id,
+                                            ),
+                                        )}
+                                    />
+                                    <!-- onclick={updateListPlacement} -->
+                                    <button
+                                        class="btn btn-sm btn-square {hasChanges
+                                            ? 'btn-outline'
+                                            : ''}"
+                                        type={editMode && hasChanges
+                                            ? "submit"
+                                            : "button"}
+                                        onclick={() => {
+                                            if (!editMode) {
+                                                editMode = true;
+                                            } else if (!hasChanges) {
+                                                editMode = false;
+                                            }
+                                        }}
+                                        disabled={requestingUpdate ||
+                                            activeItems.length > activeLimit}
+                                    >
+                                        {#if editMode}
+                                            <Icon
+                                                src={Check}
+                                                class="size-[1.2em]"
+                                            />
+                                        {:else if requestingUpdate}
+                                            <span
+                                                class="loading loading-dots size-[1.2em]"
+                                            ></span>
+                                            <!-- <Icon
                                             src={Pencil}
                                             class="size-[1.2em]"
                                         /> -->
-                                    {:else}
-                                        <Icon
-                                            src={Pencil}
-                                            class="size-[1.2em]"
-                                        />
-                                    {/if}
-                                </button>
-                            </form>
+                                        {:else}
+                                            <Icon
+                                                src={Pencil}
+                                                class="size-[1.2em]"
+                                            />
+                                        {/if}
+                                    </button>
+                                </form>
+                            {/if}
                         </div>
                     {/if}
 
-                    {#if data.profile.snapshot}
+                    <!-- {#if data.list.snapshotAt}
                         <div class="bg-base-200 p-4 rounded-lg mb-4">
                             <div
                                 class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
                             >
                                 <p class="text-sm text-base-content/80">
                                     showing snapshot for {new Date(
-                                        data.profile.snapshot.at,
+                                        data.list.snapshotAt,
                                     ).toLocaleString()}
                                 </p>
                                 <button
@@ -496,12 +504,11 @@
                                     <h3 class="text-lg font-semibold mb-2">
                                         active list at time
                                     </h3>
-                                    {#if data.profile.snapshot.activeList.length > 0}
+                                    {#if data.list.snapshotAt && data.list.active.length > 0}
                                         <List
                                             listKey="snapshot-active"
                                             {zoneType}
-                                            items={data.profile.snapshot
-                                                .activeList}
+                                            items={data.list.active}
                                             editMode={false}
                                             onDrop={() => {}}
                                         />
@@ -516,12 +523,11 @@
                                     <h3 class="text-lg font-semibold mb-2">
                                         inactive completed at time
                                     </h3>
-                                    {#if data.profile.snapshot.inactiveList.length > 0}
+                                    {#if data.list.inactive.length > 0}
                                         <List
                                             listKey="snapshot-inactive"
                                             {zoneType}
-                                            items={data.profile.snapshot
-                                                .inactiveList}
+                                            items={data.list.inactive}
                                             editMode={false}
                                             onDrop={() => {}}
                                         />
@@ -534,7 +540,7 @@
                                 </div>
                             </div>
                         </div>
-                    {/if}
+                    {/if} -->
 
                     {#if editMode}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -634,7 +640,7 @@
                     all progress
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
-                    {#if !data.profile.allProgress || data.profile.allProgress.length === 0}
+                    {#if !data.allProgress.length}
                         <div class="text-center">
                             <h3
                                 class="text-lg font-semibold text-base-content/70 mb-2"
@@ -666,14 +672,14 @@
                                             {#each groupedProgress[statusName] as item}
                                                 <Activity2
                                                     id={item.levelId}
-                                                    name={item.details?.name}
-                                                    publisher={item.details
-                                                        ?.publisher}
+                                                    name={item.level.name}
+                                                    publisher={item.level
+                                                        .publisher}
                                                     score={item.score}
                                                     status={item.status}
                                                     completionPercentage={item.completionPercentage}
                                                     updatedAt={item.updatedAt}
-                                                    isUser={data.profile.isUser}
+                                                    showEdit={data.isOwner}
                                                     onClick={() =>
                                                         openProgressEditor(
                                                             item,
@@ -709,8 +715,8 @@
                     type="datetime-local"
                     name="at"
                     class="input input-bordered input-sm w-full"
-                    value={data.profile.snapshotAtParam
-                        ? data.profile.snapshotAtParam.slice(0, 16)
+                    value={data.list.snapshotAt
+                        ? data.list.snapshotAt.slice(0, 16)
                         : ""}
                 />
             </label>
@@ -745,95 +751,3 @@
     bind:review
     bind:progressVideoUrl
 />
-
-<!-- <dialog class="modal" bind:this={progressModal}>
-    <div class="modal-box">
-        <h3 class="font-semibold text-lg mb-3">
-            edit progress: {selectedProgress.levelName}
-        </h3>
-
-        <form
-            method="POST"
-            action="?/updateProgress"
-            class="flex flex-col gap-3"
-            use:enhance={() => {
-                return async ({ result }) => {
-                    if (result.type === "success") {
-                        toastManager.add(
-                            (result.data?.message as string) ??
-                                "successfully updated progress",
-                            "success",
-                        );
-                        progressModal?.close();
-                        await goto(
-                            page.url.pathname +
-                                page.url.search +
-                                "#" +
-                                tabs.progress,
-                            {
-                                invalidateAll: true,
-                            },
-                        );
-                    } else if (result.type === "failure") {
-                        toastManager.add(
-                            (result.data?.message as string) ??
-                                "failed to update progress",
-                            "error",
-                        );
-                    } else {
-                        toastManager.add("unknown error occurred", "error");
-                    }
-                };
-            }}
-        >
-            <input
-                type="hidden"
-                name="levelId"
-                value={selectedProgress.levelId}
-            />
-
-            <label class="form-control w-full">
-                <span class="label-text text-sm mb-1">status</span>
-                <select
-                    class="select select-bordered"
-                    name="status"
-                    bind:value={selectedProgress.status}
-                >
-                    <option value="">leave unchanged</option>
-                    {#each statusOptions as option}
-                        <option value={option.value}>{option.label}</option>
-                    {/each}
-                </select>
-            </label>
-
-            <label class="form-control w-full">
-                <span class="label-text text-sm mb-1">score</span>
-                <select
-                    class="select select-bordered"
-                    name="score"
-                    bind:value={selectedProgress.score}
-                >
-                    <option value="">no score</option>
-                    {#each scoreOptions as option}
-                        <option value={option.value}>
-                            {option.value} - {option.label}
-                        </option>
-                    {/each}
-                </select>
-            </label>
-
-            <div class="modal-action mt-2">
-                <button class="btn btn-sm btn-primary" type="submit">
-                    save
-                </button>
-                <button
-                    class="btn btn-sm btn-ghost"
-                    type="button"
-                    onclick={() => progressModal?.close()}
-                >
-                    cancel
-                </button>
-            </div>
-        </form>
-    </div>
-</dialog> -->

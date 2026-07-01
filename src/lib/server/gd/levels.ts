@@ -67,9 +67,9 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
     return this;
   }
 
-  ids(ids: number[]) {
+  ids(ids: Iterable<number>) {
     this.query.type = 10;
-    return this.search(ids.join(","), false);
+    return this.search(Array.from(ids).join(","), false);
   }
 
   page(page: number) {

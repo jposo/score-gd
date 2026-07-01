@@ -53,31 +53,30 @@ export const load: PageServerLoad = async (event) => {
         error(404, "user not found");
     }
 
-    const listLevelIds = profile.list.map((item) => item.id);
-    const inactiveLevelIds = profile.inactiveList.map((item) => item.id);
     const snapshot = snapshotAt
         ? await db.findCompletedListSnapshotByUserId(profile.id, snapshotAt)
         : null;
-    const snapshotActiveIds = snapshot
-        ? snapshot.activeList.map((item) => item.id)
-        : [];
-    const snapshotInactiveIds = snapshot
-        ? snapshot.inactiveList.map((item) => item.id)
-        : [];
+
+    // retrieve all level IDs
+    const listLevelIds = snapshot ? snapshot.activeList.map((item) => item.id) : profile.list.map((item) => item.id);
+    const inactiveLevelIds = snapshot ? snapshot.inactiveList.map((item) => item.id) : profile.inactiveList.map((item) => item.id);
+    // const snapshotActiveIds = snapshot
+    //     ? snapshot.activeList.map((item) => item.id)
+    //     : [];
+    // const snapshotInactiveIds = snapshot
+    //     ? snapshot.inactiveList.map((item) => item.id)
+    //     : [];
     const recentActivityLevelIds = profile.recentActivity.map(
         (item) => item.levelId,
     );
     const allProgressLevelIds = profile.allProgress.map((item) => item.levelId);
-    const allIds = [
-        ...new Set([
-            ...listLevelIds,
-            ...inactiveLevelIds,
-            ...recentActivityLevelIds,
-            ...allProgressLevelIds,
-            ...snapshotActiveIds,
-            ...snapshotInactiveIds,
-        ]),
-    ];
+    // store them all in a set to avoid duplicates
+    const allIds = new Set([
+        ...listLevelIds,
+        ...inactiveLevelIds,
+        ...recentActivityLevelIds,
+        ...allProgressLevelIds,
+    ]);
 
     const allLevels = await get("levels").ids(allIds);
 
@@ -85,70 +84,76 @@ export const load: PageServerLoad = async (event) => {
         error(500, "failed to fetch levels");
     }
 
-    const levelMap = new Map(
+    type Level = {
+        name: string;
+        publisher: string;
+    }
+
+    const levelMap = new Map<number, Level>(
         allLevels.result.map((level) => [
             level.id,
             {
                 name: level.name,
-                publisher: level.creator?.username,
+                publisher: level.creator?.username ?? "unknown",
             },
         ]),
     );
+    const fallbackLevel: Level = {
+        name: "unknown level",
+        publisher: "unknown",
+    }
     const enrichedList = profile.list.map((item) => ({
         ...item,
-        details: levelMap.get(item.id) || null,
+        level: levelMap.get(item.id) || fallbackLevel,
     }));
     const enrichedInactiveList = profile.inactiveList.map((item) => ({
         ...item,
-        details: levelMap.get(item.id) || null,
+        level: levelMap.get(item.id) || fallbackLevel,
     }));
     const enrichedActivity = profile.recentActivity.map((item) => ({
         ...item,
-        details: levelMap.get(item.levelId) || null,
+        level: levelMap.get(item.levelId) || fallbackLevel,
     }));
     const enrichedAllProgress = profile.allProgress.map((item) => ({
         ...item,
-        details: levelMap.get(item.levelId) || null,
+        level: levelMap.get(item.levelId) || fallbackLevel,
     }));
     const enrichedSnapshot = snapshot
         ? {
-              at: snapshot.at.toISOString(),
-              activeList: snapshot.activeList.map((item) => ({
-                  ...item,
-                  details: levelMap.get(item.id) || null,
-              })),
-              inactiveList: snapshot.inactiveList.map((item) => ({
-                  ...item,
-                  details: levelMap.get(item.id) || null,
-              })),
-          }
+            at: snapshot.at.toISOString(),
+            active: snapshot.activeList.map((item) => ({
+                ...item,
+                level: levelMap.get(item.id) || fallbackLevel,
+            })),
+            inactive: snapshot.inactiveList.map((item) => ({
+                ...item,
+                level: levelMap.get(item.id) || fallbackLevel,
+            })),
+        }
         : null;
 
     const {
         data: { user },
     } = await event.locals.supabase.auth.getUser();
-    const isUser = user?.id === profile.id;
+    const isOwner = user?.id === profile.id;
 
-    const enrichedProfile = {
+    return {
         username: profile.username,
         bio: profile.bio,
         registeredAt: profile.createdAt!,
+        isOwner,
         stats: {
             averageScore: profile.averageScore,
             levelsCompleted: profile.levelsCompleted,
             reviewsWritten: profile.reviewsWritten,
         },
-        list: enrichedList,
-        inactiveList: enrichedInactiveList,
+        list: {
+            snapshotAt: enrichedSnapshot?.at,
+            active: enrichedSnapshot ? enrichedSnapshot.active : enrichedList,
+            inactive: enrichedSnapshot ? enrichedSnapshot.inactive : enrichedInactiveList,
+        },
         recentActivity: enrichedActivity,
         allProgress: enrichedAllProgress,
-        snapshot: enrichedSnapshot,
-        snapshotAtParam,
-        isUser,
-    };
-
-    return {
-        profile: enrichedProfile,
     };
 };
 

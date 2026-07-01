@@ -9,7 +9,7 @@
         status: string | null;
         completionPercentage: number | null;
         updatedAt: Date;
-        isUser: boolean;
+        showEdit: boolean;
         onClick: () => void;
     } = $props();
 
@@ -56,7 +56,7 @@
             </span>
         </div>
 
-        {#if props.isUser}
+        {#if props.showEdit}
             <button
                 type="button"
                 class="btn btn-xs btn-square btn-outline"
