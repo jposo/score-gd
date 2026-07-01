@@ -8,11 +8,9 @@
         Pencil,
         Backward,
     } from "svelte-hero-icons";
-    import Activity from "$lib/components/Activity.svelte";
     import Activity2 from "$lib/components/Activity2.svelte";
     import List from "$lib/components/ListDragAndDrop.svelte";
     import { formatDate } from "$lib/tools/utils";
-    import type { ListItem } from "$lib/shared/types";
     import { toastManager } from "$lib/state/toasts.svelte";
     import { goto } from "$app/navigation";
     import { onMount } from "svelte";
@@ -22,6 +20,7 @@
         PROGRESS_SCORE_OPTIONS,
         PROGRESS_STATUS_OPTIONS,
     } from "$lib/constants";
+    import ProgressDialog from "$lib/components/ProgressDialog.svelte";
 
     let { data }: { data: PageData } = $props();
 
@@ -34,7 +33,7 @@
     let initialInactiveItems = $state<any[]>([]);
     let requestingUpdate = $state(false);
     let snapshotModal = $state<HTMLDialogElement | null>(null);
-    let progressModal = $state<HTMLDialogElement | null>(null);
+    let progressDialog = $state<ProgressDialog | null>(null);
 
     type EditableProgress = {
         levelId: number;
@@ -43,12 +42,38 @@
         levelName: string;
     };
 
-    let selectedProgress = $state<EditableProgress>({
-        levelId: 0,
-        status: "",
-        score: "",
-        levelName: "",
+    let status = $state<string | undefined>(undefined);
+    let score = $state<number | undefined>(undefined);
+    let completionPercentage = $state<number | undefined>(undefined);
+    let attempts = $state<number | undefined>(undefined);
+    let startDate = $state<string | undefined>(undefined);
+    let completionDate = $state<string | undefined>(undefined);
+    let review = $state<string | undefined>(undefined);
+    let progressVideoUrl = $state<string | undefined>(undefined);
+
+    let selectedLevel = $state<{ id: number; name: string; length: string }>({
+        id: 0,
+        name: "",
+        length: "",
     });
+
+    function openProgressEditor(item: any) {
+        selectedLevel = {
+            id: item.levelId,
+            name: item.details?.name ?? `level ${item.levelId}`,
+            length: item.details?.length ?? "",
+        };
+        status = item.status ?? undefined;
+        score = item.score ?? undefined;
+        completionPercentage = item.completionPercentage ?? undefined;
+        attempts = item.attempts ?? undefined;
+        startDate = item.startedAt ?? undefined;
+        completionDate = item.completedAt ?? undefined;
+        review = item.review ?? undefined;
+        progressVideoUrl = item.videoUrl ?? undefined;
+
+        progressDialog?.open();
+    }
 
     const tabs = {
         recent: "recent",
@@ -176,16 +201,6 @@
 
     function clearSnapshotFilter() {
         goto(page.url.pathname + "#" + tabs.list);
-    }
-
-    function openProgressEditor(item: any) {
-        selectedProgress = {
-            levelId: item.levelId,
-            status: (item.status ?? "") as EditableProgress["status"],
-            score: item.score ?? "",
-            levelName: item.details?.name ?? `level ${item.levelId}`,
-        };
-        progressModal?.showModal();
     }
 </script>
 
@@ -330,16 +345,6 @@
                                         isUser={data.profile.isUser}
                                         onClick={() => openProgressEditor(a)}
                                     />
-                                    <!-- <Activity
-                                    link={`/levels/${a.levelId}`}
-                                    title={a.details?.name ?? "unknown level"}
-                                    score={a.score}
-                                    status={a.status}
-                                    completionPercentage={a.completionPercentage}
-                                    createdAt={new Date(a.createdAt)}
-                                    review={a.review}
-                                /> -->
-                                    <!-- <div class="divider"></div> -->
                                 {/each}
                             </div>
                         {/if}
@@ -532,30 +537,6 @@
                     {/if}
 
                     {#if editMode}
-                        <!-- {#if hasChanges}
-                            <div
-                                class="alert alert-info mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
-                            >
-                                <span> you have unsaved list changes. </span>
-                                <div class="flex gap-2">
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-ghost"
-                                        onclick={resetPendingChanges}
-                                    >
-                                        reset changes
-                                    </button>
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-outline"
-                                        onclick={cancelEditMode}
-                                    >
-                                        cancel editing
-                                    </button>
-                                </div>
-                            </div>
-                        {/if} -->
-
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="bg-base-200 p-4 rounded-lg">
                                 <div
@@ -750,7 +731,22 @@
     </div>
 </dialog>
 
-<dialog class="modal" bind:this={progressModal}>
+<ProgressDialog
+    bind:this={progressDialog}
+    level={selectedLevel}
+    {statusOptions}
+    {scoreOptions}
+    bind:status
+    bind:score
+    bind:completionPercentage
+    bind:attempts
+    bind:startDate
+    bind:completionDate
+    bind:review
+    bind:progressVideoUrl
+/>
+
+<!-- <dialog class="modal" bind:this={progressModal}>
     <div class="modal-box">
         <h3 class="font-semibold text-lg mb-3">
             edit progress: {selectedProgress.levelName}
@@ -840,4 +836,4 @@
             </div>
         </form>
     </div>
-</dialog>
+</dialog> -->

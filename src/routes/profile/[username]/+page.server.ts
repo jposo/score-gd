@@ -6,6 +6,7 @@ import { requireAuth } from "$lib/server/auth/middleware";
 import { z } from "zod";
 import winston from "winston";
 import { statusEnum, type InsertProgress } from "$lib/server/db/schema";
+import ProgressUpdate from "$lib/server/schemas/ProgressUpdate";
 
 const UpdateList = z.object({
     activeList: z
@@ -36,18 +37,6 @@ const UpdateList = z.object({
             }
         })
         .pipe(z.array(z.coerce.number().min(1))),
-});
-
-const UpdateProgressFromProfile = z.object({
-    levelId: z.coerce.number().min(1),
-    status: z.preprocess(
-        (val) => (val === "" ? undefined : val),
-        z.enum(statusEnum.enumValues).optional(),
-    ),
-    score: z.preprocess(
-        (val) => (val === "" ? null : val),
-        z.coerce.number().min(1).max(10).nullable().optional(),
-    ),
 });
 
 export const load: PageServerLoad = async (event) => {
@@ -199,73 +188,6 @@ export const actions: Actions = {
         } catch (err) {
             winston.error("error updating list placement:", err);
             return fail(500, { message: "failed to update list placement" });
-        }
-    },
-    updateProgress: async (event) => {
-        const user = await requireAuth(event);
-
-        try {
-            const profileUsername = event.params.username as string;
-            const profileUser = await db.findUserByUsername(profileUsername);
-
-            if (!profileUser || profileUser.id !== user.id) {
-                return fail(403, { message: "forbidden" });
-            }
-
-            const form = await event.request.formData();
-            const parsed = UpdateProgressFromProfile.safeParse(
-                Object.fromEntries(form),
-            );
-
-            if (!parsed.success) {
-                return fail(400, { message: "invalid progress data" });
-            }
-
-            const data = parsed.data;
-            const existingProgress = await db.findUserProgressByLevelId(
-                user.id,
-                data.levelId,
-            );
-
-            const payload: InsertProgress = {
-                userId: user.id,
-                levelId: data.levelId,
-                status: data.status,
-                score: data.score,
-            };
-
-            if (payload.status && payload.status !== "completed") {
-                payload.listPlacement = null;
-            }
-
-            if (
-                payload.status === "completed" &&
-                !existingProgress?.listPlacement
-            ) {
-                const activeCount = await db.countActiveCompleted(user.id);
-                if (activeCount >= 25) {
-                    payload.listPlacement = null;
-                } else {
-                    const placement = await db.findNextActiveListPlacement(
-                        user.id,
-                    );
-                    payload.listPlacement = placement.toString();
-                }
-            }
-
-            const updated = await db.upsertUserProgress(payload);
-
-            if (!updated) {
-                return fail(422, { message: "failed to update progress" });
-            }
-
-            return {
-                success: true,
-                message: "successfully updated progress",
-            };
-        } catch (err) {
-            winston.error("error updating progress from profile:", err);
-            return fail(500, { message: "failed to update progress" });
         }
     },
 };

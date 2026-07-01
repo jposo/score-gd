@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { Icon, Pencil } from "svelte-hero-icons";
+
     let props: {
         id: number;
         name?: string;
@@ -48,7 +50,7 @@
                 <div>
                     {new Date(props.updatedAt).toLocaleDateString()}
                 </div>
-                <div>
+                <div class="font-bold">
                     {props.status}
                 </div>
             </span>
@@ -57,10 +59,10 @@
         {#if props.isUser}
             <button
                 type="button"
-                class="btn btn-xs btn-outline"
+                class="btn btn-xs btn-square btn-outline"
                 onclick={props.onClick}
             >
-                edit
+                <Icon src={Pencil} class="size-[1.2em]" />
             </button>
         {/if}
     </div>

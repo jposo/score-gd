@@ -70,69 +70,80 @@
     }}
     onconsider={handleDndConsider}
     onfinalize={handleDndFinalize}
-    class="list h-full"
+    class="list h-full gap-2"
 >
     {#each items as item, index (item.id)}
         <li
-            class="list-row flex items-center px-0 py-4"
+            class="bg-base-200 rounded-lg p-3 flex items-center gap-3"
             animate:flip={{ duration: flipDurationMs }}
         >
-            <div class="flex w-full items-center">
-                <div class="flex items-center text-4xl font-thin tabular-nums">
-                    {#if editMode}
-                        <span class="cursor-grab">
-                            <Icon src={Bars3} class="size-6 me-2" />
-                        </span>
-                    {:else if item.videoUrl}
-                        <a
-                            href={item.videoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="me-2 transition-opacity hover:opacity-80"
-                        >
-                            <img
-                                src={`https://img.youtube.com/vi/${getYoutubeId(item.videoUrl)}/mqdefault.jpg`}
-                                alt="YouTube thumbnail"
-                                class="aspect-video rounded-lg shadow-sm h-14"
-                            />
-                        </a>
-                    {/if}
-                    <span class="opacity-30">{index + 1}</span>
+            <div class="flex items-center gap-2 shrink-0">
+                {#if editMode}
+                    <span class="cursor-grab">
+                        <Icon src={Bars3} class="size-6 opacity-60" />
+                    </span>
+                {/if}
+
+                <span
+                    class="text-2xl font-thin tabular-nums opacity-30 w-6 text-right"
+                >
+                    {index + 1}
+                </span>
+
+                {#if item.videoUrl}
+                    <a
+                        href={item.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="transition-opacity hover:opacity-80 shrink-0"
+                    >
+                        <img
+                            src={`https://img.youtube.com/vi/${getYoutubeId(item.videoUrl)}/mqdefault.jpg`}
+                            alt="YouTube thumbnail"
+                            class="aspect-video rounded-lg shadow-sm h-14 w-auto object-cover"
+                        />
+                    </a>
+                {/if}
+            </div>
+
+            <div
+                class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 grow min-w-0"
+            >
+                <div class="min-w-0">
+                    <a
+                        href={`/levels/${item.id}`}
+                        class="font-semibold hover:link truncate block text-base"
+                    >
+                        {item.details.name}
+                    </a>
+                    <div class="text-xs text-base-content/60">
+                        by {item.details.publisher}
+                    </div>
                 </div>
 
-                <div class="list-col-grow ml-4">
-                    <div class="text-xl bold">
-                        <a href={`/levels/${item.id}`} class="hover:link">
-                            {item.details.name}
-                        </a>
-                        <span class="text-xs font-semibold opacity-60">
-                            {item.details.publisher}
-                        </span>
-                    </div>
-                    <div
-                        class="text-xs lowerecase font-semibold opacity-60 gd-stats"
-                    >
-                        {#if item.attempts}
-                            <span>{item.attempts} attempts</span>
-                        {/if}
-                        {#if item.score !== null}
-                            <span>{item.score}/10</span>
-                        {/if}
-                        {#if item.startedAt}
-                            <span
-                                >started: {formatDate(
-                                    item.startedAt,
-                                ).toLowerCase()}</span
-                            >
-                        {/if}
-                        {#if item.completedAt}
-                            <span
-                                >completed: {formatDate(
-                                    item.completedAt,
-                                ).toLowerCase()}</span
-                            >
-                        {/if}
-                    </div>
+                <div
+                    class="text-xs text-base-content/70 flex flex-wrap gap-3 shrink-0"
+                >
+                    {#if item.attempts}
+                        <span>{item.attempts} attempts</span>
+                    {/if}
+                    {#if item.score !== null}
+                        <span>{item.score}/10</span>
+                    {/if}
+                    {#if item.startedAt}
+                        <span
+                            >started: {formatDate(
+                                item.startedAt,
+                            ).toLowerCase()}</span
+                        >
+                    {/if}
+                    {#if item.completedAt}
+                        <span
+                            >completed: {formatDate(
+                                item.completedAt,
+                            ).toLowerCase()}</span
+                        >
+                    {/if}
                 </div>
             </div>
         </li>
