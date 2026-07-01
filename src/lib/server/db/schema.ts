@@ -147,11 +147,11 @@ export const progress = pgTable(
       "percentage_check",
       sql`${table.completionPercentage} >= 0 AND ${table.completionPercentage} <= 100`,
     ),
-    uniqueIndex("user_level_index").on(table.userId, table.levelId),
-    index("status_index").on(table.status),
-    index("level_id_index").on(table.levelId),
-    index("score_index").on(table.score),
-    index("completed_at_index").on(table.completedAt),
+    uniqueIndex("progress_user_level_index").on(table.userId, table.levelId),
+    index("progress_level_status_index").on(table.levelId, table.status),
+    index("progress_user_activity_index").on(table.userId, table.updatedAt),
+    index("progress_level_id_index").on(table.levelId),
+    index("progress_active_list_order_index").on(table.userId, table.status, table.listPlacement)
   ],
 ).enableRLS();
 
@@ -159,7 +159,7 @@ export const progressHistory = pgTable(
   "progress_history",
   {
     id: serial("id").primaryKey(),
-    progressId: integer("progress_id"),
+    progressId: integer("progress_id").notNull().references(() => progress.id),
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id),

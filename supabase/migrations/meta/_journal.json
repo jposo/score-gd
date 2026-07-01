@@ -15,6 +15,13 @@
       "when": 1782450310970,
       "tag": "0001_acoustic_satana",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782943706118,
+      "tag": "0002_illegal_giant_man",
+      "breakpoints": true
     }
   ]
 }
