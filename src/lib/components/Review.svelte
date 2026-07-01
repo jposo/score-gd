@@ -16,13 +16,15 @@
     showModeratorOptions: boolean;
   } = $props();
 
-  const formattedAttempts = props.attempts
-    ? abbreviateNumber(props.attempts)
-    : null;
+  const formattedAttempts = $derived(
+    props.attempts ? abbreviateNumber(props.attempts) : null,
+  );
 
-  const subtitle = [props.rating, props.status, formattedAttempts]
-    .filter((p) => p !== null)
-    .join(" • ");
+  const subtitle = $derived(
+    [props.rating, props.status, formattedAttempts]
+      .filter((p) => p !== null)
+      .join(" • "),
+  );
 </script>
 
 <div class="flex flex-col gap-2">
@@ -78,15 +80,9 @@
               use:enhance={() => {
                 return async ({ result }) => {
                   if (result.type === "success") {
-                    toastManager.add(
-                      result.data?.message ?? "successfully hidden review",
-                      "success",
-                    );
+                    toastManager.add("successfully hidden review", "success");
                   } else if (result.type === "failure") {
-                    toastManager.add(
-                      result.data?.message ?? "failed to hide review",
-                      "error",
-                    );
+                    toastManager.add("failed to hide review", "error");
                   } else {
                     toastManager.add("unknown error occurred", "error");
                   }

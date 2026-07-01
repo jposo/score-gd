@@ -5,8 +5,6 @@ import { get } from "$lib/server/gd/client";
 import { requireAuth } from "$lib/server/auth/middleware";
 import { z } from "zod";
 import winston from "winston";
-import { statusEnum, type InsertProgress } from "$lib/server/db/schema";
-import ProgressUpdate from "$lib/server/schemas/ProgressUpdate";
 
 const UpdateList = z.object({
     activeList: z

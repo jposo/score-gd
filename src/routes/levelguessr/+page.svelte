@@ -10,7 +10,7 @@
   let { data }: PageProps = $props();
 
   let now = $state(Date.now());
-  let target = new Date(data.updatesOn).getTime();
+  let target = $derived(new Date(data.updatesOn).getTime());
 
   let diff = $derived(Math.max(0, target - now));
   let diffHours = $derived(Math.floor(diff / (1000 * 60 * 60)));

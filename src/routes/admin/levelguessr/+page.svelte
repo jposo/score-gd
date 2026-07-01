@@ -69,8 +69,8 @@
     endY: 0,
   });
   let isDrawing = $state(false);
-  let nextDay = $state(data.latestDay + 1);
-  let nextDate = $state(new Date(data.projectedDate.getTime() + 86400000));
+  let nextDay = $derived(data.latestDay + 1);
+  // let nextDate = $state(new Date(data.projectedDate.getTime() + 86400000));
 
   function handleMetadataLoaded(event: Event) {
     const videoElement = event.currentTarget as HTMLVideoElement;
