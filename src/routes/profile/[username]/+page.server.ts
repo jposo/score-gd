@@ -56,8 +56,12 @@ export const load: PageServerLoad = async (event) => {
         : null;
 
     // retrieve all level IDs
-    const listLevelIds = snapshot ? snapshot.activeList.map((item) => item.id) : profile.list.map((item) => item.id);
-    const inactiveLevelIds = snapshot ? snapshot.inactiveList.map((item) => item.id) : profile.inactiveList.map((item) => item.id);
+    const listLevelIds = snapshot
+        ? snapshot.activeList.map((item) => item.id)
+        : profile.list.map((item) => item.id);
+    const inactiveLevelIds = snapshot
+        ? snapshot.inactiveList.map((item) => item.id)
+        : profile.inactiveList.map((item) => item.id);
     // const snapshotActiveIds = snapshot
     //     ? snapshot.activeList.map((item) => item.id)
     //     : [];
@@ -86,7 +90,7 @@ export const load: PageServerLoad = async (event) => {
         name: string;
         publisher: string;
         length: string;
-    }
+    };
 
     const levelMap = new Map<number, Level>(
         allLevels.result.map((level) => [
@@ -94,7 +98,7 @@ export const load: PageServerLoad = async (event) => {
             {
                 name: level.name,
                 publisher: level.creator?.username ?? "unknown",
-                length: level.length
+                length: level.length,
             },
         ]),
     );
@@ -102,7 +106,7 @@ export const load: PageServerLoad = async (event) => {
         name: "unknown level",
         publisher: "unknown",
         length: "tiny",
-    }
+    };
     const enrichedList = profile.list.map((item) => ({
         ...item,
         level: levelMap.get(item.id) || fallbackLevel,
@@ -121,16 +125,16 @@ export const load: PageServerLoad = async (event) => {
     }));
     const enrichedSnapshot = snapshot
         ? {
-            at: snapshot.at.toISOString(),
-            active: snapshot.activeList.map((item) => ({
-                ...item,
-                level: levelMap.get(item.id) || fallbackLevel,
-            })),
-            inactive: snapshot.inactiveList.map((item) => ({
-                ...item,
-                level: levelMap.get(item.id) || fallbackLevel,
-            })),
-        }
+              at: snapshot.at.toISOString(),
+              active: snapshot.activeList.map((item) => ({
+                  ...item,
+                  level: levelMap.get(item.id) || fallbackLevel,
+              })),
+              inactive: snapshot.inactiveList.map((item) => ({
+                  ...item,
+                  level: levelMap.get(item.id) || fallbackLevel,
+              })),
+          }
         : null;
 
     const {
@@ -151,7 +155,9 @@ export const load: PageServerLoad = async (event) => {
         list: {
             snapshotAt: enrichedSnapshot?.at,
             active: enrichedSnapshot ? enrichedSnapshot.active : enrichedList,
-            inactive: enrichedSnapshot ? enrichedSnapshot.inactive : enrichedInactiveList,
+            inactive: enrichedSnapshot
+                ? enrichedSnapshot.inactive
+                : enrichedInactiveList,
         },
         recentActivity: enrichedActivity,
         allProgress: enrichedAllProgress,

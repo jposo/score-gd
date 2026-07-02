@@ -150,10 +150,10 @@
         initialActiveState = activeItems.map((item) => item.id);
         initialInactiveState = inactiveItems.map((item) => item.id);
 
-        if (data.list.snapshotAt) {
-            tab = tabs.list;
-            return;
-        }
+        // if (data.list.snapshotAt) {
+        //     tab = tabs.list;
+        //     return;
+        // }
 
         if (page.url.hash === "#" + tabs.recent) {
             tab = tabs.recent;
@@ -214,13 +214,6 @@
                     <div
                         class="w-32 h-32 rounded-full text-neutral-content bg-neutral"
                     >
-                        <!-- {#if data.profile.profilePicturePath}
-              <img
-                src={data.profile.profilePicturePath}
-                alt={data.profile.username}
-                class="w-full h-full object-cover"
-              />
-            {:else} -->
                         <span class="text-3xl">{data.username?.charAt(0)}</span>
                         <!-- {/if} -->
                     </div>
@@ -346,7 +339,7 @@
                 <label class="tab">
                     <input
                         type="radio"
-                        name="user_activity"
+                        name="user_list"
                         checked={tab === tabs.list}
                         onclick={() => goto("#" + tabs.list)}
                     />
@@ -355,10 +348,18 @@
                 </label>
                 <div class="tab-content bg-base-100 border-base-300 p-6">
                     {#if data.isOwner}
-                        <div class="flex justify-end gap-2 mb-1">
+                        <div class="flex items-center justify-end gap-2 mb-1">
+                            {#if data.list.snapshotAt}
+                                <p class="text-sm opacity-60">
+                                    {new Date(data.list.snapshotAt)
+                                        .toLocaleString()
+                                        .toLowerCase()}
+                                </p>
+                            {/if}
+
                             <button
                                 type="button"
-                                class="btn btn-sm btn-square"
+                                class="btn btn-sm btn-square btn-secondary"
                                 onclick={() => {
                                     if (data.list.snapshotAt) {
                                         clearSnapshotFilter();
@@ -368,9 +369,9 @@
                                 }}
                             >
                                 {#if data.list.snapshotAt}
-                                    <Icon src={Forward} class="size-[1.2em]" />
+                                    <Icon src={Forward} class="size-[1.5em]" />
                                 {:else}
-                                    <Icon src={Backward} class="size-[1.2em]" />
+                                    <Icon src={Backward} class="size-[1.5em]" />
                                 {/if}
                             </button>
 
@@ -437,9 +438,8 @@
                                             ),
                                         )}
                                     />
-                                    <!-- onclick={updateListPlacement} -->
                                     <button
-                                        class="btn btn-sm btn-square {hasChanges
+                                        class="btn btn-sm btn-square btn-secondary {hasChanges
                                             ? 'btn-outline'
                                             : ''}"
                                         type={editMode && hasChanges
@@ -458,11 +458,11 @@
                                         {#if editMode}
                                             <Icon
                                                 src={Check}
-                                                class="size-[1.2em]"
+                                                class="size-[1.5em]"
                                             />
                                         {:else if requestingUpdate}
                                             <span
-                                                class="loading loading-dots size-[1.2em]"
+                                                class="loading loading-dots size-[1.5em]"
                                             ></span>
                                             <!-- <Icon
                                             src={Pencil}
@@ -471,7 +471,7 @@
                                         {:else}
                                             <Icon
                                                 src={Pencil}
-                                                class="size-[1.2em]"
+                                                class="size-[1.5em]"
                                             />
                                         {/if}
                                     </button>
@@ -479,68 +479,6 @@
                             {/if}
                         </div>
                     {/if}
-
-                    <!-- {#if data.list.snapshotAt}
-                        <div class="bg-base-200 p-4 rounded-lg mb-4">
-                            <div
-                                class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-3"
-                            >
-                                <p class="text-sm text-base-content/80">
-                                    showing snapshot for {new Date(
-                                        data.list.snapshotAt,
-                                    ).toLocaleString()}
-                                </p>
-                                <button
-                                    type="button"
-                                    class="btn btn-xs btn-ghost"
-                                    onclick={clearSnapshotFilter}
-                                >
-                                    clear snapshot
-                                </button>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="bg-base-100 p-4 rounded-lg">
-                                    <h3 class="text-lg font-semibold mb-2">
-                                        active list at time
-                                    </h3>
-                                    {#if data.list.snapshotAt && data.list.active.length > 0}
-                                        <List
-                                            listKey="snapshot-active"
-                                            {zoneType}
-                                            items={data.list.active}
-                                            editMode={false}
-                                            onDrop={() => {}}
-                                        />
-                                    {:else}
-                                        <p class="text-sm text-base-content/70">
-                                            no active items at this time.
-                                        </p>
-                                    {/if}
-                                </div>
-
-                                <div class="bg-base-100 p-4 rounded-lg">
-                                    <h3 class="text-lg font-semibold mb-2">
-                                        inactive completed at time
-                                    </h3>
-                                    {#if data.list.inactive.length > 0}
-                                        <List
-                                            listKey="snapshot-inactive"
-                                            {zoneType}
-                                            items={data.list.inactive}
-                                            editMode={false}
-                                            onDrop={() => {}}
-                                        />
-                                    {:else}
-                                        <p class="text-sm text-base-content/70">
-                                            no inactive completed items at this
-                                            time.
-                                        </p>
-                                    {/if}
-                                </div>
-                            </div>
-                        </div>
-                    {/if} -->
 
                     {#if editMode}
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -619,7 +557,7 @@
                 <label class="tab">
                     <input
                         type="radio"
-                        name="user_activity"
+                        name="user_progress"
                         checked={tab === tabs.progress}
                         onclick={() => goto("#" + tabs.progress)}
                     />

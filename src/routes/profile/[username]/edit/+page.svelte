@@ -65,7 +65,7 @@
                 <!-- Bio -->
                 <fieldset class="fieldset w-full">
                     <legend class="fieldset-legend"
-                        >bio {bio?.length}/200</legend
+                        >bio {bio?.length ?? 0}/200</legend
                     >
                     <textarea
                         name="bio"
@@ -73,8 +73,7 @@
                         class="textarea w-full"
                         maxlength="200"
                         placeholder="tell people about yourself..."
-                        disabled={loading}
-                    ></textarea>
+                        disabled={loading}></textarea>
                 </fieldset>
 
                 <!-- Read-only fields for reference -->
@@ -122,7 +121,7 @@
 
                     <button
                         type="button"
-                        class="btn btn-ghost flex-1"
+                        class="btn flex-1"
                         onclick={handleCancel}
                         disabled={loading}
                     >

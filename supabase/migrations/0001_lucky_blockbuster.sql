@@ -1,34 +1,18 @@
-CREATE TABLE "progress_history" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"progress_id" integer NOT NULL,
-	"user_id" uuid NOT NULL,
-	"level_id" integer NOT NULL,
-	"old_status" "status",
-	"new_status" "status",
-	"old_list_placement" numeric(40, 20),
-	"new_list_placement" numeric(40, 20),
-	"change_type" text NOT NULL,
-	"valid_from" timestamp DEFAULT now() NOT NULL,
-	"valid_to" timestamp,
-	"changed_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-ALTER TABLE "progress_history" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
-DROP INDEX "user_level_index";--> statement-breakpoint
-DROP INDEX "status_index";--> statement-breakpoint
-DROP INDEX "level_id_index";--> statement-breakpoint
-DROP INDEX "score_index";--> statement-breakpoint
-DROP INDEX "completed_at_index";--> statement-breakpoint
-ALTER TABLE "progress" ALTER COLUMN "list_placement" SET DATA TYPE numeric(40, 20);--> statement-breakpoint
-ALTER TABLE "progress_history" ADD CONSTRAINT "progress_history_progress_id_progress_id_fk" FOREIGN KEY ("progress_id") REFERENCES "public"."progress"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "progress_history" ADD CONSTRAINT "progress_history_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "progress_history_user_changed_at_index" ON "progress_history" USING btree ("user_id","changed_at");--> statement-breakpoint
-CREATE INDEX "progress_history_progress_id_index" ON "progress_history" USING btree ("progress_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "progress_user_level_index" ON "progress" USING btree ("user_id","level_id");--> statement-breakpoint
-CREATE INDEX "progress_level_status_index" ON "progress" USING btree ("level_id","status");--> statement-breakpoint
-CREATE INDEX "progress_user_activity_index" ON "progress" USING btree ("user_id","updated_at");--> statement-breakpoint
-CREATE INDEX "progress_level_id_index" ON "progress" USING btree ("level_id");--> statement-breakpoint
-CREATE INDEX "progress_active_list_order_index" ON "progress" USING btree ("user_id","status","list_placement");
+create or replace function public.handle_new_user()
+returns trigger as $$
+begin
+  insert into public.users (id, email)
+  values (
+    new.id,
+    new.email
+  );
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+create or replace trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
 
 --> statement-breakpoint
 CREATE OR REPLACE FUNCTION public.enforce_active_completed_limit()

@@ -59,10 +59,10 @@
         {#if props.showEdit}
             <button
                 type="button"
-                class="btn btn-xs btn-square btn-outline"
+                class="btn btn-xs btn-square btn-secondary"
                 onclick={props.onClick}
             >
-                <Icon src={Pencil} class="size-[1.2em]" />
+                <Icon src={Pencil} class="size-[1.5em]" />
             </button>
         {/if}
     </div>
