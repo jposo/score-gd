@@ -1,6 +1,6 @@
 {
-  "id": "555baf9f-caca-457e-9703-c5b44806578b",
-  "prevId": "87c2c577-c584-438b-9d81-87da450ba887",
+  "id": "cfd168fe-77ad-422f-b1d0-b13de128f4cd",
+  "prevId": "b6a19246-8dff-47e2-b6f6-d4c1e5f3a8e6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -374,7 +374,7 @@
         },
         "list_placement": {
           "name": "list_placement",
-          "type": "integer",
+          "type": "numeric(40, 20)",
           "primaryKey": false,
           "notNull": false
         },
@@ -406,8 +406,8 @@
         }
       },
       "indexes": {
-        "user_level_index": {
-          "name": "user_level_index",
+        "progress_user_level_index": {
+          "name": "progress_user_level_index",
           "columns": [
             {
               "expression": "user_id",
@@ -427,9 +427,15 @@
           "method": "btree",
           "concurrently": false
         },
-        "status_index": {
-          "name": "status_index",
+        "progress_level_status_index": {
+          "name": "progress_level_status_index",
           "columns": [
+            {
+              "expression": "level_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "status",
               "isExpression": false,
@@ -442,8 +448,29 @@
           "method": "btree",
           "concurrently": false
         },
-        "level_id_index": {
-          "name": "level_id_index",
+        "progress_user_activity_index": {
+          "name": "progress_user_activity_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "progress_level_id_index": {
+          "name": "progress_level_id_index",
           "columns": [
             {
               "expression": "level_id",
@@ -457,26 +484,23 @@
           "method": "btree",
           "concurrently": false
         },
-        "score_index": {
-          "name": "score_index",
+        "progress_active_list_order_index": {
+          "name": "progress_active_list_order_index",
           "columns": [
             {
-              "expression": "score",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        },
-        "completed_at_index": {
-          "name": "completed_at_index",
-          "columns": [
+            },
             {
-              "expression": "completed_at",
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "list_placement",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -529,6 +553,159 @@
           "value": "\"progress\".\"completion_percentage\" >= 0 AND \"progress\".\"completion_percentage\" <= 100"
         }
       },
+      "isRLSEnabled": true
+    },
+    "public.progress_history": {
+      "name": "progress_history",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "progress_id": {
+          "name": "progress_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level_id": {
+          "name": "level_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "old_status": {
+          "name": "old_status",
+          "type": "status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_status": {
+          "name": "new_status",
+          "type": "status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "old_list_placement": {
+          "name": "old_list_placement",
+          "type": "numeric(40, 20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_list_placement": {
+          "name": "new_list_placement",
+          "type": "numeric(40, 20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change_type": {
+          "name": "change_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valid_from": {
+          "name": "valid_from",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "valid_to": {
+          "name": "valid_to",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_at": {
+          "name": "changed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "progress_history_user_changed_at_index": {
+          "name": "progress_history_user_changed_at_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "changed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "progress_history_progress_id_index": {
+          "name": "progress_history_progress_id_index",
+          "columns": [
+            {
+              "expression": "progress_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "progress_history_progress_id_progress_id_fk": {
+          "name": "progress_history_progress_id_progress_id_fk",
+          "tableFrom": "progress_history",
+          "columnsFrom": [
+            "progress_id"
+          ],
+          "tableTo": "progress",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "progress_history_user_id_users_id_fk": {
+          "name": "progress_history_user_id_users_id_fk",
+          "tableFrom": "progress_history",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "tableTo": "users",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
       "isRLSEnabled": true
     },
     "public.review_votes": {

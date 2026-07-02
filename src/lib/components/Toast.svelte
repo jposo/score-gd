@@ -1,18 +1,19 @@
 <script lang="ts">
-  import { fade } from "svelte/transition";
-  interface Props {
-    type: "info" | "success" | "error";
-    message: string;
-  }
+    import { fade } from "svelte/transition";
+    interface Props {
+        type: "info" | "success" | "error";
+        message: string;
+    }
 
-  let { type: level, message }: Props = $props();
+    let { type: level, message }: Props = $props();
 </script>
 
 <div
-  class="toast toast-center toast-top toast-bottom z-50"
-  transition:fade={{ duration: 300 }}
+    class="toast toast-center toast-top z-50 shadow-sm"
+    transition:fade={{ duration: 300 }}
 >
-  <div class="alert alert-{level}">
-    <span>{message}</span>
-  </div>
+    <!--  this stopped working for some reason alert-{level} -->
+    <div class="alert alert-{level}">
+        <span>{message}</span>
+    </div>
 </div>

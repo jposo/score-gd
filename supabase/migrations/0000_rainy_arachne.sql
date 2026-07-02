@@ -52,7 +52,7 @@ CREATE TABLE "progress" (
 	"hide_review" boolean DEFAULT false NOT NULL,
 	"helpful_votes" integer DEFAULT 0 NOT NULL,
 	"unhelpful_votes" integer DEFAULT 0 NOT NULL,
-	"list_placement" integer,
+	"list_placement" numeric(40, 20),
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now(),
 	"deleted_at" timestamp,
@@ -62,6 +62,22 @@ CREATE TABLE "progress" (
 );
 --> statement-breakpoint
 ALTER TABLE "progress" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE TABLE "progress_history" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"progress_id" integer NOT NULL,
+	"user_id" uuid NOT NULL,
+	"level_id" integer NOT NULL,
+	"old_status" "status",
+	"new_status" "status",
+	"old_list_placement" numeric(40, 20),
+	"new_list_placement" numeric(40, 20),
+	"change_type" text NOT NULL,
+	"valid_from" timestamp DEFAULT now() NOT NULL,
+	"valid_to" timestamp,
+	"changed_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+ALTER TABLE "progress_history" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
 CREATE TABLE "review_votes" (
 	"user_id" uuid NOT NULL,
 	"progress_id" integer NOT NULL,
@@ -108,12 +124,16 @@ ALTER TABLE "level_creators" ADD CONSTRAINT "level_creators_level_id_levels_id_f
 ALTER TABLE "levels" ADD CONSTRAINT "levels_updated_by_users_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "progress" ADD CONSTRAINT "progress_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "progress" ADD CONSTRAINT "progress_deleted_by_users_id_fk" FOREIGN KEY ("deleted_by") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "progress_history" ADD CONSTRAINT "progress_history_progress_id_progress_id_fk" FOREIGN KEY ("progress_id") REFERENCES "public"."progress"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "progress_history" ADD CONSTRAINT "progress_history_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "review_votes" ADD CONSTRAINT "review_votes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "review_votes" ADD CONSTRAINT "review_votes_progress_id_progress_id_fk" FOREIGN KEY ("progress_id") REFERENCES "public"."progress"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_id_users_id_fk" FOREIGN KEY ("id") REFERENCES "auth"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "unique_day_index" ON "days" USING btree ("day");--> statement-breakpoint
-CREATE UNIQUE INDEX "user_level_index" ON "progress" USING btree ("user_id","level_id");--> statement-breakpoint
-CREATE INDEX "status_index" ON "progress" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "level_id_index" ON "progress" USING btree ("level_id");--> statement-breakpoint
-CREATE INDEX "score_index" ON "progress" USING btree ("score");--> statement-breakpoint
-CREATE INDEX "completed_at_index" ON "progress" USING btree ("completed_at");
+CREATE UNIQUE INDEX "progress_user_level_index" ON "progress" USING btree ("user_id","level_id");--> statement-breakpoint
+CREATE INDEX "progress_level_status_index" ON "progress" USING btree ("level_id","status");--> statement-breakpoint
+CREATE INDEX "progress_user_activity_index" ON "progress" USING btree ("user_id","updated_at");--> statement-breakpoint
+CREATE INDEX "progress_level_id_index" ON "progress" USING btree ("level_id");--> statement-breakpoint
+CREATE INDEX "progress_active_list_order_index" ON "progress" USING btree ("user_id","status","list_placement");--> statement-breakpoint
+CREATE INDEX "progress_history_user_changed_at_index" ON "progress_history" USING btree ("user_id","changed_at");--> statement-breakpoint
+CREATE INDEX "progress_history_progress_id_index" ON "progress_history" USING btree ("progress_id");

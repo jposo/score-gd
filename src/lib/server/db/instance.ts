@@ -5,6 +5,7 @@ import { env } from "$env/dynamic/private";
 import {
     sql,
     eq,
+    gt,
     desc,
     and,
     or,
@@ -28,13 +29,18 @@ type Review = {
     updatedAt: Date;
 };
 
-type Activity = {
+type ProgressEntry = {
     levelId: number;
     status: string;
+    completionPercentage: number;
     score: number;
-    // levelName: string;
+    attempts: number;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    videoUrl: string | null;
     review: string | null;
     createdAt: Date;
+    updatedAt: Date;
 };
 
 type List = {
@@ -42,14 +48,82 @@ type List = {
     levelId: number;
     // levelName: string;
     // publisher: string;
-    placement: number;
+    placement: string | null;
     score: number;
     attempts: number;
+    startedAt: Date | null;
+    completedAt: Date | null;
+    videoUrl: string | null;
 }[];
+
+type SnapshotState = {
+    id: number;
+    status: string | null;
+    placement: string | null;
+    score: number | null;
+    attempts: number | null;
+    startedAt: string | null;
+    completedAt: string | null;
+    videoUrl: string | null;
+    createdAt: Date | null;
+};
 
 class Database {
     static #instance: Database;
     private db: ReturnType<typeof drizzle>;
+
+    private arraysEqual(a: number[], b: number[]) {
+        if (a.length !== b.length) {
+            return false;
+        }
+
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private hasSameMembers(a: number[], b: number[]) {
+        if (a.length !== b.length) {
+            return false;
+        }
+
+        const setA = new Set(a);
+        if (setA.size !== b.length) {
+            return false;
+        }
+
+        for (const value of b) {
+            if (!setA.has(value)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private detectSingleMovedId(previous: number[], next: number[]) {
+        if (previous.length !== next.length) {
+            return null;
+        }
+
+        if (this.arraysEqual(previous, next)) {
+            return null;
+        }
+
+        for (const candidate of previous) {
+            const previousWithout = previous.filter((id) => id !== candidate);
+            const nextWithout = next.filter((id) => id !== candidate);
+            if (this.arraysEqual(previousWithout, nextWithout)) {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
 
     private constructor() {
         const client = postgres(env.DATABASE_URL);
@@ -207,6 +281,7 @@ class Database {
             .select({
                 id: schema.users.id,
                 username: schema.users.username,
+                bio: schema.users.bio,
                 email: schema.users.email,
                 roles: schema.users.roles,
                 createdAt: schema.users.createdAt,
@@ -250,24 +325,80 @@ class Database {
                     sql`CASE WHEN ${schema.progress.review} IS NOT NULL THEN 1 END`,
                 ),
                 list: sql<List>`coalesce(json_agg(
-                json_build_object(
-                  'id', ${schema.progress.levelId},
-                  'placement', ${schema.progress.listPlacement},
-                  'score', ${schema.progress.score},
-                  'attempts', ${schema.progress.attempts}
-                )
-                ORDER BY ${schema.progress.listPlacement} ASC
-              ) FILTER (WHERE ${schema.progress.status} = 'completed'), '[]')`,
-                recentActivity: sql<Activity[]>`coalesce(json_agg(
-                json_build_object(
-                  'levelId', ${schema.progress.levelId},
-                  'status', ${schema.progress.status},
-                  'score', ${schema.progress.score},
-                  'review', ${schema.progress.review},
-                  'createdAt', ${schema.progress.createdAt}
-                )
-                ORDER BY ${schema.progress.updatedAt} DESC
-              ) FILTER (WHERE ${schema.progress.levelId} IS NOT NULL), '[]')`,
+                    json_build_object(
+                        'id', ${schema.progress.levelId},
+                        'placement', ${schema.progress.listPlacement},
+                        'score', ${schema.progress.score},
+                        'attempts', ${schema.progress.attempts},
+                        'startedAt', ${schema.progress.startedAt},
+                        'completedAt', ${schema.progress.completedAt},
+                        'videoUrl', ${schema.progress.videoUrl}
+                    )
+                    ORDER BY ${schema.progress.listPlacement} ASC
+                ) FILTER (
+                    WHERE ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NOT NULL
+                ), '[]')`,
+                inactiveList: sql<List>`coalesce(json_agg(
+                    json_build_object(
+                        'id', ${schema.progress.levelId},
+                        'placement', ${schema.progress.listPlacement},
+                        'score', ${schema.progress.score},
+                        'attempts', ${schema.progress.attempts},
+                        'startedAt', ${schema.progress.startedAt},
+                        'completedAt', ${schema.progress.completedAt},
+                        'videoUrl', ${schema.progress.videoUrl}
+                    )
+                    ORDER BY ${schema.progress.updatedAt} DESC
+                ) FILTER (
+                    WHERE ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NULL
+                ), '[]')`,
+                recentActivity: sql<ProgressEntry[]>`(
+                    SELECT coalesce(json_agg(act), '[]')
+                    FROM (
+                        SELECT json_build_object(
+                            'levelId', ${schema.progress.levelId},
+                            'status', ${schema.progress.status},
+                            'completionPercentage', ${schema.progress.completionPercentage},
+                            'score', ${schema.progress.score},
+                            'attempts', ${schema.progress.attempts},
+                            'startedAt', ${schema.progress.startedAt},
+                            'completedAt', ${schema.progress.completedAt},
+                            'videoUrl', ${schema.progress.videoUrl},
+                            'review', ${schema.progress.review},
+                            'createdAt', ${schema.progress.createdAt},
+                            'updatedAt', ${schema.progress.updatedAt}
+                        ) AS act
+                        FROM ${schema.progress}
+                        WHERE ${schema.progress.userId} = ${schema.users.id}
+                            AND ${schema.progress.levelId} IS NOT NULL
+                        ORDER BY ${schema.progress.updatedAt} DESC
+                        LIMIT 10
+                    ) sub
+                )`,
+                allProgress: sql<ProgressEntry[]>`(
+                    SELECT coalesce(json_agg(p), '[]')
+                    FROM (
+                        SELECT json_build_object(
+                            'levelId', ${schema.progress.levelId},
+                            'status', ${schema.progress.status},
+                            'completionPercentage', ${schema.progress.completionPercentage},
+                            'score', ${schema.progress.score},
+                            'attempts', ${schema.progress.attempts},
+                            'startedAt', ${schema.progress.startedAt},
+                            'completedAt', ${schema.progress.completedAt},
+                            'videoUrl', ${schema.progress.videoUrl},
+                            'review', ${schema.progress.review},
+                            'createdAt', ${schema.progress.createdAt},
+                            'updatedAt', ${schema.progress.updatedAt}
+                        ) AS p
+                        FROM ${schema.progress}
+                        WHERE ${schema.progress.userId} = ${schema.users.id}
+                            AND ${schema.progress.levelId} IS NOT NULL
+                        ORDER BY ${schema.progress.updatedAt} DESC
+                    ) sub
+                )`,
             })
             .from(schema.users)
             .leftJoin(
@@ -445,6 +576,469 @@ class Database {
         return progress[0] || null;
     }
 
+    async countActiveCompleted(userId: string) {
+        const result = await this.db
+            .select({
+                count: count(),
+            })
+            .from(schema.progress)
+            .where(
+                sql`${schema.progress.userId} = ${userId}
+                    AND ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NOT NULL`,
+            );
+
+        return result[0]?.count ?? 0;
+    }
+
+    async findNextActiveListPlacement(userId: string) {
+        const result = await this.db
+            .select({
+                maxPlacement: sql<number>`coalesce(max(${schema.progress.listPlacement}::numeric), 0)::float8`,
+            })
+            .from(schema.progress)
+            .where(
+                sql`${schema.progress.userId} = ${userId}
+                    AND ${schema.progress.status} = 'completed'
+                    AND ${schema.progress.listPlacement} IS NOT NULL`,
+            );
+
+        return (result[0]?.maxPlacement ?? 0) + 1000;
+    }
+
+    async moveActiveListItemFractional(
+        userId: string,
+        movedLevelId: number,
+        previousLevelId: number | null,
+        nextLevelId: number | null,
+    ) {
+        return this.db.transaction(async (tx) => {
+            const moved = await tx
+                .select({
+                    levelId: schema.progress.levelId,
+                    status: schema.progress.status,
+                    listPlacement: sql<number>`${schema.progress.listPlacement}::float8`,
+                })
+                .from(schema.progress)
+                .where(
+                    and(
+                        eq(schema.progress.userId, userId),
+                        eq(schema.progress.levelId, movedLevelId),
+                    ),
+                )
+                .limit(1);
+
+            if (!moved.length || moved[0].status !== "completed") {
+                return null;
+            }
+
+            let leftPlacement: number | null = null;
+            let rightPlacement: number | null = null;
+
+            if (previousLevelId !== null) {
+                const previous = await tx
+                    .select({
+                        listPlacement: sql<number>`${schema.progress.listPlacement}::float8`,
+                    })
+                    .from(schema.progress)
+                    .where(
+                        sql`${schema.progress.userId} = ${userId}
+                            AND ${schema.progress.levelId} = ${previousLevelId}
+                            AND ${schema.progress.status} = 'completed'
+                            AND ${schema.progress.listPlacement} IS NOT NULL`,
+                    )
+                    .limit(1);
+
+                if (!previous.length) {
+                    return null;
+                }
+
+                leftPlacement = previous[0].listPlacement;
+            }
+
+            if (nextLevelId !== null) {
+                const next = await tx
+                    .select({
+                        listPlacement: sql<number>`${schema.progress.listPlacement}::float8`,
+                    })
+                    .from(schema.progress)
+                    .where(
+                        sql`${schema.progress.userId} = ${userId}
+                            AND ${schema.progress.levelId} = ${nextLevelId}
+                            AND ${schema.progress.status} = 'completed'
+                            AND ${schema.progress.listPlacement} IS NOT NULL`,
+                    )
+                    .limit(1);
+
+                if (!next.length) {
+                    return null;
+                }
+
+                rightPlacement = next[0].listPlacement;
+            }
+
+            let nextPlacement = moved[0].listPlacement ?? 1000;
+
+            if (leftPlacement === null && rightPlacement === null) {
+                nextPlacement = 1000;
+            } else if (leftPlacement === null && rightPlacement !== null) {
+                nextPlacement = rightPlacement - 1000;
+            } else if (leftPlacement !== null && rightPlacement === null) {
+                nextPlacement = leftPlacement + 1000;
+            } else if (leftPlacement !== null && rightPlacement !== null) {
+                if (leftPlacement >= rightPlacement) {
+                    return null;
+                }
+                nextPlacement = (leftPlacement + rightPlacement) / 2;
+            }
+
+            const result = await tx
+                .update(schema.progress)
+                .set({
+                    listPlacement: nextPlacement.toString(),
+                })
+                .where(
+                    and(
+                        eq(schema.progress.levelId, movedLevelId),
+                        eq(schema.progress.userId, userId),
+                    ),
+                )
+                .returning();
+
+            return result[0] || null;
+        });
+    }
+
+    async syncCompletedListMembership(
+        userId: string,
+        activeLevelIds: number[],
+        inactiveLevelIds: number[],
+    ) {
+        if (activeLevelIds.length > 25) {
+            return null;
+        }
+
+        const allIds = [...new Set([...activeLevelIds, ...inactiveLevelIds])];
+
+        return this.db.transaction(async (tx) => {
+            const completedRows = await tx
+                .select({
+                    levelId: schema.progress.levelId,
+                    status: schema.progress.status,
+                    listPlacement: sql<
+                        number | null
+                    >`${schema.progress.listPlacement}::float8`,
+                })
+                .from(schema.progress)
+                .where(
+                    and(
+                        eq(schema.progress.userId, userId),
+                        eq(schema.progress.status, "completed"),
+                    ),
+                );
+
+            const completedIds = completedRows.map((row) => row.levelId);
+
+            if (!this.hasSameMembers(completedIds, allIds)) {
+                return null;
+            }
+
+            const byId = new Map(
+                completedRows.map((row) => [row.levelId, row]),
+            );
+
+            const currentActive = completedRows
+                .filter((row) => row.listPlacement !== null)
+                .sort((a, b) => (a.listPlacement ?? 0) - (b.listPlacement ?? 0))
+                .map((row) => row.levelId);
+
+            const currentInactive = completedRows
+                .filter((row) => row.listPlacement === null)
+                .map((row) => row.levelId);
+
+            if (
+                this.arraysEqual(currentActive, activeLevelIds) &&
+                this.hasSameMembers(currentInactive, inactiveLevelIds)
+            ) {
+                return {
+                    activeCount: activeLevelIds.length,
+                    inactiveCount: inactiveLevelIds.length,
+                    updatedRows: 0,
+                };
+            }
+
+            const sameActiveMembers = this.hasSameMembers(
+                currentActive,
+                activeLevelIds,
+            );
+            const sameInactiveMembers = this.hasSameMembers(
+                currentInactive,
+                inactiveLevelIds,
+            );
+
+            if (sameActiveMembers && sameInactiveMembers) {
+                const movedLevelId = this.detectSingleMovedId(
+                    currentActive,
+                    activeLevelIds,
+                );
+
+                if (movedLevelId !== null) {
+                    const movedIndex = activeLevelIds.findIndex(
+                        (id) => id === movedLevelId,
+                    );
+                    const previousLevelId =
+                        movedIndex > 0 ? activeLevelIds[movedIndex - 1] : null;
+                    const nextLevelId =
+                        movedIndex < activeLevelIds.length - 1
+                            ? activeLevelIds[movedIndex + 1]
+                            : null;
+
+                    let leftPlacement: number | null = null;
+                    let rightPlacement: number | null = null;
+
+                    if (previousLevelId !== null) {
+                        leftPlacement =
+                            byId.get(previousLevelId)?.listPlacement ?? null;
+                    }
+
+                    if (nextLevelId !== null) {
+                        rightPlacement =
+                            byId.get(nextLevelId)?.listPlacement ?? null;
+                    }
+
+                    let targetPlacement =
+                        byId.get(movedLevelId)?.listPlacement ?? 1000;
+
+                    if (leftPlacement === null && rightPlacement === null) {
+                        targetPlacement = 1000;
+                    } else if (
+                        leftPlacement === null &&
+                        rightPlacement !== null
+                    ) {
+                        targetPlacement = rightPlacement - 1000;
+                    } else if (
+                        leftPlacement !== null &&
+                        rightPlacement === null
+                    ) {
+                        targetPlacement = leftPlacement + 1000;
+                    } else if (
+                        leftPlacement !== null &&
+                        rightPlacement !== null
+                    ) {
+                        if (leftPlacement >= rightPlacement) {
+                            return null;
+                        }
+                        targetPlacement = (leftPlacement + rightPlacement) / 2;
+                    }
+
+                    const currentPlacement =
+                        byId.get(movedLevelId)?.listPlacement ?? null;
+                    if (currentPlacement !== targetPlacement) {
+                        await tx
+                            .update(schema.progress)
+                            .set({
+                                listPlacement: targetPlacement.toString(),
+                            })
+                            .where(
+                                and(
+                                    eq(schema.progress.userId, userId),
+                                    eq(schema.progress.levelId, movedLevelId),
+                                ),
+                            );
+
+                        return {
+                            activeCount: activeLevelIds.length,
+                            inactiveCount: inactiveLevelIds.length,
+                            updatedRows: 1,
+                        };
+                    }
+
+                    return {
+                        activeCount: activeLevelIds.length,
+                        inactiveCount: inactiveLevelIds.length,
+                        updatedRows: 0,
+                    };
+                }
+            }
+
+            let updatedRows = 0;
+
+            for (let index = 0; index < activeLevelIds.length; index++) {
+                const levelId = activeLevelIds[index];
+                const placement = ((index + 1) * 1000).toString();
+                const currentPlacement = byId.get(levelId)?.listPlacement;
+
+                if (currentPlacement === Number(placement)) {
+                    continue;
+                }
+
+                await tx
+                    .update(schema.progress)
+                    .set({
+                        listPlacement: placement,
+                    })
+                    .where(
+                        and(
+                            eq(schema.progress.userId, userId),
+                            eq(schema.progress.levelId, levelId),
+                        ),
+                    );
+
+                updatedRows++;
+            }
+
+            for (const levelId of inactiveLevelIds) {
+                const currentPlacement = byId.get(levelId)?.listPlacement;
+
+                if (currentPlacement === null) {
+                    continue;
+                }
+
+                await tx
+                    .update(schema.progress)
+                    .set({
+                        listPlacement: null,
+                    })
+                    .where(
+                        and(
+                            eq(schema.progress.userId, userId),
+                            eq(schema.progress.levelId, levelId),
+                        ),
+                    );
+
+                updatedRows++;
+            }
+
+            return {
+                activeCount: activeLevelIds.length,
+                inactiveCount: inactiveLevelIds.length,
+                updatedRows,
+            };
+        });
+    }
+
+    async findCompletedListSnapshotByUserId(userId: string, at: Date) {
+        const currentRows = await this.db
+            .select({
+                levelId: schema.progress.levelId,
+                status: schema.progress.status,
+                listPlacement: schema.progress.listPlacement,
+                score: schema.progress.score,
+                attempts: schema.progress.attempts,
+                startedAt: schema.progress.startedAt,
+                completedAt: schema.progress.completedAt,
+                videoUrl: schema.progress.videoUrl,
+                createdAt: schema.progress.createdAt,
+            })
+            .from(schema.progress)
+            .where(eq(schema.progress.userId, userId));
+
+        const historyRows = await this.db
+            .select({
+                levelId: schema.progressHistory.levelId,
+                oldStatus: schema.progressHistory.oldStatus,
+                oldListPlacement: schema.progressHistory.oldListPlacement,
+                changeType: schema.progressHistory.changeType,
+                changedAt: schema.progressHistory.changedAt,
+                validFrom: schema.progressHistory.validFrom,
+            })
+            .from(schema.progressHistory)
+            .where(
+                and(
+                    eq(schema.progressHistory.userId, userId),
+                    gt(schema.progressHistory.changedAt, at),
+                ),
+            )
+            .orderBy(desc(schema.progressHistory.changedAt));
+
+        const stateByLevelId = new Map<number, SnapshotState>();
+
+        for (const row of currentRows) {
+            stateByLevelId.set(row.levelId, {
+                id: row.levelId,
+                status: row.status ?? null,
+                placement: row.listPlacement ?? null,
+                score: row.score ?? null,
+                attempts: row.attempts ?? null,
+                startedAt: row.startedAt ?? null,
+                completedAt: row.completedAt ?? null,
+                videoUrl: row.videoUrl ?? null,
+                createdAt: row.createdAt ?? null,
+            });
+        }
+
+        for (const event of historyRows) {
+            if (event.validFrom && event.validFrom > at) {
+                continue;
+            }
+
+            const existing = stateByLevelId.get(event.levelId) ?? {
+                id: event.levelId,
+                status: null,
+                placement: null,
+                score: null,
+                attempts: null,
+                startedAt: null,
+                completedAt: null,
+                videoUrl: null,
+                createdAt: null,
+            };
+
+            if (
+                event.changeType === "update" ||
+                event.changeType === "delete"
+            ) {
+                existing.status = event.oldStatus ?? null;
+                existing.placement = event.oldListPlacement ?? null;
+                stateByLevelId.set(event.levelId, existing);
+            }
+        }
+
+        const snapshotRows = [...stateByLevelId.values()].filter((row) => {
+            if (row.createdAt && row.createdAt > at) {
+                return false;
+            }
+
+            return row.status === "completed";
+        });
+
+        const activeList = snapshotRows
+            .filter((row) => row.placement !== null)
+            .sort((a, b) => {
+                const aPlacement = Number(a.placement ?? "0");
+                const bPlacement = Number(b.placement ?? "0");
+                return aPlacement - bPlacement;
+            })
+            .map((row) => ({
+                id: row.id,
+                placement: row.placement,
+                score: row.score,
+                attempts: row.attempts,
+                startedAt: row.startedAt,
+                completedAt: row.completedAt,
+                videoUrl: row.videoUrl,
+            }));
+
+        const inactiveList = snapshotRows
+            .filter((row) => row.placement === null)
+            .sort((a, b) => b.id - a.id)
+            .map((row) => ({
+                id: row.id,
+                placement: row.placement,
+                score: row.score,
+                attempts: row.attempts,
+                startedAt: row.startedAt,
+                completedAt: row.completedAt,
+                videoUrl: row.videoUrl,
+            }));
+
+        return {
+            at,
+            activeList,
+            inactiveList,
+        };
+    }
+
     async updateListPlacement(
         levelId: number,
         userId: string,
@@ -452,7 +1046,7 @@ class Database {
     ) {
         const result = await this.db
             .update(schema.progress)
-            .set({ listPlacement: placement })
+            .set({ listPlacement: placement.toString() })
             .where(
                 and(
                     eq(schema.progress.levelId, levelId),

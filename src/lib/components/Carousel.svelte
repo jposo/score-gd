@@ -8,7 +8,7 @@
 
   let { images, select = 0 }: Props = $props();
 
-  let currentIndex = $state(select);
+  let currentIndex = $derived(select);
 
   $effect(() => {
     currentIndex = select;
@@ -18,7 +18,7 @@
     }
   });
 
-  let loaded: boolean[] = $state(Array(images.length).fill(false));
+  let loaded: boolean[] = $derived(Array(images.length).fill(false));
 </script>
 
 <div class="relative flex justify-center max-w-6xl mx-auto">

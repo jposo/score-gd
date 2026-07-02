@@ -3,11 +3,12 @@ import { env } from "$env/dynamic/private";
 import { env as penv } from "$env/dynamic/public";
 import { Buffer } from "node:buffer";
 
-const supabase = createClient(
-    penv.PUBLIC_SUPABASE_PROJECT_URL,
-    env.SUPABASE_API_KEY,
-);
+function getSupabase() {
+    return createClient(penv.PUBLIC_SUPABASE_PROJECT_URL, env.SUPABASE_API_KEY);
+}
+
 export async function uploadImage(file: Buffer, filepath: string) {
+    const supabase = getSupabase();
     const { data, error } = await supabase.storage
         .from("images")
         .upload(filepath, file, {

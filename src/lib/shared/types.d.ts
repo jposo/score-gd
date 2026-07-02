@@ -1,9 +1,22 @@
+import type { SelectProgress } from "$lib/server/db/schema";
+
 export type ListItem = {
-  id: number;
-  placement: number;
   levelId: number;
-  levelName: string;
+  status: string;
+  score?: number;
+  completionPercentage?: number;
+  completionTime?: string;
+  attempts?: number;
+  startedAt?: Date;
+  completedAt?: Date;
+  videoUrl?: string;
+  review?: string;
 };
+//   id: number;
+//   placement: number;
+//   levelId: number;
+//   levelName: string;
+// };
 
 export type Guess = {
   id: number;

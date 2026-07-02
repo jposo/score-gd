@@ -1,9 +1,13 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes:
-    light,
-    silk,
-    dark --default,
-    dracula,
-    sunset;
+    themes:
+        light,
+        silk,
+        dark --default,
+        dracula,
+        sunset;
+}
+
+.gd-stats span:not(:last-child)::after {
+    content: " • ";
 }

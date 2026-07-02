@@ -7,104 +7,199 @@ import { z } from "zod";
 import winston from "winston";
 
 const UpdateList = z.object({
-  list: z
-    .string()
-    .transform((str, ctx) => {
-      try {
-        return JSON.parse(str);
-      } catch (e) {
-        ctx.addIssue({
-          code: "invalid_type",
-          message: "Invalid JSON array string",
-          expected: "string",
-        });
-        return z.NEVER;
-      }
-    })
-    .pipe(z.array(z.number().min(1))),
+    activeList: z
+        .string()
+        .transform((str, ctx) => {
+            try {
+                return JSON.parse(str);
+            } catch {
+                ctx.addIssue({
+                    code: "custom",
+                    message: "invalid active list payload",
+                });
+                return z.NEVER;
+            }
+        })
+        .pipe(z.array(z.coerce.number().min(1)).max(25)),
+    inactiveList: z
+        .string()
+        .transform((str, ctx) => {
+            try {
+                return JSON.parse(str);
+            } catch {
+                ctx.addIssue({
+                    code: "custom",
+                    message: "invalid inactive list payload",
+                });
+                return z.NEVER;
+            }
+        })
+        .pipe(z.array(z.coerce.number().min(1))),
 });
 
 export const load: PageServerLoad = async (event) => {
-  const username = event.params.username as string;
-  const profile = await db.findUserInfoByUsername(username);
+    const username = event.params.username as string;
+    const profile = await db.findUserInfoByUsername(username);
+    const snapshotAtParam = event.url.searchParams.get("at");
+    const parsedSnapshotAt = snapshotAtParam ? new Date(snapshotAtParam) : null;
+    const snapshotAt =
+        parsedSnapshotAt && !Number.isNaN(parsedSnapshotAt.getTime())
+            ? parsedSnapshotAt
+            : null;
 
-  if (!profile) {
-    error(404, "user not found");
-  }
+    if (!profile) {
+        error(404, "user not found");
+    }
 
-  const listLevelIds = profile.list.map((item) => item.id);
-  const recentActivityLevelIds = profile.recentActivity.map(
-    (item) => item.levelId,
-  );
-  const allIds = [...new Set([...listLevelIds, ...recentActivityLevelIds])];
+    const snapshot = snapshotAt
+        ? await db.findCompletedListSnapshotByUserId(profile.id, snapshotAt)
+        : null;
 
-  const allLevels = await get("levels").ids(allIds);
+    // retrieve all level IDs
+    const listLevelIds = snapshot
+        ? snapshot.activeList.map((item) => item.id)
+        : profile.list.map((item) => item.id);
+    const inactiveLevelIds = snapshot
+        ? snapshot.inactiveList.map((item) => item.id)
+        : profile.inactiveList.map((item) => item.id);
+    // const snapshotActiveIds = snapshot
+    //     ? snapshot.activeList.map((item) => item.id)
+    //     : [];
+    // const snapshotInactiveIds = snapshot
+    //     ? snapshot.inactiveList.map((item) => item.id)
+    //     : [];
+    const recentActivityLevelIds = profile.recentActivity.map(
+        (item) => item.levelId,
+    );
+    const allProgressLevelIds = profile.allProgress.map((item) => item.levelId);
+    // store them all in a set to avoid duplicates
+    const allIds = new Set([
+        ...listLevelIds,
+        ...inactiveLevelIds,
+        ...recentActivityLevelIds,
+        ...allProgressLevelIds,
+    ]);
 
-  if (!allLevels) {
-    error(500, "failed to fetch levels");
-  }
+    const allLevels = await get("levels").ids(allIds);
 
-  const levelMap = new Map(
-    allLevels.result.map((level) => [
-      level.id,
-      {
-        name: level.name,
-        publisher: level.creator?.username,
-      },
-    ]),
-  );
-  const enrichedList = profile.list.map((item) => ({
-    ...item,
-    details: levelMap.get(item.id) || null,
-  }));
-  const enrichedActivity = profile.recentActivity.map((item) => ({
-    ...item,
-    details: levelMap.get(item.levelId) || null,
-  }));
+    if (!allLevels) {
+        error(500, "failed to fetch levels");
+    }
 
-  const {
-    data: { user },
-  } = await event.locals.supabase.auth.getUser();
-  const isUser = user?.id === profile.id;
+    type Level = {
+        name: string;
+        publisher: string;
+        length: string;
+    };
 
-  const enrichedProfile = {
-    username: profile.username,
-    bio: profile.bio,
-    registeredAt: profile.createdAt!,
-    stats: {
-      averageScore: profile.averageScore,
-      levelsCompleted: profile.levelsCompleted,
-      reviewsWritten: profile.reviewsWritten,
-    },
-    list: enrichedList,
-    recentActivity: enrichedActivity,
-    isUser,
-  };
+    const levelMap = new Map<number, Level>(
+        allLevels.result.map((level) => [
+            level.id,
+            {
+                name: level.name,
+                publisher: level.creator?.username ?? "unknown",
+                length: level.length,
+            },
+        ]),
+    );
+    const fallbackLevel: Level = {
+        name: "unknown level",
+        publisher: "unknown",
+        length: "tiny",
+    };
+    const enrichedList = profile.list.map((item) => ({
+        ...item,
+        level: levelMap.get(item.id) || fallbackLevel,
+    }));
+    const enrichedInactiveList = profile.inactiveList.map((item) => ({
+        ...item,
+        level: levelMap.get(item.id) || fallbackLevel,
+    }));
+    const enrichedActivity = profile.recentActivity.map((item) => ({
+        ...item,
+        level: levelMap.get(item.levelId) || fallbackLevel,
+    }));
+    const enrichedAllProgress = profile.allProgress.map((item) => ({
+        ...item,
+        level: levelMap.get(item.levelId) || fallbackLevel,
+    }));
+    const enrichedSnapshot = snapshot
+        ? {
+              at: snapshot.at.toISOString(),
+              active: snapshot.activeList.map((item) => ({
+                  ...item,
+                  level: levelMap.get(item.id) || fallbackLevel,
+              })),
+              inactive: snapshot.inactiveList.map((item) => ({
+                  ...item,
+                  level: levelMap.get(item.id) || fallbackLevel,
+              })),
+          }
+        : null;
 
-  return {
-    profile: enrichedProfile,
-  };
+    const {
+        data: { user },
+    } = await event.locals.supabase.auth.getUser();
+    const isOwner = user?.id === profile.id;
+
+    return {
+        username: profile.username,
+        bio: profile.bio,
+        registeredAt: profile.createdAt!,
+        isOwner,
+        stats: {
+            averageScore: profile.averageScore,
+            levelsCompleted: profile.levelsCompleted,
+            reviewsWritten: profile.reviewsWritten,
+        },
+        list: {
+            snapshotAt: enrichedSnapshot?.at,
+            active: enrichedSnapshot ? enrichedSnapshot.active : enrichedList,
+            inactive: enrichedSnapshot
+                ? enrichedSnapshot.inactive
+                : enrichedInactiveList,
+        },
+        recentActivity: enrichedActivity,
+        allProgress: enrichedAllProgress,
+    };
 };
 
 export const actions: Actions = {
-  default: async (event) => {
-    const user = await requireAuth(event);
+    updateList: async (event) => {
+        const user = await requireAuth(event);
 
-    try {
-      const form = await event.request.formData();
-      const result = UpdateList.safeParse(Object.fromEntries(form));
-      if (!result.success) {
-        return fail(400, { message: "invalid list data" });
-      }
-      const data = result.data;
+        try {
+            const form = await event.request.formData();
+            const result = UpdateList.safeParse(Object.fromEntries(form));
+            if (!result.success) {
+                return fail(400, { message: "invalid list data" });
+            }
+            const data = result.data;
 
-      for (let p = 0; p < data.list.length; p++) {
-        await db.updateListPlacement(data.list[p], user.id, p + 1);
-      }
-      return { success: true };
-    } catch (err) {
-      winston.error("error updating list placement:", err);
-      return fail(500, { message: "failed to update list placement" });
-    }
-  },
+            const ids = [...data.activeList, ...data.inactiveList];
+            const uniqueIds = new Set(ids);
+            if (ids.length !== uniqueIds.size) {
+                return fail(400, {
+                    message: "list payload contains duplicate levels",
+                });
+            }
+
+            const updated = await db.syncCompletedListMembership(
+                user.id,
+                data.activeList,
+                data.inactiveList,
+            );
+
+            if (!updated) {
+                return fail(422, {
+                    message: "failed to update list membership",
+                });
+            }
+
+            return { success: true };
+        } catch (err) {
+            winston.error("error updating list placement:", err);
+            return fail(500, { message: "failed to update list placement" });
+        }
+    },
 };
