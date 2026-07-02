@@ -336,7 +336,7 @@
             searchInput = "";
         }}
     >
-        <div class="modal-box w-5/6 max-w-5xl h-3/5 flex flex-col gap-4">
+        <div class="modal-box w-5/6 max-w-5xl flex flex-col gap-4">
             <label class="input w-full border-b border-base-100 text-lg">
                 <svg
                     class="h-[1em] opacity-50"
@@ -357,12 +357,13 @@
                 <input
                     type="search"
                     placeholder="search..."
+                    maxlength="20"
                     bind:value={searchInput}
                     bind:this={search}
                     onkeydown={(e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
-                            goto(`/search?q=${searchInput}`);
+                            goto(`/levels?q=${searchInput}`);
                             searchModal.close();
                         }
                     }}

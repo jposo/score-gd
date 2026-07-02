@@ -15,6 +15,12 @@
     let selectedLengths = $state(page.url.searchParams.getAll("length") || []);
     let searchQuery = $state(page.url.searchParams.get("q") || "");
 
+    let activeFilterCount = $derived(
+        selectedDifficulties.length +
+            selectedRatings.length +
+            selectedLengths.length,
+    );
+
     function advancePage(direction?: "back" | "next") {
         const delta = direction === "next" ? 1 : direction === "back" ? -1 : 0;
         const targetPage = parseInt(pageParam) + delta;
@@ -41,24 +47,48 @@
         pageParam = targetPage.toString();
     }
 
+    function toggle(list: string[], value: string) {
+        return list.includes(value)
+            ? list.filter((v) => v !== value)
+            : [...list, value];
+    }
+
     function addDifficulty(value: string | undefined) {
-        selectedDifficulties = value
-            ? [value, ...difficulties.filter((d) => d !== value)]
-            : [...difficulties];
-        advancePage();
+        if (!value) {
+            selectedDifficulties = []; // Clear all
+        } else if (selectedDifficulties.includes(value)) {
+            selectedDifficulties = selectedDifficulties.filter(
+                (d) => d !== value,
+            ); // Remove if already checked
+        } else {
+            selectedDifficulties = [...selectedDifficulties, value]; // Add if not checked
+        }
     }
 
     function addRating(value: string | undefined) {
-        selectedRatings = value
-            ? [value, ...ratings.filter((r) => r !== value)]
-            : [...ratings];
-        advancePage();
+        if (!value) {
+            selectedRatings = [];
+        } else if (selectedRatings.includes(value)) {
+            selectedRatings = selectedRatings.filter((r) => r !== value);
+        } else {
+            selectedRatings = [...selectedRatings, value];
+        }
     }
 
     function addLength(value: string | undefined) {
-        selectedLengths = value
-            ? [value, ...lengths.filter((l) => l !== value)]
-            : [...lengths];
+        if (!value) {
+            selectedLengths = [];
+        } else if (selectedLengths.includes(value)) {
+            selectedLengths = selectedLengths.filter((l) => l !== value);
+        } else {
+            selectedLengths = [...selectedLengths, value];
+        }
+    }
+
+    function clearAll() {
+        selectedDifficulties = [];
+        selectedRatings = [];
+        selectedLengths = [];
         advancePage();
     }
 </script>
@@ -67,80 +97,100 @@
     <title>levels - loggd</title>
 </svelte:head>
 
+{#snippet filterDropdown(
+    label: string,
+    options: string[],
+    selected: string[],
+    onToggle: (v: string | undefined) => void,
+)}
+    <div class="dropdown">
+        <div tabindex="0" role="button" class="btn gap-1.5">
+            {label}
+            {#if selected.length > 0}
+                <span class="badge badge-sm badge-primary"
+                    >{selected.length}</span
+                >
+            {/if}
+        </div>
+        <ul
+            tabindex="-1"
+            class="dropdown-content menu bg-base-100 rounded-box z-20 w-48 p-2 shadow-lg border border-base-300"
+        >
+            {#each options as option}
+                <li>
+                    <label
+                        class="label cursor-pointer justify-start gap-2 px-2"
+                    >
+                        <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm"
+                            checked={selected.includes(option)}
+                            onclick={() => onToggle(option)}
+                        />
+                        <span class="label-text">{option}</span>
+                    </label>
+                </li>
+            {/each}
+            {#if selected.length > 0}
+                <li class="mt-1 pt-1 border-t border-base-300">
+                    <button
+                        class="text-error text-sm"
+                        onclick={() => onToggle(undefined)}
+                    >
+                        clear {label.toLowerCase()}
+                    </button>
+                </li>
+            {/if}
+        </ul>
+    </div>
+{/snippet}
+
 <div class="container mx-auto p-4">
-    <div class="pb-4">
-        <form class="filter [&>*]:mb-0.5">
-            <input
-                class="btn btn-square"
-                type="reset"
-                value="×"
-                onclick={() => addDifficulty(undefined)}
-            />
-            {#each difficulties as difficulty}
+    <!-- search -->
+    <div class="mb-4 w-full">
+        <div class="join w-full">
+            <label class="input input-lg join-item grow">
+                <svg
+                    class="h-[1em] opacity-50"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                >
+                    <g
+                        stroke-linejoin="round"
+                        stroke-linecap="round"
+                        stroke-width="2.5"
+                        fill="none"
+                        stroke="currentColor"
+                    >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </g>
+                </svg>
                 <input
-                    class="btn"
-                    type="checkbox"
-                    name="difficulty"
-                    value={difficulty}
-                    aria-label={difficulty}
-                    onclick={() => addDifficulty(difficulty)}
-                    checked={selectedDifficulties.includes(difficulty)}
+                    type="text"
+                    placeholder="search levels..."
+                    maxlength="20"
+                    bind:value={searchQuery}
+                    onkeydown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            advancePage();
+                        }
+                    }}
                 />
-            {/each}
-        </form>
-    </div>
-
-    <div class="pb-4">
-        <form class="filter [&>*]:mb-0.5">
-            <input
-                class="btn btn-square"
-                type="reset"
-                value="×"
-                onclick={() => addRating(undefined)}
-            />
-            {#each ratings as rating}
-                <input
-                    class="btn"
-                    type="checkbox"
-                    name="rating"
-                    value={rating}
-                    aria-label={rating}
-                    onclick={() => addRating(rating)}
-                    checked={selectedRatings.includes(rating)}
-                />
-            {/each}
-        </form>
-    </div>
-
-    <div class="pb-4">
-        <form class="filter [&>*]:mb-0.5">
-            <input
-                class="btn btn-square"
-                type="reset"
-                value="×"
-                onclick={() => addLength(undefined)}
-            />
-            {#each lengths as length}
-                <input
-                    class="btn"
-                    type="checkbox"
-                    name="length"
-                    value={length}
-                    aria-label={length}
-                    onclick={() => addLength(length)}
-                    checked={selectedLengths.includes(length)}
-                />
-            {/each}
-        </form>
-    </div>
-
-    <div class="pb-4">
-        <form>
+            </label>
+            <button
+                class="btn btn-neutral btn-lg join-item"
+                onclick={() => advancePage()}>search</button
+            >
+        </div>
+        <!-- <form>
             <input
                 type="text"
                 placeholder="search..."
-                class="input"
+                class="input input-lg w-full"
                 name="query"
+                maxlength="20"
                 bind:value={searchQuery}
                 onkeydown={(e) => {
                     if (e.key === "Enter") {
@@ -149,12 +199,33 @@
                     }
                 }}
             />
-        </form>
+        </form> -->
+    </div>
+    <!-- filter row -->
+    <div class="flex flex-wrap items-center gap-2 mb-3">
+        {@render filterDropdown(
+            "difficulty",
+            difficulties,
+            selectedDifficulties,
+            addDifficulty,
+        )}
+        {@render filterDropdown("rating", ratings, selectedRatings, addRating)}
+        {@render filterDropdown("length", lengths, selectedLengths, addLength)}
+
+        {#if activeFilterCount > 0}
+            <button class="btn btn-ghost btn-sm text-error" onclick={clearAll}>
+                clear all ×
+            </button>
+        {/if}
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {#if data.levels.length === 0}
-            <p>no levels found :(</p>
+            <div class="text-center col-span-full">
+                <h3 class="text-lg font-semibold text-base-content/70 mb-2">
+                    no levels found
+                </h3>
+            </div>
         {:else}
             {#each data.levels as level, index (level.id)}
                 <Card
@@ -169,6 +240,7 @@
             {/each}
         {/if}
     </div>
+    <!-- prev/next page buttons -->
     <div class="flex justify-center py-4">
         <div class="join">
             {#if parseInt(pageParam) > 1}

@@ -8,6 +8,7 @@ import winston from "winston";
 
 const Params = z.object({
     page: z.coerce.number().min(1).optional().default(1),
+    query: z.string().max(20).optional(),
     difficulty: z.enum(difficulties).optional(),
     rating: z.enum(ratings).optional(),
     length: z.enum(lengths).optional(),
@@ -17,6 +18,7 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
     try {
         const paramsResult = Params.safeParse({
             page: url.searchParams.get("page") ?? undefined,
+            query: url.searchParams.get("q") ?? undefined,
             difficulty: url.searchParams.get("difficulty") ?? undefined,
             rating: url.searchParams.get("rating") ?? undefined,
             length: url.searchParams.get("length") ?? undefined,
@@ -27,7 +29,9 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
         const params = paramsResult.data;
 
         // const levels = await db.findLevelsByPage(parseInt(page));
-        let query = get("levels").type("most liked").page(params.page);
+        let query = get("levels")
+            .type("most liked")
+            .page(Math.max(0, params.page - 1));
         if (params.difficulty) {
             query = query.difficulty(params.difficulty);
         }
@@ -36,6 +40,9 @@ export const load: PageServerLoad = async ({ url }: ServerLoadEvent) => {
         }
         if (params.length) {
             query = query.length(params.length);
+        }
+        if (params.query) {
+            query = query.search(params.query);
         }
         const searchResult = await query;
         if (!searchResult) {
