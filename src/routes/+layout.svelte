@@ -11,15 +11,12 @@
     import { navigating } from "$app/state";
     import type { SearchResult } from "$lib/shared/types";
     import Avatar from "$lib/components/Avatar.svelte";
-    import {
-        PUBLIC_SUPABASE_PROJECT_URL,
-        PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    } from "$env/static/public";
+    import { env as penv } from "$env/dynamic/public";
     import { createBrowserClient } from "@supabase/ssr";
 
     const supabase = createBrowserClient(
-        PUBLIC_SUPABASE_PROJECT_URL,
-        PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+        penv.PUBLIC_SUPABASE_PROJECT_URL,
+        penv.PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     );
 
     let { children, data }: { children: any; data: PageData } = $props();
