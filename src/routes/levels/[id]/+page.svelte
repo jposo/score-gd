@@ -1,6 +1,10 @@
 <script lang="ts">
     import type { PageData, SubmitFunction } from "./$types";
-    import { dateToLocaleString, getYouTubeEmbedUrl } from "$lib/tools/utils";
+    import {
+        abbreviateNumber,
+        dateToLocaleString,
+        getYouTubeEmbedUrl,
+    } from "$lib/tools/utils";
     import Review from "$lib/components/Review.svelte";
     import { toastManager } from "$lib/state/toasts.svelte";
     import { enhance } from "$app/forms";
@@ -20,6 +24,14 @@
     let average = $derived(data.level.averageScore);
     let releaseDate = $derived(data.level.releaseDate);
     let videoUrl = $derived(data.level.videoUrl);
+    let thumbnailUrl = $derived(
+        `https://levelthumbs.prevter.me/thumbnail/${data.level.id}`,
+    );
+    let thumbnailUnavailable = $state(false);
+
+    $effect(() => {
+        thumbnailUnavailable = false;
+    });
 
     // progress data (undefined means no user is logged in)
     let score = $derived(data.progress?.score ?? undefined);
@@ -48,9 +60,27 @@
     <title>{data.level.name} - loggd</title>
 </svelte:head>
 
-<div class="container mx-auto p-4">
-    <div class="flex flex-row gap-8">
-        <div class="flex flex-col gap-4 w-1/5">
+<div class="container mx-auto py-4 px-8">
+    {#if !thumbnailUnavailable}
+        <div class="relative mb-6 h-56 md:h-72 overflow-hidden -mx-8 -mt-8">
+            <img
+                src={thumbnailUrl}
+                alt={`${data.level.name} thumbnail`}
+                class="h-full w-full object-cover"
+                loading="lazy"
+                decoding="async"
+                onerror={() => {
+                    thumbnailUnavailable = true;
+                }}
+            />
+            <div
+                class="absolute inset-0 bg-gradient-to-b from-base-100/10 via-base-100/30 to-base-100"
+            ></div>
+        </div>
+    {/if}
+
+    <div class="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        <div class="flex flex-col gap-4 w-full lg:w-1/5 lg:max-w-[180px]">
             {#if data.user}
                 {#if data.user.roles?.includes("admin")}
                     <div class="card bg-base-200 w-full">
@@ -145,7 +175,9 @@
                 </div>
             {/if}
             <!-- Stats -->
-            <div class="stats stats-vertical shadow bg-base-200 w-full">
+            <div
+                class="stats stats-horizontal lg:stats-vertical shadow bg-base-200 w-full overflow-x-auto"
+            >
                 <div class="stat">
                     <div class="stat-title">score</div>
                     <div class="stat-value">
@@ -156,25 +188,45 @@
                 <div class="stat">
                     <div class="stat-title">completions</div>
                     <div class="stat-value">
-                        {data.level.completionCount}
+                        {abbreviateNumber(data.level.completionCount)}
                     </div>
                 </div>
 
                 <div class="stat">
                     <div class="stat-title">reviews</div>
                     <div class="stat-value">
-                        {data.level.reviewCount}
+                        {abbreviateNumber(data.level.reviewCount)}
                     </div>
                 </div>
             </div>
         </div>
         <!-- Level info -->
-        <div class="flex flex-col gap-8 w-4/5">
-            <div class="flex flex-row items-end w-full">
-                <div class="space-y-2 w-3/5">
+        <div class="flex flex-col gap-8 w-full lg:w-4/5">
+            <div
+                class="w-full flex flex-col md:flex-row-reverse gap-6 items-start"
+            >
+                {#if data.level.videoUrl}
+                    <div
+                        class="w-full max-w-[320px] sm:max-w-full md:w-[320px] md:max-w-[320px] lg:w-[360px] lg:max-w-[360px] md:flex-shrink-0 aspect-video rounded-box overflow-hidden border border-base-300 shadow-sm"
+                    >
+                        <iframe
+                            class="h-full w-full"
+                            src={getYouTubeEmbedUrl(data.level.videoUrl)}
+                            title="YouTube video player"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            referrerpolicy="strict-origin-when-cross-origin"
+                            allowfullscreen
+                        ></iframe>
+                    </div>
+                {/if}
+
+                <div class="space-y-4 w-full">
                     <h1 class="text-4xl">
                         <span class="font-bold">{data.level.name}</span>
-                        <span class="text-sm">id: {data.level.id}</span>
+                        <span class="text-sm opacity-60"
+                            >id: {data.level.id}</span
+                        >
                     </h1>
                     <h2 class="text-2xl">
                         {#if data.level.releaseDate}
@@ -189,7 +241,7 @@
                         >
                     </h2>
                     <p class="italic">{data.level.description}</p>
-                    <span>
+                    <div class="flex flex-wrap gap-2">
                         <div class="badge badge-neutral">
                             <span class="font-semibold"
                                 >{data.level.songTitle}</span
@@ -216,21 +268,7 @@
                         <div class="badge badge-error">
                             {data.level.difficulty.toLowerCase()}
                         </div>
-                    </span>
-                </div>
-                <div class="w-2/5 flex justify-end">
-                    {#if data.level.videoUrl}
-                        <iframe
-                            width="388"
-                            height="218"
-                            src={getYouTubeEmbedUrl(data.level.videoUrl)}
-                            title="YouTube video player"
-                            frameborder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                            referrerpolicy="strict-origin-when-cross-origin"
-                            allowfullscreen
-                        ></iframe>
-                    {/if}
+                    </div>
                 </div>
             </div>
             <!-- Reviews -->
@@ -260,6 +298,7 @@
         </div>
     </div>
 </div>
+<!-- </div> -->
 
 <dialog bind:this={levelDetails} class="modal backdrop-blur-sm">
     <div class="modal-box">

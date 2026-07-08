@@ -20,6 +20,7 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
       | "hall of fame"
       | "daily history"
       | "weekly history"
+      | "event history"
       | "list",
   ) {
     if (type === "search") {
@@ -50,6 +51,8 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
       this.query.type = 21;
     } else if (type === "weekly history") {
       this.query.type = 22;
+    } else if (type === "event history") {
+      this.query.type = 23;
     } else if (type === "list") {
       this.query.type = 25;
     }

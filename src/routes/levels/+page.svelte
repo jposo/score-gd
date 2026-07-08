@@ -67,7 +67,7 @@
   <title>levels - loggd</title>
 </svelte:head>
 
-<div class="container mx-auto p-4">
+<div class="container mx-auto py-4 px-8">
   <div class="pb-4">
     <form class="filter [&>*]:mb-0.5">
       <input
@@ -156,7 +156,7 @@
     {#if data.levels.length === 0}
       <p>no levels found :(</p>
     {:else}
-      {#each data.levels as level, index (level.id)}
+      {#each data.levels as level (level.id)}
         <Card
           id={level.id}
           name={level.name}
@@ -164,7 +164,6 @@
           difficulty={level.difficulty}
           length={level.length}
           releaseDate={level.releaseDate}
-          tabIndex={index}
         />
       {/each}
     {/if}
