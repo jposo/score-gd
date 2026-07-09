@@ -33,17 +33,18 @@ export const handle: Handle = async ({ event, resolve }) => {
     // set permissions policy, empty = disabled
     response.headers.set(
         "Permissions-Policy",
-        "geolocation=(), microphone=(), camera=(), fullscreen=(self), payment=(), usb=()",
+        'geolocation=(), microphone=(), camera=(), fullscreen=(self "https://www.youtube.com" "https://www.youtube-nocookie.com"), payment=(), usb=()',
     );
 
     response.headers.set(
         "Content-Security-Policy",
         "default-src 'self'; " +
-            "script-src 'self' 'unsafe-inline'; " +
-            "style-src 'self' 'unsafe-inline'; " +
-            `img-src 'self' ${penv.PUBLIC_SUPABASE_PROJECT_URL} data:; ` +
-            "font-src 'self'; " +
-            `connect-src 'self' ${penv.PUBLIC_SUPABASE_PROJECT_URL}; `,
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        `img-src 'self' ${penv.PUBLIC_SUPABASE_PROJECT_URL} data: https://levelthumbs.prevter.me; ` +
+        "font-src 'self'; " +
+        "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; " +
+        `connect-src 'self' ${penv.PUBLIC_SUPABASE_PROJECT_URL}; `,
     );
 
     if (event.url.protocol === "https:") {

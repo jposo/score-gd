@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { goto } from "$app/navigation";
-    import type { PageData } from "./$types";
-    import { page } from "$app/state";
-    import Card from "$lib/components/LevelCard.svelte";
-    import { difficulties, ratings, lengths } from "$lib/shared/gd";
+  import { goto } from "$app/navigation";
+  import type { PageData } from "./$types";
+  import { page } from "$app/state";
+  import Card from "$lib/components/LevelCard.svelte";
+  import { difficulties, ratings, lengths } from "$lib/shared/gd";
 
-    let { data }: { data: PageData } = $props();
+  let { data }: { data: PageData } = $props();
 
     let pageParam = $state(page.url.searchParams.get("page") || "1");
     let selectedDifficulties = $state(
@@ -94,7 +94,7 @@
 </script>
 
 <svelte:head>
-    <title>levels - loggd</title>
+  <title>levels - loggd</title>
 </svelte:head>
 
 {#snippet filterDropdown(
@@ -257,4 +257,5 @@
             <!-- {/if} -->
         </div>
     </div>
+  </div>
 </div>
