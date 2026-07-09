@@ -1,19 +1,24 @@
 <script lang="ts">
-  import { goto } from "$app/navigation";
-  import type { PageData } from "./$types";
-  import { page } from "$app/state";
-  import Card from "$lib/components/LevelCard.svelte";
-  import { difficulties, ratings, lengths } from "$lib/shared/gd";
+    import { goto } from "$app/navigation";
+    import type { PageData } from "./$types";
+    import { page } from "$app/state";
+    import Card from "$lib/components/LevelCard.svelte";
+    import { difficulties, ratings, lengths } from "$lib/shared/gd";
+    import type { SearchResult } from "$lib/shared/types";
 
-  let { data }: { data: PageData } = $props();
+    let searchResult = $state<SearchResult | null>(null);
+    let isLoading = $state(true);
 
-    let pageParam = $state(page.url.searchParams.get("page") || "1");
+    let currentPage = $state(
+        parseInt(page.url.searchParams.get("page") as string) || 1,
+    );
     let selectedDifficulties = $state(
         page.url.searchParams.getAll("difficulty") || [],
     );
     let selectedRatings = $state(page.url.searchParams.getAll("rating") || []);
     let selectedLengths = $state(page.url.searchParams.getAll("length") || []);
     let searchQuery = $state(page.url.searchParams.get("q") || "");
+    let input = $state("");
 
     let activeFilterCount = $derived(
         selectedDifficulties.length +
@@ -21,36 +26,54 @@
             selectedLengths.length,
     );
 
-    function advancePage(direction?: "back" | "next") {
-        const delta = direction === "next" ? 1 : direction === "back" ? -1 : 0;
-        const targetPage = parseInt(pageParam) + delta;
+    let queryString = $derived.by(() => {
         const params = new URLSearchParams();
-
-        params.set("page", targetPage.toString());
+        params.set("page", currentPage.toString());
         if (searchQuery) params.set("q", searchQuery);
+        selectedDifficulties.forEach((d) => params.append("difficulty", d));
+        selectedRatings.forEach((r) => params.append("rating", r));
+        selectedLengths.forEach((l) => params.append("length", l));
+        return `?${params.toString()}`;
+    });
 
-        const appendArray = (key: string, values: string[]) => {
-            values.forEach((value) => params.append(key, value));
-        };
+    // const SEARCH_DEBOUNCE_MS = 600;
 
-        if (selectedDifficulties.length > 0) {
-            appendArray("difficulty", selectedDifficulties);
-        }
-        if (selectedRatings.length > 0) {
-            appendArray("rating", selectedRatings);
-        }
-        if (selectedLengths.length > 0) {
-            appendArray("length", selectedLengths);
-        }
+    $effect(() => {
+        // const currentQuery = queryString;
+        // const timeoutId = setTimeout(() => {
+        fetchLevels(queryString);
+        window.history.replaceState(null, "", `/levels${queryString}`);
+        // }, SEARCH_DEBOUNCE_MS);
+        // return () => clearTimeout(timeoutId);
+    });
 
-        goto(`/levels?${params.toString()}`);
-        pageParam = targetPage.toString();
+    async function fetchLevels(queryString: string) {
+        isLoading = true;
+        try {
+            const res = await fetch(`/search${queryString}`);
+            if (res.ok) {
+                const data = await res.json();
+                searchResult = data;
+            } else {
+                searchResult = null;
+            }
+        } catch (err) {
+            console.error("failed to fetch levels:", err);
+            searchResult = null;
+        } finally {
+            isLoading = false;
+        }
     }
 
-    function toggle(list: string[], value: string) {
-        return list.includes(value)
-            ? list.filter((v) => v !== value)
-            : [...list, value];
+    function advancePage(direction?: "back" | "next") {
+        const delta = direction === "next" ? 1 : direction === "back" ? -1 : 0;
+        currentPage = Math.max(1, currentPage + delta);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function triggerSearch() {
+        searchQuery = input;
+        currentPage = 1;
     }
 
     function addDifficulty(value: string | undefined) {
@@ -89,17 +112,19 @@
         selectedDifficulties = [];
         selectedRatings = [];
         selectedLengths = [];
+        searchQuery = "";
+        currentPage = 1;
         advancePage();
     }
 </script>
 
 <svelte:head>
-  <title>levels - loggd</title>
+    <title>levels - loggd</title>
 </svelte:head>
 
 {#snippet filterDropdown(
     label: string,
-    options: string[],
+    options: readonly string[],
     selected: string[],
     onToggle: (v: string | undefined) => void,
 )}
@@ -145,6 +170,21 @@
     </div>
 {/snippet}
 
+{#snippet cardSkeleton()}
+    <div class="card w-full bg-base-200 overflow-hidden">
+        <div class="skeleton h-44 w-full rounded-none relative">
+            <!-- <div class="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
+                <div class="skeleton h-5 w-2/3 bg-base-300"></div>
+                <div class="skeleton h-3 w-1/3 bg-base-300"></div>
+                <div class="flex gap-2 mt-1">
+                    <div class="skeleton h-4 w-14 bg-base-300"></div>
+                    <div class="skeleton h-4 w-14 bg-base-300"></div>
+                </div> -->
+            <!-- </div> -->
+        </div>
+    </div>
+{/snippet}
+
 <div class="container mx-auto p-4">
     <!-- search -->
     <div class="mb-4 w-full">
@@ -170,11 +210,11 @@
                     type="text"
                     placeholder="search levels..."
                     maxlength="20"
-                    bind:value={searchQuery}
+                    bind:value={input}
                     onkeydown={(e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
-                            advancePage();
+                            triggerSearch();
                         }
                     }}
                 />
@@ -220,22 +260,26 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {#if data.levels.length === 0}
+        {#if isLoading}
+            {#each Array(10) as _}
+                {@render cardSkeleton()}
+            {/each}
+        {:else if !searchResult || searchResult.levels?.length === 0}
             <div class="text-center col-span-full">
                 <h3 class="text-lg font-semibold text-base-content/70 mb-2">
                     no levels found
                 </h3>
             </div>
         {:else}
-            {#each data.levels as level, index (level.id)}
+            {#each searchResult.levels as level}
                 <Card
                     id={level.id}
                     name={level.name}
+                    score={level.averageScore}
                     publisher={level.publisher ?? "unknown"}
                     difficulty={level.difficulty}
                     length={level.length}
-                    releaseDate={level.releaseDate}
-                    tabIndex={index}
+                    releaseDate={null}
                 />
             {/each}
         {/if}
@@ -243,13 +287,13 @@
     <!-- prev/next page buttons -->
     <div class="flex justify-center py-4">
         <div class="join">
-            {#if parseInt(pageParam) > 1}
+            {#if currentPage > 1}
                 <button
                     class="join-item btn"
                     onclick={() => advancePage("back")}>«</button
                 >
             {/if}
-            <button class="join-item btn">Page {pageParam}</button>
+            <button class="join-item btn">page {currentPage}</button>
             <!-- {#if !data.page.isLastPage} -->
             <button class="join-item btn" onclick={() => advancePage("next")}
                 >»</button
@@ -257,5 +301,4 @@
             <!-- {/if} -->
         </div>
     </div>
-  </div>
 </div>

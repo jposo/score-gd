@@ -239,7 +239,7 @@
 
             {#if data.user}
                 <!-- Authenticated user menu -->
-                <div class="dropdown dropdown-end">
+                <div class="dropdown dropdown-end z-15">
                     <Avatar username={data.user.username} />
                     <ul
                         tabindex="-1"
@@ -254,7 +254,7 @@
                         {#if data.user.roles?.includes("admin")}
                             <li><a href="/admin">admin</a></li>
                         {/if}
-                        <li><a href="/settings">settings</a></li>
+                        <!-- <li><a href="/settings">settings</a></li> -->
                         <li>
                             <button onclick={handleLogout} class="text-error"
                                 >logout</button

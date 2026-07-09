@@ -20,6 +20,7 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
             | "hall of fame"
             | "daily history"
             | "weekly history"
+            | "event history"
             | "list",
     ) {
         if (type === "search") {
@@ -129,7 +130,19 @@ export class LevelQuery extends BaseQuery<LevelSearchResponse | null> {
     }
 
     length(length: "tiny" | "short" | "medium" | "long" | "xl" | "platformer") {
-        this.query.len = length;
+        if (length === "tiny") {
+            this.query.len = 0;
+        } else if (length === "short") {
+            this.query.len = 1;
+        } else if (length === "medium") {
+            this.query.len = 2;
+        } else if (length === "long") {
+            this.query.len = 3;
+        } else if (length === "xl") {
+            this.query.len = 4;
+        } else if (length === "platformer") {
+            this.query.len = 5;
+        }
         return this;
     }
 
