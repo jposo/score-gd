@@ -38,15 +38,17 @@ export type Hints = {
     [index: number]: Hint;
 };
 
+type SearchResultLevel = {
+    id: number;
+    name: string;
+    publisher: string | undefined;
+    difficulty: string;
+    releaseDate: Date | null;
+    length: string;
+    averageScore: number;
+}
+
 type SearchResult = {
-    levels?: {
-        id: number;
-        name: string;
-        publisher: string | undefined;
-        difficulty: string;
-        releaseDate: Date | null;
-        length: string;
-        averageScore: number;
-    }[];
+    levels?: SearchResultLevel[];
     page?: number;
 };

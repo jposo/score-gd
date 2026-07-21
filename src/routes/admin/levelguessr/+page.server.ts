@@ -29,10 +29,7 @@ export const load: PageServerLoad = async (event) => {
   const user = await requireAuthWithRoles(event, ["owner"]);
 
   const storedDays = await db.findAllDays();
-  const latestDay = await db.findLatestDay();
-  if (latestDay === null) {
-    error(404, "no latest day found");
-  }
+  const latestDay = await db.findLatestDay() ?? 0;
   const sources = await db.findSources();
 
   return {
@@ -59,10 +56,7 @@ export const actions: Actions = {
     }
 
     const data = result.data;
-    const latestDay = await db.findLatestDay();
-    if (latestDay === null) {
-      return fail(404, { message: "no latest day found" });
-    }
+    const latestDay = await db.findLatestDay() ?? 0;
 
     const nextDay = latestDay + 1;
 
@@ -116,7 +110,7 @@ export const actions: Actions = {
         message: "frames saved successfully",
       };
     } catch (error) {
-      winston.error("failed to upload files in 'enqueue' action", { error });
+      winston.error("failed to upload files in 'enqueue' action", { error: error + "" });
       return fail(500, { message: "failed to upload files" });
     }
   },

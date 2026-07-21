@@ -1,6 +1,6 @@
 <script lang="ts">
     import "../app.css";
-    import favicon from "$lib/assets/favicon.svg";
+    import favicon from "$lib/assets/favicon.ico";
     import { themeManager } from "$lib/state/theme.svelte";
     import { onMount } from "svelte";
     import type { PageData } from "./$types";
@@ -43,7 +43,7 @@
 
     async function handleSignIn() {
         await supabase.auth.signInWithOAuth({
-            provider: "google",
+            provider: "discord",
             options: {
                 redirectTo: `${window.location.origin}/auth/callback?next=${window.location.pathname}`,
             },
@@ -94,7 +94,7 @@
 
 <svelte:head>
     <link rel="icon" href={favicon} />
-    <title>loggd</title>
+    <title>score.gd</title>
 </svelte:head>
 
 {#each toastManager.queue as toast (toast.id)}
@@ -106,7 +106,7 @@
         class="navbar bg-base-300/80 shadow-sm px-4 sticky top-0 z-10 backdrop-blur"
     >
         <div class="navbar-start gap-2">
-            <a href="/" class="btn btn-ghost text-2xl">loggd</a>
+            <a href="/" class="btn btn-ghost text-2xl">score.gd</a>
 
             <button class="btn btn-ghost" onclick={() => openSearch()}>
                 search...
@@ -221,32 +221,14 @@
             {:else}
                 <!-- Unauthenticated user options -->
                 <button
-                    class="btn bg-white text-black border-[#e5e5e5]"
+                    class="btn bg-white text-black"
                     onclick={handleSignIn}
                 >
-                    <svg
-                        aria-label="Google logo"
-                        width="16"
-                        height="16"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 512 512"
-                        ><g
-                            ><path d="m0 0H512V512H0" fill="#fff"></path><path
-                                fill="#34a853"
-                                d="M153 292c30 82 118 95 171 60h62v48A192 192 0 0190 341"
-                            ></path><path
-                                fill="#4285f4"
-                                d="m386 400a140 175 0 0053-179H260v74h102q-7 37-38 57"
-                            ></path><path
-                                fill="#fbbc02"
-                                d="m90 341a208 200 0 010-171l63 49q-12 37 0 73"
-                            ></path><path
-                                fill="#ea4335"
-                                d="m153 219c22-69 116-109 179-50l55-54c-78-75-230-72-297 55"
-                            ></path></g
-                        ></svg
-                    >
-                    login with google
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 512 512">
+	<path d="M0 0h512v512H0z" fill="none" />
+	<path fill="#5865f2" d="M433.7 91a416.5 416.5 0 0 0-105.6-33.2c-4.6 8.2-9.9 19.3-13.5 28.1c-39.4-5.9-78.4-5.9-117.1 0c-3.7-8.8-9.1-19.9-13.7-28.1c-37.1 6.4-72.6 17.7-105.7 33.3c-66.8 101-85 199.5-75.9 296.6c44.3 33.1 87.3 53.2 129.6 66.4c10.4-14.4 19.7-29.6 27.7-45.7c-15.3-5.8-29.9-13-43.7-21.3c3.7-2.7 7.2-5.6 10.7-8.5c84.2 39.4 175.8 39.4 259 0c3.5 2.9 7.1 5.8 10.7 8.5c-13.9 8.3-28.5 15.5-43.8 21.3c8 16 17.3 31.3 27.7 45.7c42.3-13.2 85.3-33.3 129.6-66.4c10.8-112.5-18-210.1-76-296.7M170.9 328c-25.3 0-46-23.6-46-52.4s20.3-52.4 46-52.4s46.5 23.6 46 52.4c.1 28.8-20.2 52.4-46 52.4m170.2 0c-25.3 0-46-23.6-46-52.4s20.3-52.4 46-52.4s46.5 23.6 46 52.4c0 28.8-20.3 52.4-46 52.4" />
+                    </svg>
+                    login with discord
                 </button>
                 <!-- <a href="/signup" class="btn btn-ghost w-24">sign up</a>
                 <a href="/login" class="btn btn-primary w-24">login</a> -->

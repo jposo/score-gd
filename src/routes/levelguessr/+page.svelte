@@ -5,7 +5,7 @@
   import { enhance } from "$app/forms";
   import { guessesState } from "$lib/state/guesses.svelte";
   import { toastManager } from "$lib/state/toasts.svelte";
-  import type { SearchResult } from "$lib/shared/types";
+  import type { SearchResult, SearchResultLevel } from "$lib/shared/types";
 
   let { data }: PageProps = $props();
 
@@ -23,7 +23,7 @@
   let viewImage = $state(0);
   let input = $state("");
   let guessId = $state<number>();
-  let searchResults = $state<SearchResult[]>([]);
+  let searchResults = $state<SearchResult>();
 
   let guesses = $derived(data.guessHistory);
   let hints = $derived(data.game.hints);
@@ -71,7 +71,7 @@
     const timeoutId = setTimeout(async () => {
       try {
         if (input.length < 1 || input.length > 20) {
-          searchResults = [];
+          searchResults = undefined;
           return;
         }
         const response = await fetch(`/search?q=${input}&s=levelguessr`);
@@ -90,10 +90,10 @@
     return () => clearTimeout(timeoutId);
   });
 
-  function selectResult(result: SearchResult) {
-    input = result.name!;
+  function selectResult(result: SearchResultLevel) {
+    input = result.name;
     guessId = result.id;
-    searchResults = [];
+    searchResults = undefined;
   }
 </script>
 
@@ -107,7 +107,6 @@
         use:enhance={(() => {
           isSubmitting = true;
           return async ({ result }) => {
-            console.log(result);
             if (result.type === "success") {
               if (result.data?.guesses) {
                 guessesState.setGuesses(data.game.day, result.data.guesses);
@@ -133,7 +132,6 @@
               );
             } else {
               toastManager.add("unknown error", "error");
-              console.log(result);
             }
             isSubmitting = false;
           };
@@ -182,12 +180,12 @@
           </button>
         </div>
       </form>
-      {#if searchResults.length > 0}
+      {#if searchResults?.levels && searchResults.levels.length > 0}
         <ul
           tabindex="-1"
           class="dropdown-content overflow-y-auto flex-nowrap z-1 menu p-2 shadow bg-base-300 rounded-box w-full max-h-52 text-2xl **mt-2**"
         >
-          {#each searchResults as result}
+          {#each searchResults.levels as result}
             <li value={result.id}>
               <button
                 class="flex justify-between"

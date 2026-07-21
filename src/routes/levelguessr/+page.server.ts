@@ -189,7 +189,6 @@ export const actions = {
             winston.warn("could not find answer", { day: data.day });
             return fail(404, { message: "could not find answer" });
         }
-        console.log(answer);
 
         const newGuessCount = guessCount + 1;
         const correct = answer.id == data.guessId ? true : false;

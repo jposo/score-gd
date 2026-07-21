@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "loggd"
+project_id = "score.gd"
 
 [api]
 enabled = true
@@ -319,11 +319,11 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
-[auth.external.google]
+[auth.external.discord]
 enabled = true
-client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_ID)"
+client_id = "env(SUPABASE_AUTH_EXTERNAL_DISCORD_ID)"
 # DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
-secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_DISCORD_SECRET)"
 # Overrides the default auth callback URL derived from auth.external_url.
 redirect_uri = ""
 # Overrides the default auth provider URL. Used to support self-hosted gitlab, single-tenant Azure,

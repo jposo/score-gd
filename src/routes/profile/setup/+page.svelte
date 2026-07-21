@@ -46,7 +46,7 @@
         >
             <div class="space-y-2">
                 <fieldset class="fieldset">
-                    <legend class="fieldset-legend">username</legend>
+                    <legend class="fieldset-legend">username (can't be changed for now)</legend>
                     <label class="input w-full">
                         <svg
                             class="h-[1em] opacity-50"
