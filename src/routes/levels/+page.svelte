@@ -4,52 +4,116 @@
     import { page } from "$app/state";
     import Card from "$lib/components/LevelCard.svelte";
     import { difficulties, ratings, lengths } from "$lib/shared/gd";
+    import type { SearchResult } from "$lib/shared/types";
 
-    let { data }: { data: PageData } = $props();
+    let searchResult = $state<SearchResult | null>(null);
+    let isLoading = $state(true);
 
-    let pageParam = $state(page.url.searchParams.get("page") || "1");
-    let selectedDifficulty = $state(
-        page.url.searchParams.get("difficulty") || undefined,
+    let currentPage = $state(
+        parseInt(page.url.searchParams.get("page") as string) || 1,
     );
-    let selectedRating = $state(
-        page.url.searchParams.get("rating") || undefined,
+    let selectedDifficulties = $state(
+        page.url.searchParams.getAll("difficulty") || [],
     );
-    let selectedLength = $state(
-        page.url.searchParams.get("length") || undefined,
+    let selectedRatings = $state(page.url.searchParams.getAll("rating") || []);
+    let selectedLengths = $state(page.url.searchParams.getAll("length") || []);
+    let searchQuery = $state(page.url.searchParams.get("q") || "");
+    let input = $state("");
+
+    let activeFilterCount = $derived(
+        selectedDifficulties.length +
+            selectedRatings.length +
+            selectedLengths.length,
     );
+
+    let queryString = $derived.by(() => {
+        const params = new URLSearchParams();
+        params.set("page", currentPage.toString());
+        if (searchQuery) params.set("q", searchQuery);
+        selectedDifficulties.forEach((d) => params.append("difficulty", d));
+        selectedRatings.forEach((r) => params.append("rating", r));
+        selectedLengths.forEach((l) => params.append("length", l));
+        return `?${params.toString()}`;
+    });
+
+    // const SEARCH_DEBOUNCE_MS = 600;
+
+    $effect(() => {
+        // const currentQuery = queryString;
+        // const timeoutId = setTimeout(() => {
+        fetchLevels(queryString);
+        window.history.replaceState(null, "", `/levels${queryString}`);
+        // }, SEARCH_DEBOUNCE_MS);
+        // return () => clearTimeout(timeoutId);
+    });
+
+    async function fetchLevels(queryString: string) {
+        isLoading = true;
+        try {
+            const res = await fetch(`/search${queryString}`);
+            if (res.ok) {
+                const data = await res.json();
+                searchResult = data;
+            } else {
+                searchResult = null;
+            }
+        } catch (err) {
+            console.error("failed to fetch levels:", err);
+            searchResult = null;
+        } finally {
+            isLoading = false;
+        }
+    }
 
     function advancePage(direction?: "back" | "next") {
         const delta = direction === "next" ? 1 : direction === "back" ? -1 : 0;
-        const targetPage = parseInt(pageParam) + delta;
-        const paramsObject: Record<string, string> = {
-            page: targetPage.toString(),
-        };
-        if (selectedDifficulty) {
-            paramsObject.difficulty = selectedDifficulty;
-        }
-        if (selectedRating) {
-            paramsObject.rating = selectedRating;
-        }
-        if (selectedLength) {
-            paramsObject.length = selectedLength;
-        }
-        const params = new URLSearchParams(paramsObject);
-        goto(`/levels?${params.toString()}`);
-        pageParam = targetPage.toString();
+        currentPage = Math.max(1, currentPage + delta);
+        window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function changeDifficulty(value: string | undefined) {
-        selectedDifficulty = value;
-        advancePage();
+    function triggerSearch() {
+        searchQuery = input;
+        currentPage = 1;
     }
 
-    function changeRating(value: string | undefined) {
-        selectedRating = value;
-        advancePage();
+    function addDifficulty(value: string | undefined) {
+        if (!value) {
+            selectedDifficulties = []; // Clear all
+        } else if (selectedDifficulties.includes(value)) {
+            selectedDifficulties = selectedDifficulties.filter(
+                (d) => d !== value,
+            ); // Remove if already checked
+        } else {
+            selectedDifficulties = [...selectedDifficulties, value]; // Add if not checked
+        }
     }
 
-    function changeLength(value: string | undefined) {
-        selectedLength = value;
+    function addRating(value: string | undefined) {
+        if (!value) {
+            selectedRatings = [];
+        } else if (selectedRatings.includes(value)) {
+            selectedRatings = selectedRatings.filter((r) => r !== value);
+        } else {
+            selectedRatings = [...selectedRatings, value];
+        }
+    }
+
+    function addLength(value: string | undefined) {
+        if (!value) {
+            selectedLengths = [];
+        } else if (selectedLengths.includes(value)) {
+            selectedLengths = selectedLengths.filter((l) => l !== value);
+        } else {
+            selectedLengths = [...selectedLengths, value];
+        }
+    }
+
+    function clearAll() {
+        selectedDifficulties = [];
+        selectedRatings = [];
+        selectedLengths = [];
+        searchQuery = "";
+        currentPage = 1;
         advancePage();
     }
 </script>
@@ -58,99 +122,178 @@
     <title>levels - loggd</title>
 </svelte:head>
 
+{#snippet filterDropdown(
+    label: string,
+    options: readonly string[],
+    selected: string[],
+    onToggle: (v: string | undefined) => void,
+)}
+    <div class="dropdown">
+        <div tabindex="0" role="button" class="btn gap-1.5">
+            {label}
+            {#if selected.length > 0}
+                <span class="badge badge-sm badge-primary"
+                    >{selected.length}</span
+                >
+            {/if}
+        </div>
+        <ul
+            tabindex="-1"
+            class="dropdown-content menu bg-base-100 rounded-box z-20 w-48 p-2 shadow-lg border border-base-300"
+        >
+            {#each options as option}
+                <li>
+                    <label
+                        class="label cursor-pointer justify-start gap-2 px-2"
+                    >
+                        <input
+                            type="checkbox"
+                            class="checkbox checkbox-sm"
+                            checked={selected.includes(option)}
+                            onclick={() => onToggle(option)}
+                        />
+                        <span class="label-text">{option}</span>
+                    </label>
+                </li>
+            {/each}
+            {#if selected.length > 0}
+                <li class="mt-1 pt-1 border-t border-base-300">
+                    <button
+                        class="text-error text-sm"
+                        onclick={() => onToggle(undefined)}
+                    >
+                        clear {label.toLowerCase()}
+                    </button>
+                </li>
+            {/if}
+        </ul>
+    </div>
+{/snippet}
+
+{#snippet cardSkeleton()}
+    <div class="card w-full bg-base-200 overflow-hidden">
+        <div class="skeleton h-44 w-full rounded-none relative">
+            <!-- <div class="absolute bottom-4 left-4 right-4 flex flex-col gap-2">
+                <div class="skeleton h-5 w-2/3 bg-base-300"></div>
+                <div class="skeleton h-3 w-1/3 bg-base-300"></div>
+                <div class="flex gap-2 mt-1">
+                    <div class="skeleton h-4 w-14 bg-base-300"></div>
+                    <div class="skeleton h-4 w-14 bg-base-300"></div>
+                </div> -->
+            <!-- </div> -->
+        </div>
+    </div>
+{/snippet}
+
 <div class="container mx-auto p-4">
-    <div class="pb-4">
-        <form class="filter [&>*]:mb-0.5">
-            <input
-                class="btn btn-square"
-                type="reset"
-                value="×"
-                onclick={() => changeDifficulty(undefined)}
-            />
-            {#each difficulties as difficulty}
+    <!-- search -->
+    <div class="mb-4 w-full">
+        <div class="join w-full">
+            <label class="input input-lg join-item grow">
+                <svg
+                    class="h-[1em] opacity-50"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                >
+                    <g
+                        stroke-linejoin="round"
+                        stroke-linecap="round"
+                        stroke-width="2.5"
+                        fill="none"
+                        stroke="currentColor"
+                    >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </g>
+                </svg>
                 <input
-                    class="btn"
-                    type="radio"
-                    name="difficulty"
-                    value={difficulty}
-                    aria-label={difficulty}
-                    onclick={() => changeDifficulty(difficulty)}
-                    checked={selectedDifficulty === difficulty}
+                    type="text"
+                    placeholder="search levels..."
+                    maxlength="20"
+                    bind:value={input}
+                    onkeydown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            triggerSearch();
+                        }
+                    }}
                 />
-            {/each}
-        </form>
+            </label>
+            <button
+                class="btn btn-neutral btn-lg join-item"
+                onclick={() => advancePage()}>search</button
+            >
+        </div>
+        <!-- <form>
+            <input
+                type="text"
+                placeholder="search..."
+                class="input input-lg w-full"
+                name="query"
+                maxlength="20"
+                bind:value={searchQuery}
+                onkeydown={(e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        advancePage();
+                    }
+                }}
+            />
+        </form> -->
     </div>
+    <!-- filter row -->
+    <div class="flex flex-wrap items-center gap-2 mb-3">
+        {@render filterDropdown(
+            "difficulty",
+            difficulties,
+            selectedDifficulties,
+            addDifficulty,
+        )}
+        {@render filterDropdown("rating", ratings, selectedRatings, addRating)}
+        {@render filterDropdown("length", lengths, selectedLengths, addLength)}
 
-    <div class="pb-4">
-        <form class="filter [&>*]:mb-0.5">
-            <input
-                class="btn btn-square"
-                type="reset"
-                value="×"
-                onclick={() => changeRating(undefined)}
-            />
-            {#each ratings as rating}
-                <input
-                    class="btn"
-                    type="radio"
-                    name="rating"
-                    value={rating}
-                    aria-label={rating}
-                    onclick={() => changeRating(rating)}
-                    checked={selectedRating === rating}
-                />
-            {/each}
-        </form>
-    </div>
-
-    <div class="pb-4">
-        <form class="filter [&>*]:mb-0.5">
-            <input
-                class="btn btn-square"
-                type="reset"
-                value="×"
-                onclick={() => changeRating(undefined)}
-            />
-            {#each lengths as length}
-                <input
-                    class="btn"
-                    type="radio"
-                    name="rating"
-                    value={length}
-                    aria-label={length}
-                    onclick={() => changeLength(length)}
-                    checked={selectedLength === length}
-                />
-            {/each}
-        </form>
+        {#if activeFilterCount > 0}
+            <button class="btn btn-ghost btn-sm text-error" onclick={clearAll}>
+                clear all ×
+            </button>
+        {/if}
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {#if data.levels.length === 0}
-            <p>no levels found :(</p>
+        {#if isLoading}
+            {#each Array(10) as _}
+                {@render cardSkeleton()}
+            {/each}
+        {:else if !searchResult || searchResult.levels?.length === 0}
+            <div class="text-center col-span-full">
+                <h3 class="text-lg font-semibold text-base-content/70 mb-2">
+                    no levels found
+                </h3>
+            </div>
         {:else}
-            {#each data.levels as level, index (level.id)}
+            {#each searchResult.levels as level}
                 <Card
                     id={level.id}
                     name={level.name}
+                    score={level.averageScore}
                     publisher={level.publisher ?? "unknown"}
                     difficulty={level.difficulty}
                     length={level.length}
-                    releaseDate={level.releaseDate}
-                    tabIndex={index}
+                    releaseDate={null}
                 />
             {/each}
         {/if}
     </div>
+    <!-- prev/next page buttons -->
     <div class="flex justify-center py-4">
         <div class="join">
-            {#if parseInt(pageParam) > 1}
+            {#if currentPage > 1}
                 <button
                     class="join-item btn"
                     onclick={() => advancePage("back")}>«</button
                 >
             {/if}
-            <button class="join-item btn">Page {pageParam}</button>
+            <button class="join-item btn">page {currentPage}</button>
             <!-- {#if !data.page.isLastPage} -->
             <button class="join-item btn" onclick={() => advancePage("next")}
                 >»</button

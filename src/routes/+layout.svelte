@@ -111,25 +111,6 @@
             <button class="btn btn-ghost" onclick={() => openSearch()}>
                 search...
             </button>
-            <div class="dropdown dropdown-end">
-                {#if searchResults.length > 0}
-                    <ul
-                        tabindex="-1"
-                        class="dropdown-content z-10 p-2 mt-2 shadow bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
-                    >
-                        {#each searchResults as result}
-                            <li>
-                                <a
-                                    href="/levels/{result.id}"
-                                    class="block py-2 px-4 hover:bg-base-200"
-                                >
-                                    {result.name}</a
-                                >
-                            </li>
-                        {/each}
-                    </ul>
-                {/if}
-            </div>
         </div>
 
         <div class="navbar-end gap-1">
@@ -258,7 +239,7 @@
 
             {#if data.user}
                 <!-- Authenticated user menu -->
-                <div class="dropdown dropdown-end">
+                <div class="dropdown dropdown-end z-15">
                     <Avatar username={data.user.username} />
                     <ul
                         tabindex="-1"
@@ -273,7 +254,7 @@
                         {#if data.user.roles?.includes("admin")}
                             <li><a href="/admin">admin</a></li>
                         {/if}
-                        <li><a href="/settings">settings</a></li>
+                        <!-- <li><a href="/settings">settings</a></li> -->
                         <li>
                             <button onclick={handleLogout} class="text-error"
                                 >logout</button
@@ -355,7 +336,7 @@
             searchInput = "";
         }}
     >
-        <div class="modal-box w-5/6 max-w-5xl h-3/5 flex flex-col gap-4">
+        <div class="modal-box w-5/6 max-w-5xl flex flex-col gap-4">
             <label class="input w-full border-b border-base-100 text-lg">
                 <svg
                     class="h-[1em] opacity-50"
@@ -376,11 +357,19 @@
                 <input
                     type="search"
                     placeholder="search..."
+                    maxlength="20"
                     bind:value={searchInput}
                     bind:this={search}
+                    onkeydown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault();
+                            goto(`/levels?q=${searchInput}`);
+                            searchModal.close();
+                        }
+                    }}
                 />
             </label>
-            <div class="flex flex-wrap justify-center gap-4">
+            <!-- <div class="flex flex-wrap justify-center gap-4">
                 {#if searchResults && searchResults.length > 0}
                     <div class="flex flex-col w-full gap-2">
                         <form method="dialog">
@@ -417,7 +406,7 @@
                 {:else}
                     <p>no results found</p>
                 {/if}
-            </div>
+            </div> -->
         </div>
         <form method="dialog" class="modal-backdrop">
             <button>close</button>
