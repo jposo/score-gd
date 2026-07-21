@@ -18,7 +18,7 @@
 <div class="container mx-auto py-4 px-8">
     {#if spotlightItems.length > 0}
         <section class="mb-8">
-            <h1 class="text-3xl font-bold mb-4">current gd events</h1>
+            <h1 class="text-3xl font-bold mb-4">current spotlight</h1>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {#each spotlightItems as item}
                     <Card

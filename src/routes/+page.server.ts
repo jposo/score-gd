@@ -10,12 +10,12 @@ export const load: PageServerLoad = async (event) => {
     const ids = levelIds.map((level) => level.id);
 
     const [result, dailyHistory, weeklyHistory, eventHistory] =
-      await Promise.all([
-        get("levels").ids(ids),
-        get("levels").type("daily history").page(0),
-        get("levels").type("weekly history").page(0),
-        get("levels").type("event history").page(0),
-      ]);
+        await Promise.all([
+            get("levels").ids(ids),
+            get("levels").type("daily history").page(0),
+            get("levels").type("weekly history").page(0),
+            get("levels").type("event history").page(0),
+        ]);
 
     const levelMap = new Map(result?.result.map((level) => [level.id, level]));
 
