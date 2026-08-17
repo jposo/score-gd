@@ -18,7 +18,11 @@
     }
   });
 
-  let loaded: boolean[] = $derived(Array(images.length).fill(false));
+  let loaded: boolean[] = $state(Array(images.length).fill(false));
+
+  $effect(() => {
+      loaded = Array(images.length).fill(false);
+  })
 </script>
 
 <div class="relative flex justify-center max-w-6xl mx-auto">

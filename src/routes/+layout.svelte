@@ -1,6 +1,6 @@
 <script lang="ts">
     import "../app.css";
-    import favicon from "$lib/assets/favicon.svg";
+    import favicon from "$lib/assets/favicon.ico";
     import { themeManager } from "$lib/state/theme.svelte";
     import { onMount } from "svelte";
     import type { PageData } from "./$types";
@@ -43,7 +43,7 @@
 
     async function handleSignIn() {
         await supabase.auth.signInWithOAuth({
-            provider: "google",
+            provider: "discord",
             options: {
                 redirectTo: `${window.location.origin}/auth/callback?next=${window.location.pathname}`,
             },
@@ -94,7 +94,7 @@
 
 <svelte:head>
     <link rel="icon" href={favicon} />
-    <title>loggd</title>
+    <title>score.gd</title>
 </svelte:head>
 
 {#each toastManager.queue as toast (toast.id)}
@@ -106,7 +106,7 @@
         class="navbar bg-base-300/80 shadow-sm px-4 sticky top-0 z-10 backdrop-blur"
     >
         <div class="navbar-start gap-2">
-            <a href="/" class="btn btn-ghost text-2xl">loggd</a>
+            <a href="/" class="btn btn-ghost text-2xl">score.gd</a>
 
             <button class="btn btn-ghost" onclick={() => openSearch()}>
                 search...
@@ -193,50 +193,6 @@
                 </svg>
                 levels
             </a>
-            <!-- Theme Controller -->
-            <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="h-5 w-5"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42"
-                        />
-                    </svg>
-                    appearance
-                </div>
-                <ul
-                    tabindex="-1"
-                    class="dropdown-content z-10 p-2 mt-2 shadow bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto"
-                >
-                    {#each themeManager.themes as themeOption}
-                        {@const isCurrentTheme =
-                            themeManager.currentTheme === themeOption}
-                        <li>
-                            <input
-                                type="radio"
-                                name="theme-dropdown"
-                                class="theme-controller btn btn-sm btn-block {!isCurrentTheme
-                                    ? 'btn-ghost'
-                                    : ''} justify-start"
-                                aria-label={themeOption}
-                                value={themeOption}
-                                checked={isCurrentTheme}
-                                onchange={() =>
-                                    themeManager.setTheme(themeOption)}
-                            />
-                        </li>
-                    {/each}
-                </ul>
-            </div>
-
             {#if data.user}
                 <!-- Authenticated user menu -->
                 <div class="dropdown dropdown-end z-15">
@@ -265,32 +221,14 @@
             {:else}
                 <!-- Unauthenticated user options -->
                 <button
-                    class="btn bg-white text-black border-[#e5e5e5]"
+                    class="btn bg-white text-black"
                     onclick={handleSignIn}
                 >
-                    <svg
-                        aria-label="Google logo"
-                        width="16"
-                        height="16"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 512 512"
-                        ><g
-                            ><path d="m0 0H512V512H0" fill="#fff"></path><path
-                                fill="#34a853"
-                                d="M153 292c30 82 118 95 171 60h62v48A192 192 0 0190 341"
-                            ></path><path
-                                fill="#4285f4"
-                                d="m386 400a140 175 0 0053-179H260v74h102q-7 37-38 57"
-                            ></path><path
-                                fill="#fbbc02"
-                                d="m90 341a208 200 0 010-171l63 49q-12 37 0 73"
-                            ></path><path
-                                fill="#ea4335"
-                                d="m153 219c22-69 116-109 179-50l55-54c-78-75-230-72-297 55"
-                            ></path></g
-                        ></svg
-                    >
-                    login with google
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 512 512">
+	<path d="M0 0h512v512H0z" fill="none" />
+	<path fill="#5865f2" d="M433.7 91a416.5 416.5 0 0 0-105.6-33.2c-4.6 8.2-9.9 19.3-13.5 28.1c-39.4-5.9-78.4-5.9-117.1 0c-3.7-8.8-9.1-19.9-13.7-28.1c-37.1 6.4-72.6 17.7-105.7 33.3c-66.8 101-85 199.5-75.9 296.6c44.3 33.1 87.3 53.2 129.6 66.4c10.4-14.4 19.7-29.6 27.7-45.7c-15.3-5.8-29.9-13-43.7-21.3c3.7-2.7 7.2-5.6 10.7-8.5c84.2 39.4 175.8 39.4 259 0c3.5 2.9 7.1 5.8 10.7 8.5c-13.9 8.3-28.5 15.5-43.8 21.3c8 16 17.3 31.3 27.7 45.7c42.3-13.2 85.3-33.3 129.6-66.4c10.8-112.5-18-210.1-76-296.7M170.9 328c-25.3 0-46-23.6-46-52.4s20.3-52.4 46-52.4s46.5 23.6 46 52.4c.1 28.8-20.2 52.4-46 52.4m170.2 0c-25.3 0-46-23.6-46-52.4s20.3-52.4 46-52.4s46.5 23.6 46 52.4c0 28.8-20.3 52.4-46 52.4" />
+                    </svg>
+                    login with discord
                 </button>
                 <!-- <a href="/signup" class="btn btn-ghost w-24">sign up</a>
                 <a href="/login" class="btn btn-primary w-24">login</a> -->
@@ -369,44 +307,6 @@
                     }}
                 />
             </label>
-            <!-- <div class="flex flex-wrap justify-center gap-4">
-                {#if searchResults && searchResults.length > 0}
-                    <div class="flex flex-col w-full gap-2">
-                        <form method="dialog">
-                            {#each searchResults as result}
-                                <div
-                                    class="flex w-full items-center px-4"
-                                    tabindex="-1"
-                                >
-                                    <a
-                                        role="button"
-                                        href="/levels/{result.id}"
-                                        onclick={() => searchModal.close()}
-                                        class="w-full hover:bg-base-300 px-4 py-2 rounded-box"
-                                    >
-                                        <div
-                                            class="grid w-full items-center gap-0"
-                                        >
-                                            <div class="col-span-3 text-lg">
-                                                <span
-                                                    class="text-[0.75em] opacity-50"
-                                                >
-                                                    {result.publisher}
-                                                </span>
-                                                <span class="block">
-                                                    {result.name}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                </div>
-                            {/each}
-                        </form>
-                    </div>
-                {:else}
-                    <p>no results found</p>
-                {/if}
-            </div> -->
         </div>
         <form method="dialog" class="modal-backdrop">
             <button>close</button>
@@ -429,31 +329,51 @@
         class="footer sm:footer-horizontal bg-neutral text-neutral-content items-center p-4"
     >
         <aside class="grid-flow-col items-center">
-            <!-- <svg
-        width="36"
-        height="36"
-        viewBox="0 0 24 24"
-        xmlns="http://www.w3.org/2000/svg"
-        fill-rule="evenodd"
-        clip-rule="evenodd"
-        class="fill-current"
-      >
-        <path
-          d="M22.672 15.226l-2.432.811.841 2.515c.33 1.019-.209 2.127-1.23 2.456-1.15.325-2.148-.321-2.463-1.226l-.84-2.518-5.013 1.677.84 2.517c.391 1.203-.434 2.542-1.831 2.542-.88 0-1.601-.564-1.86-1.314l-.842-2.516-2.431.809c-1.135.328-2.145-.317-2.463-1.229-.329-1.018.211-2.127 1.231-2.456l2.432-.809-1.621-4.823-2.432.808c-1.355.384-2.558-.59-2.558-1.839 0-.817.509-1.582 1.327-1.846l2.433-.809-.842-2.515c-.33-1.02.211-2.129 1.232-2.458 1.02-.329 2.13.209 2.461 1.229l.842 2.515 5.011-1.677-.839-2.517c-.403-1.238.484-2.553 1.843-2.553.819 0 1.585.509 1.85 1.326l.841 2.517 2.431-.81c1.02-.33 2.131.211 2.461 1.229.332 1.018-.21 2.126-1.23 2.456l-2.433.809 1.622 4.823 2.433-.809c1.242-.401 2.557.484 2.557 1.838 0 .819-.51 1.583-1.328 1.847m-8.992-6.428l-5.01 1.675 1.619 4.828 5.011-1.674-1.62-4.829z"
-        ></path>
-      </svg> -->
             <p>
-                This site is a fan-made web page and is not affiliated with
+                This site is a fan-made website and is not affiliated with
                 RobTop Games AB.
             </p>
         </aside>
         <nav
-            class="grid-flow-col gap-4 md:place-self-center md:justify-self-end"
+            class="grid-flow-col gap-0 md:place-self-center md:justify-self-end"
         >
+            <div class="dropdown dropdown-end dropdown-top">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24"
+                                        height="24" viewBox="0 0 24 24">
+	<path d="M0 0h24v24H0z" fill="none" />
+	<path fill="currentColor" d="M6 21q-1.125 0-2.225-.55T2 19q.65 0 1.325-.513T4 17q0-1.25.875-2.125T7 14t2.125.875T10 17q0 1.65-1.175 2.825T6 21m5.75-6L9 12.25l8.95-8.95q.275-.275.688-.288t.712.288l1.35 1.35q.3.3.3.7t-.3.7z" />
+                    </svg>
+                </div>
+                <ul
+                    tabindex="-1"
+                    class="dropdown-content z-10 p-2 mb-2 shadow bg-base-300 rounded-box w-52 max-h-96 overflow-y-auto text-base-content"
+                >
+                    {#each themeManager.themes as themeOption}
+                        {@const isCurrentTheme =
+                            themeManager.currentTheme === themeOption}
+                        <li>
+                            <input
+                                type="radio"
+                                name="theme-dropdown"
+                                class="theme-controller btn btn-sm btn-block {!isCurrentTheme
+                                    ? 'btn-ghost'
+                                    : ''} justify-start"
+                                aria-label={themeOption}
+                                value={themeOption}
+                                checked={isCurrentTheme}
+                                onchange={() =>
+                                    themeManager.setTheme(themeOption)}
+                            />
+                        </li>
+                    {/each}
+                </ul>
+            </div>
             <a
                 aria-label="youtube channel url"
                 href="https://www.youtube.com/channel/UCke91-1wo4q0Yw1w-2MvJJw"
                 target="_blank"
+                class="btn btn-sm btn-block btn-ghost"
             >
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -465,6 +385,17 @@
                     <path
                         d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"
                     ></path>
+                </svg>
+            </a>
+            <a
+                aria-label="github repo url"
+                href="https://github.com/jposo/score-gd"
+                target="_blank"
+                class="btn btn-sm btn-block btn-ghost"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                  <path d="M0 0h24v24H0z" fill="none" />
+                  <path fill="currentColor" d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33s1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2" />
                 </svg>
             </a>
         </nav>

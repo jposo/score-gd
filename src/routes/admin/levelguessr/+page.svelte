@@ -2,7 +2,7 @@
   import type { PageProps, SubmitFunction } from "./$types";
   import { enhance } from "$app/forms";
   import { toastManager } from "$lib/state/toasts.svelte";
-  import type { SearchResult } from "$lib/shared/types";
+  import type { SearchResult, SearchResultLevel } from "$lib/shared/types";
 
   let { data }: PageProps = $props();
 
@@ -29,7 +29,7 @@
   let isSubmitting = $state(false);
   let input = $state("");
   let levelId = $state<number>();
-  let searchResults = $state<SearchResult[]>([]);
+  let searchResults = $state<SearchResult>();
   let files = $state<FileList>();
   let videoElement = $state<HTMLVideoElement>();
   let video = $derived(files?.item(0) ?? null);
@@ -278,8 +278,6 @@
       quality -= 0.1;
     }
 
-    console.log("compressed to quality: ", quality);
-
     const croppedDataUrl = compressedDataUrl;
     const frameIndex = cropSettings.frameIndex;
 
@@ -325,13 +323,12 @@
     const timeoutId = setTimeout(async () => {
       try {
         if (input.length < 3) {
-          searchResults = [];
+          searchResults = undefined;
           return;
         }
-        const response = await fetch(`/search?q=${input}&s=levelguessr`);
+        const response = await fetch(`/search?q=${input}&rating=star`);
         if (response.ok) {
-          const results = await response.json();
-          console.log(`Search successful, returned ${results.length} results.`);
+          const results: SearchResult = await response.json();
           searchResults = results;
         }
       } catch (error) {
@@ -344,17 +341,17 @@
     return () => clearTimeout(timeoutId);
   });
 
-  function selectResult(result: SearchResult) {
-    input = result.name!;
+  function selectResult(result: SearchResultLevel) {
+    input = result.name;
     levelId = result.id;
-    searchResults = [];
+    searchResults = undefined;
   }
 </script>
 
 <ul
   class="menu menu-vertical lg:menu-horizontal bg-base-200 rounded-b-box w-full"
 >
-  <li><a href="/admin">loggd</a></li>
+  <li><a href="/admin">score.gd</a></li>
   <li><a href="/admin/levelguessr">levelguessr</a></li>
 </ul>
 
@@ -484,12 +481,12 @@
               />
             </label>
 
-            {#if searchResults.length > 0}
+            {#if searchResults?.levels && searchResults.levels.length > 0}
               <ul
                 tabindex="-1"
                 class="dropdown-content z-1 menu p-2 shadow bg-base-300 rounded-box w-full text-xl **mt-2**"
               >
-                {#each searchResults as result}
+                {#each searchResults.levels as result}
                   {@const played = data.storedDays.find(
                     (day) => day.id === result.id,
                   )}

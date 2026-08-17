@@ -57,7 +57,7 @@
 </script>
 
 <svelte:head>
-    <title>{data.level.name} - loggd</title>
+    <title>{data.level.name} - score.gd</title>
 </svelte:head>
 
 <div class="container mx-auto py-4 px-8">

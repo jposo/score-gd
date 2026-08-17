@@ -41,7 +41,7 @@ export const handle: Handle = async ({ event, resolve }) => {
         "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline'; " +
         "style-src 'self' 'unsafe-inline'; " +
-        `img-src 'self' ${penv.PUBLIC_SUPABASE_PROJECT_URL} data: https://levelthumbs.prevter.me; ` +
+        `img-src 'self' ${penv.PUBLIC_SUPABASE_PROJECT_URL} data: https://levelthumbs.prevter.me; media-src 'self' blob:;` +
         "font-src 'self'; " +
         "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; " +
         `connect-src 'self' ${penv.PUBLIC_SUPABASE_PROJECT_URL}; `,

@@ -1,4 +1,4 @@
-# loggd
+# score.gd
 
 A web application for the Geometry Dash community.
 
@@ -31,7 +31,7 @@ A web application for the Geometry Dash community.
 
 1.  Clone the repo
     ```sh
-    git clone https://github.com/jposo/loggd.git
+    git clone https://github.com/jposo/score-gd.git
     ```
 2.  Install Deno & NPM packages
     ```sh

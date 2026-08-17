@@ -227,7 +227,7 @@ class Database {
     }
 
     async insertLevel(values: schema.InsertLevel) {
-        console.log("Inserting level with values:", values);
+        // console.log("Inserting level with values:", values);
 
         const result = await this.db
             .insert(schema.levels)
@@ -239,7 +239,7 @@ class Database {
     }
 
     async insertLevels(values: schema.InsertLevel[]) {
-        console.log("Inserting levels with values:", values);
+        // console.log("Inserting levels with values:", values);
 
         const result = await this.db
             .insert(schema.levels)

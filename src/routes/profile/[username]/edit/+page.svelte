@@ -22,7 +22,7 @@
 </script>
 
 <svelte:head>
-    <title>edit profile - loggd</title>
+    <title>edit profile - score.gd</title>
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">

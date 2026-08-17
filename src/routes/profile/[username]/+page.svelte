@@ -199,7 +199,7 @@
 </script>
 
 <svelte:head>
-    <title>profile: {data.user?.username} - loggd</title>
+    <title>profile: {data.user?.username} - score.gd</title>
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">
